@@ -1,0 +1,2453 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Sistema de inventário patrimonial com leitor de código de barras">
+  <meta name="author" content="IFC">
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script type="module" crossorigin>var __defProp = Object.defineProperty;
+var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __propIsEnum = Object.prototype.propertyIsEnumerable;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __spreadValues = (a, b) => {
+  for (var prop in b || (b = {}))
+    if (__hasOwnProp.call(b, prop))
+      __defNormalProp(a, prop, b[prop]);
+  if (__getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(b)) {
+      if (__propIsEnum.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    }
+  return a;
+};
+(function() {
+  "use strict";
+  var _documentCurrentScript = typeof document !== "undefined" ? document.currentScript : null;
+  const scriptRel = "modulepreload";
+  const assetsURL = function(dep, importerUrl) {
+    return new URL(dep, importerUrl).href;
+  };
+  const seen = {};
+  const __vitePreload = function preload(baseModule, deps, importerUrl) {
+    let promise = Promise.resolve();
+    if (false) {
+      let allSettled = function(promises$2) {
+        return Promise.all(promises$2.map((p) => Promise.resolve(p).then((value$1) => ({
+          status: "fulfilled",
+          value: value$1
+        }), (reason) => ({
+          status: "rejected",
+          reason
+        }))));
+      };
+      const links = document.getElementsByTagName("link");
+      const cspNonceMeta = document.querySelector("meta[property=csp-nonce]");
+      const cspNonce = (cspNonceMeta == null ? void 0 : cspNonceMeta.nonce) || (cspNonceMeta == null ? void 0 : cspNonceMeta.getAttribute("nonce"));
+      promise = allSettled(deps.map((dep) => {
+        dep = assetsURL(dep, importerUrl);
+        if (dep in seen) return;
+        seen[dep] = true;
+        const isCss = dep.endsWith(".css");
+        const cssSelector = isCss ? '[rel="stylesheet"]' : "";
+        if (!!importerUrl) for (let i$1 = links.length - 1; i$1 >= 0; i$1--) {
+          const link$1 = links[i$1];
+          if (link$1.href === dep && (!isCss || link$1.rel === "stylesheet")) return;
+        }
+        else if (document.querySelector(`link[href="${dep}"]${cssSelector}`)) return;
+        const link = document.createElement("link");
+        link.rel = isCss ? "stylesheet" : scriptRel;
+        if (!isCss) link.as = "script";
+        link.crossOrigin = "";
+        link.href = dep;
+        if (cspNonce) link.setAttribute("nonce", cspNonce);
+        document.head.appendChild(link);
+        if (isCss) return new Promise((res, rej) => {
+          link.addEventListener("load", res);
+          link.addEventListener("error", () => rej(/* @__PURE__ */ new Error(`Unable to preload CSS for ${dep}`)));
+        });
+      }));
+    }
+    function handlePreloadError(err$2) {
+      const e$1 = new Event("vite:preloadError", { cancelable: true });
+      e$1.payload = err$2;
+      window.dispatchEvent(e$1);
+      if (!e$1.defaultPrevented) throw err$2;
+    }
+    return promise.then((res) => {
+      for (const item of res || []) {
+        if (item.status !== "rejected") continue;
+        handlePreloadError(item.reason);
+      }
+      return baseModule().catch(handlePreloadError);
+    });
+  };
+  function LocationSelector() {
+    this.containerId = "#location-selector";
+    this.selectId = "location-select";
+    this.NONE_SELECTED = "-1";
+    this.getSelectedLocation = this.getSelectedLocation.bind(this);
+    this.init = this.init.bind(this);
+  }
+  LocationSelector.prototype.getSelectedLocation = function() {
+    const el = document.getElementById(this.selectId);
+    return el ? el.value : this.NONE_SELECTED;
+  };
+  LocationSelector.prototype.init = function(data) {
+    const container = document.querySelector(this.containerId);
+    if (!container) {
+      console.error("LocationSelector: Container não encontrado:", this.containerId);
+      return;
+    }
+    const locations = data || [];
+    if (locations.length === 0) {
+      console.warn("LocationSelector: Nenhuma localização disponível para renderizar.");
+      container.innerHTML = '<p class="error">Nenhuma localização encontrada.</p>';
+      return;
+    }
+    let optionsHtml = `<option value="${this.NONE_SELECTED}">Selecione uma localização</option>`;
+    for (let i = 0; i < locations.length; i++) {
+      const item = locations[i];
+      if (!item || typeof item.name !== "string") {
+        console.warn("LocationSelector: Item inválido ignorado:", item);
+        continue;
+      }
+      const name = item.name;
+      const count = item.assetsCount || 0;
+      optionsHtml += '<option value="' + name + '">' + name + " [" + count + " itens]</option>";
+    }
+    container.innerHTML = '<select id="' + this.selectId + '" class="location-select">' + optionsHtml + "</select>";
+    this.setupEvents();
+  };
+  LocationSelector.prototype.setupEvents = function() {
+    const select = document.getElementById(this.selectId);
+    if (!select) {
+      console.error("LocationSelector: Elemento select com id '" + this.selectId + "' não encontrado.");
+      return;
+    }
+    const handleChange = function() {
+      const newValue = select.value;
+      window.dispatchEvent(new CustomEvent("locationChanged", {
+        detail: { location: newValue }
+      }));
+    };
+    select.addEventListener("change", handleChange);
+  };
+  LocationSelector.prototype.hasValidSelection = function() {
+    const selected = this.getSelectedLocation();
+    return selected !== this.NONE_SELECTED;
+  };
+  LocationSelector.prototype.setSelectedLocation = function(locationName) {
+    const select = document.getElementById(this.selectId);
+    if (!select) return false;
+    const optionExists = Array.from(select.options).some(
+      (option) => option.value === locationName
+    );
+    if (optionExists) {
+      select.value = locationName;
+      select.dispatchEvent(new Event("change"));
+      return true;
+    }
+    return false;
+  };
+  const locationSelector = new LocationSelector();
+  function UserWarnings() {
+    this.warningArea = document.getElementById("warning-area");
+    this.timerId = null;
+  }
+  UserWarnings.prototype.printUserWarning = function(message) {
+    /* @__PURE__ */ console.log(message);
+    if (!this.warningArea) return;
+    this.warningArea.textContent = message;
+    this.warningArea.classList.add("warning-active");
+    if (this.timerId) {
+      clearTimeout(this.timerId);
+    }
+    this.timerId = setTimeout(() => {
+      this.clearUserWarning();
+    }, 15e3);
+  };
+  UserWarnings.prototype.clearUserWarning = function() {
+    if (!this.warningArea) return;
+    this.warningArea.textContent = "";
+    this.warningArea.classList.remove("warning-active");
+    if (this.timerId) {
+      clearTimeout(this.timerId);
+    }
+  };
+  const userWarnings = new UserWarnings();
+  function ScannerManager() {
+    this.html5QrCode = null;
+    this.isCameraOn = false;
+    this.canScan = true;
+    this.isLockedExternal = false;
+    this.init();
+  }
+  ScannerManager.prototype.init = function() {
+    const container = document.querySelector("#scanner-area");
+    if (!container) return;
+    container.innerHTML = `
+        <div id="videoArea">
+            <div id="reader"></div>
+            <div id="cameraPlaceholder">Câmera Desligada</div>
+            <div id="scanDelayOverlay">Processado!</div>
+        </div>
+
+        <div class="control-row">
+            <button id="toggleFlash" class="btn btn-gray">⚡ Flash</button>
+            <button id="toggleCamera" class="btn btn-primary">📷 Ligar Câmera</button>
+        </div>
+
+        <div class="control-row">
+            <input type="number" id="manualBarcode" placeholder="Código (13 dig)" inputmode="numeric">
+            <button id="submitManualBarcode" class="btn btn-gray">Enviar</button>
+        </div>
+    `;
+    document.getElementById("toggleCamera").addEventListener("click", () => this.handleCameraAction());
+    document.getElementById("toggleFlash").addEventListener("click", () => this.toggleFlash());
+    this._setupManualInput();
+    this.hide();
+  };
+  ScannerManager.prototype.setFocus = function() {
+    document.getElementById("manualBarcode").focus();
+  };
+  ScannerManager.prototype._setupManualInput = function() {
+    const self2 = this;
+    const btn = document.getElementById("submitManualBarcode");
+    const input = document.getElementById("manualBarcode");
+    btn.addEventListener("click", () => {
+      const cleanValue = (input.value || "").trim();
+      if (cleanValue === "") {
+        self2.setFocus();
+        return;
+      }
+      btn.disabled = true;
+      window.dispatchEvent(new CustomEvent("codeScanned", {
+        detail: { code: cleanValue }
+      }));
+      input.value = "";
+      setTimeout(() => {
+        btn.disabled = false;
+      }, 500);
+    });
+  };
+  ScannerManager.prototype.show = function() {
+    const el = document.querySelector("#scanner-area");
+    if (el) el.style.display = "block";
+    this.isCameraOn = false;
+    this.handleCameraAction();
+  };
+  ScannerManager.prototype.hide = function() {
+    const el = document.querySelector("#scanner-area");
+    if (el) el.style.display = "none";
+    this.isCameraOn = true;
+    this.handleCameraAction();
+  };
+  ScannerManager.prototype.lock = function() {
+    this.isLockedExternal = true;
+    this.canScan = false;
+    const overlay = document.getElementById("scanDelayOverlay");
+    if (overlay) overlay.style.display = "none";
+  };
+  ScannerManager.prototype.unlock = function() {
+    this.isLockedExternal = false;
+    this.canScan = true;
+  };
+  ScannerManager.prototype.handleCameraAction = async function() {
+    const btn = document.getElementById("toggleCamera");
+    const placeholder = document.getElementById("cameraPlaceholder");
+    const flashBtn = document.getElementById("toggleFlash");
+    if (!this.isCameraOn) {
+      if (locationSelector.getSelectedLocation() === locationSelector.NONE_SELECTED) {
+        userWarnings.printUserWarning("Selecione uma localização antes de iniciar as leituras!");
+        return;
+      }
+      this.html5QrCode = new Html5Qrcode("reader");
+      try {
+        await this.html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 5, qrbox: { width: 280, height: 125 }, aspectRatio: 1 },
+          (txt) => this._onScanSuccess(txt)
+        );
+        this.isCameraOn = true;
+        this.canScan = true;
+        placeholder.style.display = "none";
+        btn.innerText = "🚫 Desligar Câmera";
+        btn.classList.replace("btn-primary", "btn-danger");
+        this._checkFlashSupport(flashBtn);
+      } catch (err) {
+        console.error("Erro ao iniciar câmera:", err);
+      }
+    } else {
+      await this.stopScanner();
+    }
+  };
+  ScannerManager.prototype.stopScanner = async function() {
+    const btn = document.getElementById("toggleCamera");
+    const placeholder = document.getElementById("cameraPlaceholder");
+    const flashBtn = document.getElementById("toggleFlash");
+    if (this.html5QrCode) {
+      try {
+        await this.html5QrCode.stop();
+        this.html5QrCode = null;
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+    this.isCameraOn = false;
+    placeholder.style.display = "block";
+    flashBtn.style.display = "none";
+    btn.innerText = "📷 Ligar Câmera";
+    btn.classList.replace("btn-danger", "btn-primary");
+  };
+  ScannerManager.prototype.toggleFlash = async function() {
+    if (!this.isCameraOn) return;
+    try {
+      const track = document.querySelector("#reader video").srcObject.getVideoTracks()[0];
+      const isFlashNow = track.getSettings().torch || false;
+      await track.applyConstraints({ advanced: [{ torch: !isFlashNow }] });
+    } catch (err) {
+      console.warn(err);
+    }
+  };
+  ScannerManager.prototype._checkFlashSupport = function(flashBtn) {
+    const video = document.querySelector("#reader video");
+    if (video && video.srcObject) {
+      const track = video.srcObject.getVideoTracks()[0];
+      const caps = track.getCapabilities ? track.getCapabilities() : {};
+      if (caps.torch) flashBtn.style.display = "block";
+    }
+  };
+  ScannerManager.prototype._onScanSuccess = function(decodedText) {
+    if (!this.canScan || this.isLockedExternal) return;
+    this.canScan = false;
+    const overlay = document.getElementById("scanDelayOverlay");
+    if (overlay) {
+      overlay.style.display = "flex";
+      overlay.innerText = "Processando...";
+    }
+    window.dispatchEvent(new CustomEvent("codeScanned", {
+      detail: { code: decodedText }
+    }));
+    setTimeout(() => {
+      if (overlay) overlay.style.display = "none";
+      if (!this.isLockedExternal) {
+        this.canScan = true;
+      }
+    }, 1500);
+  };
+  const scannerManager = new ScannerManager();
+  const STORAGE_KEY = "BARCODE_APP_DATA_V1";
+  const VERSION_KEY = "BARCODE_APP_VERSION";
+  const SAVE_DEBOUNCE_MS = 400;
+  const AssetStatus = Object.freeze({
+    /** @description Aguardando sincronização */
+    PENDING: "pending",
+    /** @description Sincronização em andamento */
+    IN_FLIGHT: "inFlight",
+    /** @description Sincronizado com sucesso */
+    SYNCED: "synced",
+    /** @description Falha na sincronização */
+    FAILED: "failed"
+  });
+  function AssetRepository() {
+    this.items = [];
+    this.saveTimer = null;
+    this._load();
+  }
+  AssetRepository.prototype._save = function(immediate) {
+    const self2 = this;
+    if (self2.saveTimer) {
+      clearTimeout(this.saveTimer);
+      self2.saveTimer = null;
+    }
+    const persist = function() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(self2.items));
+      } catch (e) {
+        console.error("AssetRepository: Erro ao salvar", e);
+        if (e.name === "QuotaExceededError") {
+          self2._handleStorageFull();
+        }
+      }
+    };
+    if (immediate) {
+      persist();
+    } else {
+      self2.saveTimer = setTimeout(persist, SAVE_DEBOUNCE_MS);
+    }
+  };
+  AssetRepository.prototype._handleStorageFull = function() {
+    console.warn("AssetRepository: Storage cheio, aplicando limpeza conservadora");
+    this.items = this.items.sort((a, b) => b.createdAt - a.createdAt).slice(0, 100);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.items));
+      /* @__PURE__ */ console.info("AssetRepository: Limpeza conservadora aplicada com sucesso");
+    } catch (e) {
+      console.error("AssetRepository: Erro crítico ao salvar após limpeza", e);
+      try {
+        this.items = [];
+        localStorage.removeItem(STORAGE_KEY);
+        console.warn("AssetRepository: Storage limpo completamente devido a erro crítico");
+      } catch (finalError) {
+        console.error("AssetRepository: Falha catastrófica no storage", finalError);
+      }
+    }
+    this._emit("repositoryChanged");
+  };
+  AssetRepository.prototype._load = function() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      this.items = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      console.error("AssetRepository: Erro ao carregar", e);
+      this.items = [];
+    }
+  };
+  AssetRepository.prototype._emit = function(name, detail) {
+    window.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
+  };
+  AssetRepository.prototype.addItem = async function(rawCode, location) {
+    if (typeof rawCode === "undefined" || rawCode === null) return null;
+    if (typeof location === "undefined" || location === null) return null;
+    const barcode = parseInt(rawCode, 10);
+    if (isNaN(barcode) || barcode <= 0) return null;
+    const loc = String(location || "").trim();
+    if (!barcode || !loc) return null;
+    const exists = this.items.some(function(i) {
+      return i.code === barcode && i.location === loc;
+    });
+    if (exists) return null;
+    const item = {
+      uid: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      code: barcode,
+      location: loc,
+      state: 3,
+      ipvu: 8,
+      obs: "",
+      status: AssetStatus.PENDING,
+      retryCount: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    this.items.push(item);
+    this._save(true);
+    this._emit("assetAdded", { item: Object.assign({}, item) });
+    this._emit("repositoryChanged");
+    return item;
+  };
+  AssetRepository.prototype.updateItem = function(uid, state, ipvu, obs) {
+    const item = this.items.find(function(i) {
+      return i.uid === uid;
+    });
+    if (!item) return false;
+    item.state = state;
+    item.ipvu = ipvu;
+    item.obs = obs || "";
+    item.updatedAt = Date.now();
+    item.status = AssetStatus.PENDING;
+    item.retryCount = 0;
+    this._save();
+    this._emit("assetDataChanged", { item: Object.assign({}, item) });
+    this._emit("repositoryChanged");
+    return true;
+  };
+  AssetRepository.prototype.hasItem = async function(barcode, location) {
+    const code = parseInt(String(barcode || "").trim(), 10);
+    const loc = String(location || "").trim();
+    if (isNaN(code) || !loc) return false;
+    return this.items.some(function(item) {
+      return item.code === code && item.location === loc;
+    });
+  };
+  AssetRepository.prototype.getItem = function(uid) {
+    return this.items.find(function(i) {
+      return i.uid === uid;
+    }) || null;
+  };
+  AssetRepository.prototype.getAllItems = function() {
+    return this.items.map(function(item) {
+      return Object.assign({}, item);
+    });
+  };
+  AssetRepository.prototype.getItemsByLocation = function(location) {
+    const targetLoc = String(location || "").trim();
+    if (!targetLoc) return this.getAllItems();
+    return this.items.filter(function(item) {
+      return item.location === targetLoc;
+    }).map(function(item) {
+      return Object.assign({}, item);
+    });
+  };
+  AssetRepository.prototype.getStats = function() {
+    return {
+      total: this.items.length,
+      synced: this.items.filter(function(i) {
+        return i.status === AssetStatus.SYNCED;
+      }).length,
+      pending: this.items.filter(function(i) {
+        return i.status === AssetStatus.PENDING || i.status === AssetStatus.IN_FLIGHT;
+      }).length,
+      failed: this.items.filter(function(i) {
+        return i.status === AssetStatus.FAILED;
+      }).length
+    };
+  };
+  AssetRepository.prototype.getPendingBatch = function(batchSize) {
+    return this.items.filter(function(i) {
+      return i.status === AssetStatus.PENDING;
+    }).slice(0, batchSize);
+  };
+  AssetRepository.prototype.markBatchInFlight = function(uids) {
+    this.items.forEach(function(item) {
+      if (uids.indexOf(item.uid) !== -1) {
+        item.status = AssetStatus.IN_FLIGHT;
+      }
+    });
+    this._save();
+  };
+  AssetRepository.prototype.processSyncSuccess = function(syncedUids) {
+    const self2 = this;
+    let changed = false;
+    this.items.forEach(function(item) {
+      if (item.status === AssetStatus.IN_FLIGHT && syncedUids.indexOf(item.uid) !== -1) {
+        item.status = AssetStatus.SYNCED;
+        item.retryCount = 0;
+        changed = true;
+        self2._emit("assetDataChanged", { item: Object.assign({}, item), type: "sync" });
+      }
+    });
+    if (changed) this._save(true);
+  };
+  AssetRepository.prototype.processSyncRetry = function(failedUids, maxRetries) {
+    const self2 = this;
+    let changed = false;
+    this.items.forEach(function(item) {
+      if (item.status === AssetStatus.IN_FLIGHT && failedUids.indexOf(item.uid) !== -1) {
+        item.retryCount++;
+        item.status = item.retryCount >= maxRetries ? AssetStatus.FAILED : AssetStatus.PENDING;
+        changed = true;
+        if (item.status === AssetStatus.FAILED) {
+          self2._emit("assetFailed", { item: Object.assign({}, item) });
+        }
+      }
+    });
+    if (changed) this._save(true);
+  };
+  AssetRepository.prototype.retryFailed = function() {
+    let changed = false;
+    this.items.forEach(function(item) {
+      if (item.status === AssetStatus.FAILED) {
+        item.status = AssetStatus.PENDING;
+        item.retryCount = 0;
+        changed = true;
+      }
+    });
+    if (changed) {
+      this._save(true);
+      this._emit("repositoryChanged");
+    }
+    return changed;
+  };
+  AssetRepository.prototype.applyMaintenance = function(appSettings) {
+    if (!appSettings) return;
+    const min_valid_date = appSettings.min_valid_date;
+    const app_version = appSettings.app_version;
+    if (!min_valid_date || !app_version) return;
+    const newVersion = String(app_version).trim();
+    const localVersion = localStorage.getItem(VERSION_KEY);
+    let forceSave = false;
+    if (!localVersion) {
+      localStorage.setItem(VERSION_KEY, newVersion);
+    } else if (localVersion !== newVersion) {
+      this.clearStorage();
+      localStorage.setItem(VERSION_KEY, newVersion);
+      return;
+    }
+    if (min_valid_date && this.items.length > 0) {
+      const minDateTimestamp = new Date(min_valid_date).getTime();
+      const initialCount = this.items.length;
+      this.items = this.items.filter(function(item) {
+        return item.createdAt >= minDateTimestamp;
+      });
+      if (this.items.length !== initialCount) {
+        forceSave = true;
+      }
+    }
+    if (forceSave) {
+      this._save(true);
+      this._emit("repositoryChanged");
+    }
+  };
+  AssetRepository.prototype.clearStorage = function() {
+    this.items = [];
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.error("AssetRepository: Erro ao limpar storage", e);
+    }
+    this._emit("repositoryChanged");
+    this._emit("syncCompleted");
+    return true;
+  };
+  const assetRepository = new AssetRepository();
+  function BarcodeTable() {
+    this.currentPage = 1;
+    this.renderTable = this.renderTable.bind(this);
+    this._updateItemInTable = this._updateItemInTable.bind(this);
+    this._setupTableEvents = this._setupTableEvents.bind(this);
+    this._itemsPerPage = 10;
+    this._currentFilter = null;
+    const tableArea = document.getElementById("barcode-table-area");
+    tableArea.innerHTML = `
+        <div class="table-wrapper">
+            <h4 class="table-header-container" id="table-heading">Itens Encontrados por este dispositivo</h4>
+            <table id="barcode-table">
+                <thead>
+                    <tr>
+                        <th class="col-stat">Stat</th>
+                        <th class="col-patrimonio">Patrimônio</th>
+                        <th class="col-location">Local</th>
+                        <th class="col-action">Ação</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="pagination-container">
+            <div class="pagination-info">Itens: <span id="table-item-count">0</span></div>
+            <div class="pagination-info">Página <span id="page-num">1</span></div>
+            <div class="pagination-buttons">
+                <button id="prev-page" class="pagination-btn">Anterior</button>
+                <button id="next-page" class="pagination-btn">Próximo</button>
+            </div>
+        </div>
+    `;
+    this._setupTableEvents();
+  }
+  BarcodeTable.prototype._createCell = function(content, className) {
+    const cell = document.createElement("td");
+    cell.className = className || "";
+    cell.textContent = content;
+    return cell;
+  };
+  BarcodeTable.prototype._statusIcon = function(status) {
+    switch (status) {
+      case AssetStatus.SYNCED:
+        return "✅";
+      case AssetStatus.IN_FLIGHT:
+        return "🔄";
+      case AssetStatus.FAILED:
+        return "❌";
+      case AssetStatus.PENDING:
+        return "⏳";
+      default:
+        return "?";
+    }
+  };
+  BarcodeTable.prototype._updateItemInTable = function(item) {
+    const row = document.getElementById("row-" + item.uid);
+    if (!row) return;
+    if (row.cells[0].textContent !== this._statusIcon(item.status)) {
+      row.cells[0].textContent = this._statusIcon(item.status);
+    }
+    if (row.cells[1].textContent !== item.code) {
+      row.cells[1].textContent = item.code;
+    }
+    if (row.cells[2].textContent !== item.location) {
+      row.cells[2].textContent = item.location;
+    }
+  };
+  BarcodeTable.prototype.renderTable = function(currentFilter = null) {
+    const self2 = this;
+    const tbody = document.querySelector("#barcode-table tbody");
+    if (!tbody) return;
+    if (currentFilter !== null) {
+      if (currentFilter !== locationSelector.NONE_SELECTED) {
+        self2._currentFilter = currentFilter;
+      } else {
+        self2._currentFilter = null;
+      }
+    }
+    const allFilteredItems = [...assetRepository.getItemsByLocation(self2._currentFilter)].reverse();
+    const totalItems = allFilteredItems.length;
+    const totalPages = Math.ceil(totalItems / self2._itemsPerPage) || 1;
+    if (self2.currentPage > totalPages) self2.currentPage = totalPages;
+    if (self2.currentPage < 1) self2.currentPage = 1;
+    const start = (self2.currentPage - 1) * self2._itemsPerPage;
+    const end = start + self2._itemsPerPage;
+    const paginatedItems = allFilteredItems.slice(start, end);
+    document.getElementById("page-num").textContent = self2.currentPage + " / " + totalPages;
+    document.getElementById("prev-page").disabled = self2.currentPage === 1;
+    document.getElementById("next-page").disabled = self2.currentPage === totalPages;
+    document.getElementById("table-item-count").textContent = String(totalItems);
+    tbody.innerHTML = "";
+    const fragment = document.createDocumentFragment();
+    paginatedItems.forEach(function(item) {
+      const tr = document.createElement("tr");
+      tr.id = "row-" + item.uid;
+      tr.appendChild(self2._createCell(self2._statusIcon(item.status), "status-cell centered-cell"));
+      tr.appendChild(self2._createCell(item.code, "centered-cell"));
+      tr.appendChild(self2._createCell(item.location, "default-cell"));
+      const actionCell = document.createElement("td");
+      actionCell.className = "centered-cell";
+      const btn = document.createElement("button");
+      btn.className = "btn-edit";
+      btn.textContent = "Editar";
+      btn.onclick = function() {
+        window.dispatchEvent(new CustomEvent("editItemRequested", {
+          detail: { uid: item.uid }
+        }));
+      };
+      actionCell.appendChild(btn);
+      tr.appendChild(actionCell);
+      fragment.appendChild(tr);
+    });
+    tbody.appendChild(fragment);
+  };
+  BarcodeTable.prototype._setupTableEvents = function() {
+    const self2 = this;
+    const btnPrev = document.getElementById("prev-page");
+    const btnNext = document.getElementById("next-page");
+    if (btnPrev && btnNext) {
+      btnPrev.onclick = function() {
+        if (self2.currentPage > 1) {
+          self2.currentPage--;
+          self2.renderTable();
+        }
+      };
+      btnNext.onclick = function() {
+        const totalPages = Math.ceil(assetRepository.getStats().total / self2._itemsPerPage);
+        if (self2.currentPage < totalPages) {
+          self2.currentPage++;
+          self2.renderTable();
+        }
+      };
+    }
+    window.addEventListener("assetDataChanged", function(event) {
+      const item = event.detail && event.detail.item;
+      if (item) {
+        self2._updateItemInTable(item);
+      }
+    });
+    window.addEventListener("locationChanged", function(e) {
+      const novoLocal = e.detail.location;
+      if (novoLocal === null || novoLocal === void 0) return;
+      self2.currentPage = 1;
+      self2.renderTable(novoLocal);
+    });
+  };
+  const barcodeTable = new BarcodeTable();
+  function InventoryBaseline() {
+    this.data = null;
+    this.setAssetsDatabase = this.setAssetsDatabase.bind(this);
+    this.getLocation = this.getLocation.bind(this);
+    this.verifyItem = this.verifyItem.bind(this);
+  }
+  InventoryBaseline.prototype.setAssetsDatabase = function(data) {
+    if (data && typeof data === "object") {
+      this.data = data;
+    }
+  };
+  InventoryBaseline.prototype.getLocation = function(asset) {
+    if (!this.data || !Array.isArray(this.data)) return null;
+    const codeToCheck = parseInt(asset, 10);
+    if (isNaN(codeToCheck)) return null;
+    for (let i = 0; i < this.data.length; i++) {
+      const item = this.data[i];
+      const loc = item.location;
+      const codes = item.assets;
+      if (Array.isArray(codes) && codes.indexOf(codeToCheck) !== -1) {
+        return loc;
+      }
+    }
+    return null;
+  };
+  InventoryBaseline.prototype.getAssetsFromLocation = function(location) {
+    if (!this.data || !Array.isArray(this.data)) return [];
+    for (let i = 0; i < this.data.length; i++) {
+      const item = this.data[i];
+      if (item.location === location) {
+        return item.assets;
+      }
+    }
+    return [];
+  };
+  InventoryBaseline.prototype.verifyItem = async function(asset, selectedLocation) {
+    if (!this.data) {
+      return { status: false, msg: "Base de dados não carregada." };
+    }
+    const locFound = this.getLocation(asset);
+    if (locFound) {
+      return locFound === selectedLocation ? { status: true } : { status: "check", local: locFound };
+    }
+    return { status: false, msg: "Código " + asset + " não encontrado na base." };
+  };
+  InventoryBaseline.prototype.isLoaded = function() {
+    return this.data !== null && Array.isArray(this.data);
+  };
+  InventoryBaseline.prototype.getStats = function() {
+    if (!this.data || !Array.isArray(this.data)) {
+      return { totalLocations: 0, totalAssets: 0 };
+    }
+    const totalAssets = this.data.reduce((sum, location) => {
+      return sum + (Array.isArray(location.assets) ? location.assets.length : 0);
+    }, 0);
+    return {
+      totalLocations: this.data.length,
+      totalAssets
+    };
+  };
+  const inventoryBaseline = new InventoryBaseline();
+  function AudioManager() {
+    this.audioContext = null;
+    this.TYPES = {
+      SUCCESS: { repeat: 1, duration: 0.1, freq: 880 },
+      WARNING: { repeat: 2, duration: 0.2, freq: 555, vibrate: [200, 300, 200] },
+      ERROR: { repeat: 2, duration: 0.15, freq: 1333, vibrate: [300, 200, 300] }
+    };
+    this.init = this.init.bind(this);
+    this.play = this.play.bind(this);
+    this.vibrate = this.vibrate.bind(this);
+    this.playSuccess = this.playSuccess.bind(this);
+    this.playWarning = this.playWarning.bind(this);
+    this.playError = this.playError.bind(this);
+    this.init();
+  }
+  AudioManager.prototype.init = function() {
+    if (this.audioContext) return;
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        this.audioContext = new AudioContextClass();
+        if (this.audioContext.state === "suspended") {
+          this.audioContext.resume().catch((error) => {
+            console.error("Failed to resume AudioContext: ", error);
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao inicializar AudioContext:", error);
+    }
+  };
+  AudioManager.prototype.vibrate = function(pattern) {
+    if ("vibrate" in navigator) {
+      navigator.vibrate(pattern);
+    }
+  };
+  AudioManager.prototype.play = function(repeat, duration, frequency, vibratePattern) {
+    repeat = repeat || 1;
+    duration = duration || 0.1;
+    frequency = frequency || 440;
+    if (vibratePattern && !Array.isArray(vibratePattern)) {
+      console.warn("vibratePattern inválido: deve ser um Array. Ignorando vibração.");
+      vibratePattern = null;
+    }
+    if (vibratePattern) {
+      this.vibrate(vibratePattern);
+    }
+    if (!this.audioContext) {
+      this.init();
+      if (!this.audioContext) return;
+    }
+    if (this.audioContext.state === "suspended") {
+      this.audioContext.resume();
+    }
+    const startTime = this.audioContext.currentTime + 0.05;
+    const gap = 0.1;
+    try {
+      for (let i = 0; i < repeat; i++) {
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        const scheduledStart = startTime + i * (duration + gap);
+        const scheduledEnd = scheduledStart + duration;
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(frequency, scheduledStart);
+        gainNode.gain.cancelScheduledValues(scheduledStart);
+        gainNode.gain.setValueAtTime(0, scheduledStart);
+        gainNode.gain.linearRampToValueAtTime(0.5, scheduledStart + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(1e-3, scheduledEnd);
+        oscillator.start(scheduledStart);
+        oscillator.stop(scheduledEnd);
+      }
+    } catch (error) {
+      console.error("Error playing beep: ", error);
+    }
+  };
+  AudioManager.prototype.playSuccess = function() {
+    const config = this.TYPES.SUCCESS;
+    this.play(config.repeat, config.duration, config.freq, config.vibrate);
+  };
+  AudioManager.prototype.playWarning = function() {
+    const config = this.TYPES.WARNING;
+    this.play(config.repeat, config.duration, config.freq, config.vibrate);
+  };
+  AudioManager.prototype.playError = function() {
+    const config = this.TYPES.ERROR;
+    this.play(config.repeat, config.duration, config.freq, config.vibrate);
+  };
+  const audioManager = new AudioManager();
+  function BackendService() {
+    this.defaultOptions = {
+      timeout: 3e4,
+      retryOnFailure: true,
+      maxRetries: 3,
+      baseDelay: 2e3
+    };
+    this.callStats = {
+      total: 0,
+      success: 0,
+      failure: 0,
+      pending: 0
+    };
+  }
+  BackendService.prototype.getCallConfig = function(functionName) {
+    const configs = {
+      "saveCodeBatch": {
+        timeout: 15e3,
+        retryOnFailure: true,
+        maxRetries: 2,
+        // Poucas tentativas para evitar duplicação
+        baseDelay: 2e3
+      },
+      "getInventorySummary": {
+        timeout: 3e4,
+        retryOnFailure: true,
+        maxRetries: 3,
+        baseDelay: 1e3
+      },
+      "getNotFoundItens": {
+        timeout: 25e3,
+        retryOnFailure: true,
+        maxRetries: 2,
+        baseDelay: 1500
+      },
+      "saveMessage": {
+        timeout: 1e4,
+        retryOnFailure: true,
+        maxRetries: 1,
+        // Mensagens podem esperar
+        baseDelay: 3e3
+      },
+      "getInventoryData": {
+        timeout: 2e4,
+        retryOnFailure: true,
+        maxRetries: 3,
+        // Dados críticos, mais tentativas
+        baseDelay: 1e3
+      }
+    };
+    return configs[functionName] || this.defaultOptions;
+  };
+  BackendService.prototype.isGASEnvironment = function() {
+    return typeof google !== "undefined" && typeof google.script !== "undefined";
+  };
+  BackendService.prototype._callBackend = function(functionName, params = {}) {
+    const self2 = this;
+    const functionConfig = self2.getCallConfig(functionName);
+    const config = __spreadValues({}, functionConfig);
+    self2.callStats.total++;
+    self2.callStats.pending++;
+    try {
+      JSON.stringify(params);
+    } catch (e) {
+      return Promise.reject(new Error(`Parâmetros inválidos para ${functionName}: Não serializável`));
+    }
+    const operation = () => {
+      return new Promise((resolve, reject) => {
+        if (!self2.isGASEnvironment()) {
+          reject(new Error("Ambiente GAS não disponível"));
+          return;
+        }
+        const timeoutId = setTimeout(() => {
+          reject(new Error(`Timeout na chamada ${functionName} após ${config.timeout}ms`));
+        }, config.timeout);
+        google.script.run.withSuccessHandler((result) => {
+          clearTimeout(timeoutId);
+          resolve(result);
+        }).withFailureHandler((error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        })[functionName](params);
+      });
+    };
+    const executeCall = config.retryOnFailure && config.maxRetries > 0 ? () => self2._retryOperation(operation, {
+      maxRetries: config.maxRetries,
+      baseDelay: 1e3,
+      maxDelay: config.timeout * 0.8,
+      // 80% do timeout máximo
+      shouldRetry: (error) => {
+        const errorString = error ? error.message || error.toString() : "";
+        if (!errorString) return false;
+        if (errorString.includes("ScriptError") || errorString.includes("Rate Limit")) return true;
+        if (errorString.includes("Timeout")) return true;
+        if (errorString.includes("Auth")) return false;
+        if (errorString.includes("404")) return false;
+        return true;
+      }
+    }) : operation;
+    return executeCall().then((result) => {
+      self2.callStats.success++;
+      self2.callStats.pending--;
+      return result;
+    }).catch((error) => {
+      self2.callStats.failure++;
+      self2.callStats.pending--;
+      throw error;
+    });
+  };
+  BackendService.prototype._retryOperation = async function(operation, options = {}) {
+    const {
+      maxRetries = 3,
+      baseDelay = 1e3,
+      maxDelay = 1e4,
+      shouldRetry = (error) => true
+    } = options;
+    let lastError;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await operation();
+        if (attempt > 0) {
+          /* @__PURE__ */ console.log(`✅ Retry bem-sucedido na tentativa ${attempt + 1}`);
+        }
+        return result;
+      } catch (error) {
+        lastError = error;
+        if (attempt === maxRetries || !shouldRetry(error)) {
+          break;
+        }
+        const delay = Math.min(
+          baseDelay * Math.pow(2, attempt) * (0.5 + Math.random()),
+          maxDelay
+        );
+        console.warn(`🔄 Tentativa ${attempt + 1} falhou, tentando novamente em ${Math.round(delay)}ms:`, error.message);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+    throw lastError;
+  };
+  BackendService.prototype.saveCodeBatch = function(batch) {
+    return this._callBackend("saveCodeBatch", batch);
+  };
+  BackendService.prototype.getInventorySummary = function(location = null) {
+    return this._callBackend("getInventorySummary", location);
+  };
+  BackendService.prototype.getNotFoundItens = function(location) {
+    return this._callBackend("getNotFoundItens", location);
+  };
+  BackendService.prototype.saveMessage = function(message) {
+    return this._callBackend("saveMessage", message);
+  };
+  BackendService.prototype.getAppSettings = function() {
+    return this._callBackend("getAppSettings", {});
+  };
+  BackendService.prototype.getInventoryData = function() {
+    return this._callBackend("getInventoryData", {});
+  };
+  BackendService.prototype.getStats = function() {
+    return __spreadValues({}, this.callStats);
+  };
+  BackendService.prototype.resetStats = function() {
+    this.callStats = {
+      total: 0,
+      success: 0,
+      failure: 0,
+      pending: 0
+    };
+  };
+  BackendService.prototype.checkConnectivity = async function() {
+    try {
+      await this._callBackend("getInventoryDataJSON", {});
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
+  BackendService.prototype.mockCall = function(functionName, mockData, delay = 500) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        /* @__PURE__ */ console.log(`Mock call: ${functionName}`, mockData);
+        resolve(mockData);
+      }, delay);
+    });
+  };
+  const backendService = new BackendService();
+  function RemoteInventoryRegistry(options) {
+    const opts = options || {};
+    this.cache = /* @__PURE__ */ new Map();
+    this.intervalMs = opts.updateIntervalMs || 3e4;
+    this.ttlMs = opts.ttlMs || 6e5;
+    this.storageKey = opts.storageKey || "SCANNING_REGISTRY_V1";
+    this.timer = null;
+    this.isFetching = false;
+    this.ready = false;
+    window.dispatchEvent(new CustomEvent("inventoryRegistryIsFetching", { detail: { isFetching: self.isFetching } }));
+    this.lastUpdated = null;
+    this._handleOnline = this._syncWithRemote.bind(this);
+    this._loadFromStorage();
+    this._setupListeners();
+    this.start();
+  }
+  RemoteInventoryRegistry.prototype._setupListeners = function() {
+    const self2 = this;
+    window.addEventListener("online", () => self2.start());
+    window.addEventListener("offline", () => self2.stop());
+    const syncHandler = () => self2._syncWithRemote();
+    window.addEventListener("locationChanged", syncHandler);
+    window.addEventListener("syncCompleted", syncHandler);
+  };
+  RemoteInventoryRegistry.prototype.start = function() {
+    const self2 = this;
+    this.stop();
+    setTimeout(function() {
+      self2._syncWithRemote();
+    }, 1500);
+  };
+  RemoteInventoryRegistry.prototype.stop = function() {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+  };
+  RemoteInventoryRegistry.prototype.checkAssetLocation = async function(code) {
+    if (!this.ready || !code) return null;
+    return this.cache.get(this._normalizeCode(code)) || null;
+  };
+  RemoteInventoryRegistry.prototype.hasBeenScanned = function(code) {
+    if (!code) return false;
+    return this.cache.has(this._normalizeCode(code));
+  };
+  RemoteInventoryRegistry.prototype._normalizeCode = function(value) {
+    return String(value).trim().toUpperCase();
+  };
+  RemoteInventoryRegistry.prototype._loadFromStorage = function() {
+    try {
+      const raw = localStorage.getItem(this.storageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!parsed.timestamp || !parsed.data) return;
+      const age = Date.now() - parsed.timestamp;
+      if (age > this.ttlMs) {
+        console.warn("RemoteInventoryRegistry: Cache expirado. Limpando...");
+        localStorage.removeItem(this.storageKey);
+        return;
+      }
+      this.cache = new Map(parsed.data);
+      this.ready = true;
+      this.lastUpdated = new Date(parsed.timestamp);
+    } catch (e) {
+      console.error("RemoteInventoryRegistry: Erro ao carregar cache", e);
+      localStorage.removeItem(this.storageKey);
+    }
+  };
+  RemoteInventoryRegistry.prototype._saveToStorage = function() {
+    try {
+      const payload = {
+        timestamp: Date.now(),
+        data: Array.from(this.cache.entries())
+      };
+      localStorage.setItem(this.storageKey, JSON.stringify(payload));
+    } catch (e) {
+      console.error("RemoteInventoryRegistry: Erro ao salvar cache (quota excedida?)", e);
+    }
+  };
+  RemoteInventoryRegistry.prototype._scheduleNext = function() {
+    const self2 = this;
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(function() {
+      self2._syncWithRemote();
+    }, this.intervalMs);
+  };
+  RemoteInventoryRegistry.prototype._syncWithRemote = function() {
+    const self2 = this;
+    if (self2.timer) {
+      clearTimeout(self2.timer);
+      self2.timer = null;
+    }
+    if (self2.isFetching || !navigator.onLine) {
+      self2._scheduleNext();
+      return;
+    }
+    self2.isFetching = true;
+    window.dispatchEvent(new CustomEvent("inventoryRegistryIsFetching", { detail: { isFetching: self2.isFetching } }));
+    let selectedLocation = locationSelector.getSelectedLocation();
+    selectedLocation = selectedLocation === locationSelector.NONE_SELECTED ? null : selectedLocation;
+    function processResponse(response) {
+      if (!navigator.onLine) {
+        self2.isFetching = false;
+        window.dispatchEvent(new CustomEvent("inventoryRegistryIsFetching", { detail: { isFetching: self2.isFetching } }));
+        return;
+      }
+      try {
+        if (!response || !Array.isArray(response.assetsFinded)) {
+          console.error("RemoteInventoryRegistry: Estrutura de dados assetsFinded inválida", response);
+          self2.isFetching = false;
+          window.dispatchEvent(new CustomEvent("inventoryRegistryIsFetching", { detail: { isFetching: self2.isFetching } }));
+          return;
+        }
+        if (!response || !Array.isArray(response.locations)) {
+          console.error("RemoteInventoryRegistry: Estrutura de dados locations inválida", response);
+          self2.isFetching = false;
+          window.dispatchEvent(new CustomEvent("inventoryRegistryIsFetching", { detail: { isFetching: self2.isFetching } }));
+          return;
+        }
+        const newCache = /* @__PURE__ */ new Map();
+        const groups = response.assetsFinded;
+        for (let i = 0; i < groups.length; i++) {
+          const group = groups[i];
+          const locationName = group.location;
+          const assets = group.assets;
+          if (Array.isArray(assets)) {
+            for (let j = 0; j < assets.length; j++) {
+              const code = self2._normalizeCode(assets[j]);
+              if (code !== "") {
+                newCache.set(code, locationName);
+              }
+            }
+          }
+        }
+        self2.cache = newCache;
+        self2.ready = true;
+        self2.lastUpdated = /* @__PURE__ */ new Date();
+        self2._saveToStorage();
+        window.dispatchEvent(new CustomEvent("inventoryRegistryUpdated", {
+          detail: {
+            locations: response.locations
+          }
+        }));
+      } catch (err) {
+        console.error("RemoteInventoryRegistry: Erro ao processar resposta", err);
+      } finally {
+        self2.isFetching = false;
+        window.dispatchEvent(new CustomEvent("inventoryRegistryIsFetching", { detail: { isFetching: self2.isFetching } }));
+        self2._scheduleNext();
+      }
+    }
+    backendService.getInventorySummary(selectedLocation).then(processResponse).catch(function(error) {
+      console.error("RemoteInventoryRegistry: Falha na chamada ao GAS", error);
+      self2.isFetching = false;
+      window.dispatchEvent(new CustomEvent("inventoryRegistryIsFetching", { detail: { isFetching: self2.isFetching } }));
+      self2._scheduleNext();
+    });
+  };
+  const remoteInventoryRegistry = new RemoteInventoryRegistry({
+    updateIntervalMs: 3e4,
+    ttlMs: 10 * 60 * 1e3
+    // 10 min
+  });
+  const AppModal = {
+    /**
+     * Indica se o modal está atualmente visível
+     * @type {boolean}
+     */
+    isVisible: false,
+    /**
+     * Cache dos elementos DOM do modal
+     * @type {ModalElements|null}
+     */
+    elements: null,
+    /**
+     * Inicializa o HTML e CSS na primeira chamada.
+     * Método privado - não deve ser chamado diretamente
+     * @private
+     */
+    _init() {
+      if (this.elements) return;
+      const overlay = document.createElement("div");
+      overlay.className = "app-modal-overlay";
+      overlay.innerHTML = `
+            <div class="app-modal-box">
+                <div class="app-modal-title"></div>
+                <div class="app-modal-body"></div>
+                <div class="app-modal-actions">
+                    <button class="app-btn app-btn-cancel">Cancelar</button>
+                    <button class="app-btn app-btn-confirm">Confirmar</button>
+                </div>
+            </div>
+        `;
+      document.body.appendChild(overlay);
+      this.elements = {
+        overlay,
+        title: overlay.querySelector(".app-modal-title"),
+        body: overlay.querySelector(".app-modal-body"),
+        btnConfirm: overlay.querySelector(".app-btn-confirm"),
+        btnCancel: overlay.querySelector(".app-btn-cancel")
+      };
+    },
+    /**
+     * Exibe um modal de confirmação customizado.
+     * Substitui o window.confirm() nativo com interface mais amigável.
+     * 
+     * @param {string} title - Título do modal (pode conter emojis)
+     * @param {string} message - Mensagem do modal (suporta \n para quebra de linha)
+     * @returns {Promise<boolean>} Promise que resolve para true se confirmado, false se cancelado
+     * 
+     * @example
+     * // Uso básico
+     * const resultado = await AppModal.confirm("Confirmação", "Deseja prosseguir?");
+     * if (resultado) {
+     *     // Ação confirmada
+     * }
+     * 
+     * @example
+     * // Com quebras de linha
+     * AppModal.confirm("Aviso", "Esta ação é irreversível.\n\nDeseja continuar?");
+     * 
+     * @throws {Error} Se não for executado em ambiente browser com DOM disponível
+     */
+    confirm(title, message) {
+      return new Promise((resolve) => {
+        if (this.isVisible) {
+          console.warn("AppModal: Tentativa de abrir modal duplicado ignorada.");
+          return resolve(false);
+        }
+        this._init();
+        this.elements.title.textContent = title;
+        this.elements.body.textContent = message;
+        const cleanup = () => {
+          this.isVisible = false;
+          this.elements.overlay.classList.remove("active");
+          this.elements.btnConfirm.removeEventListener("click", onConfirm);
+          this.elements.btnCancel.removeEventListener("click", onCancel);
+        };
+        const onConfirm = () => {
+          cleanup();
+          resolve(true);
+        };
+        const onCancel = () => {
+          cleanup();
+          resolve(false);
+        };
+        this.elements.btnConfirm.addEventListener("click", onConfirm);
+        this.elements.btnCancel.addEventListener("click", onCancel);
+        this.isVisible = true;
+        this.elements.overlay.classList.add("active");
+      });
+    }
+  };
+  async function processBarcode(rawValue, selectedLocation) {
+    try {
+      if (!selectedLocation || selectedLocation === locationSelector.NONE_SELECTED) {
+        userWarnings.printUserWarning("Selecione uma localização antes de bipar.");
+        return false;
+      }
+      const regex = /^(199[0-9]|20[0-2][0-9]|2030)\d{6}$/;
+      if (!regex.test(rawValue)) {
+        audioManager.playError();
+        userWarnings.printUserWarning(`Tombamento inválido: ${rawValue}`);
+        return false;
+      }
+      if (await assetRepository.hasItem(rawValue, selectedLocation)) {
+        audioManager.playWarning();
+        userWarnings.printUserWarning(`${rawValue} já adicionado na lista local`);
+        return false;
+      }
+      const retorno = await inventoryBaseline.verifyItem(rawValue, selectedLocation);
+      if (retorno.status === false) {
+        audioManager.playError();
+        userWarnings.printUserWarning(retorno.msg);
+        return false;
+      }
+      if (retorno.status === "check") {
+        audioManager.playWarning();
+        scannerManager.lock();
+        try {
+          const userConfirmed = await AppModal.confirm(
+            `⚠️ ATENÇÃO: LOCALIZAÇÃO DIVERGENTE`,
+            `Este bem deveria estar na localidade 
+
+📍${retorno.local}
+
+Confirma que o código ${rawValue} está correto?`
+          );
+          if (!userConfirmed) {
+            userWarnings.printUserWarning(`Cancelado: Item deveria estar em ${retorno.local}`);
+            return false;
+          }
+        } finally {
+          try {
+            scannerManager.unlock();
+          } catch (e) {
+          }
+        }
+      }
+      const foundLocation = await remoteInventoryRegistry.checkAssetLocation(rawValue);
+      if (foundLocation && foundLocation !== selectedLocation) {
+        audioManager.playWarning();
+        scannerManager.lock();
+        try {
+          const userConfirmed = await AppModal.confirm(
+            `⚠️ CONFLITO DE LOCALIZAÇÃO`,
+            `O bem patrimonial '${rawValue}' já está registrado em:
+📍 ${foundLocation}
+
+Você está tentando inserir em:
+📍 ${selectedLocation}
+
+Deseja prosseguir mesmo assim?`
+          );
+          if (!userConfirmed) {
+            userWarnings.printUserWarning(`Cancelado: Item ${rawValue} encontrado em ${foundLocation}`);
+            return false;
+          }
+        } finally {
+          try {
+            scannerManager.unlock();
+          } catch (e) {
+          }
+        }
+      }
+      const newItem = await assetRepository.addItem(rawValue, selectedLocation);
+      if (newItem) {
+        audioManager.playSuccess();
+        barcodeTable.renderTable(selectedLocation);
+        userWarnings.clearUserWarning();
+        return true;
+      }
+      return false;
+    } catch (err) {
+      try {
+        console.error("Error processing barcode", err);
+      } catch (e) {
+      }
+      try {
+        audioManager.playError();
+      } catch (e) {
+      }
+      try {
+        userWarnings.printUserWarning("Erro ao processar código de barras. Tente novamente.");
+      } catch (e) {
+      }
+      try {
+        scannerManager.unlock();
+      } catch (e) {
+      }
+      return false;
+    }
+  }
+  function LoadingModal() {
+    this.injectHTML();
+    this.alert = document.getElementById("consultingAlert");
+    this.overlay = document.getElementById("loadingOverlay");
+  }
+  LoadingModal.prototype.injectHTML = function() {
+    if (document.getElementById("consultingAlert")) return;
+    const html = `
+        <div id="loadingOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:9998; cursor:wait;"></div>
+        <div id="consultingAlert">
+            <p>⏳ Consultando planilha ...</p>
+        </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", html);
+  };
+  LoadingModal.prototype.toggle = function(show, message = "⏳ Consultando planilha ...") {
+    if (!this.alert || !this.overlay) return;
+    if (show) {
+      this.alert.querySelector("p").textContent = message;
+      this.overlay.style.display = "block";
+      this.alert.style.display = "block";
+      this.overlay.style.zIndex = "9998";
+      this.overlay.onclick = null;
+      this.overlay.style.cursor = "default";
+    } else {
+      this.alert.style.display = "none";
+      this.overlay.style.display = "none";
+      this.overlay.style.zIndex = "1900";
+    }
+  };
+  const loadingModal = new LoadingModal();
+  function AssetsNotFound() {
+    this.injectHTML();
+    this.overlay = document.getElementById("notFoundOverlay");
+    this.modal = document.getElementById("assetNotFoundModal");
+    this.open = this.open.bind(this);
+    this.close = this.close.bind(this);
+    this.setupEvents = this.setupEvents.bind(this);
+    this.addItensToNotFoundTable = this.addItensToNotFoundTable.bind(this);
+    this.getNotFoundItensOnLocation = this.getNotFoundItensOnLocation.bind(this);
+    this.setupEvents();
+    this.hideButton();
+  }
+  AssetsNotFound.prototype.injectHTML = function() {
+    const container = document.getElementById("not-found-area");
+    if (!container) return;
+    if (!document.getElementById("notFoundBtn")) {
+      container.innerHTML += `
+            <button id="notFoundBtn" class="btn location-btn">
+                Buscar itens não encontrados
+            </button>
+        `;
+    }
+    if (document.getElementById("assetNotFoundModal")) return;
+    const localOverlayHtml = `<div id="notFoundOverlay"></div>`;
+    const modalHtml = `
+        <div id="assetNotFoundModal" class="full-screen">
+            <div class="popup-header">
+                <h3 class="popup-title">Itens Não Encontrados</h3>
+                <button id="closePopupButton" class="btn btn-red">FECHAR</button>
+            </div>
+            <div class="table-scroll">
+                <table id="notFoundTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">#</th>
+                            <th style="width: 100px;">Tombo</th>
+                            <th>Descrição</th>
+                            <th style="width: 90px;">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", localOverlayHtml);
+    document.body.insertAdjacentHTML("beforeend", modalHtml);
+  };
+  AssetsNotFound.prototype.showButton = function() {
+    const btn = document.getElementById("notFoundBtn");
+    if (btn) btn.style.display = "block";
+  };
+  AssetsNotFound.prototype.hideButton = function() {
+    const btn = document.getElementById("notFoundBtn");
+    if (btn) btn.style.display = "none";
+  };
+  AssetsNotFound.prototype.setupEvents = function() {
+    const self2 = this;
+    const btn = document.getElementById("notFoundBtn");
+    if (btn) {
+      btn.onclick = function() {
+        const local = locationSelector.getSelectedLocation();
+        if (local === locationSelector.NONE_SELECTED) {
+          userWarnings.printUserWarning("Selecione uma localização primeiro!");
+          return;
+        }
+        scannerManager.lock();
+        self2.getNotFoundItensOnLocation(local);
+      };
+    }
+    const closeBtn = document.getElementById("closePopupButton");
+    if (closeBtn) {
+      closeBtn.onclick = this.close;
+    }
+    window.addEventListener("locationChanged", function(e) {
+      const novoLocal = e.detail.location;
+      if (novoLocal === null || novoLocal === void 0) return;
+      if (novoLocal === locationSelector.NONE_SELECTED) {
+        self2.hideButton();
+      } else {
+        self2.showButton();
+      }
+    });
+  };
+  AssetsNotFound.prototype.open = function() {
+    document.body.appendChild(this.modal);
+    this.overlay.style.display = "block";
+    this.modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+  };
+  AssetsNotFound.prototype.close = function() {
+    this.overlay.style.display = "none";
+    this.modal.style.display = "none";
+    document.body.style.overflow = "auto";
+    scannerManager.unlock();
+  };
+  AssetsNotFound.prototype.addItensToNotFoundTable = function(itens) {
+    if (!itens || itens.length === 0) {
+      return;
+    }
+    const tbody = document.querySelector("#notFoundTable tbody");
+    tbody.innerHTML = "";
+    const fragment = document.createDocumentFragment();
+    itens.forEach((item, index) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${item[0]}</td>
+            <td>${item[1]}</td>
+            <td></td>
+        `;
+      const btn = document.createElement("button");
+      btn.textContent = "Adicionar";
+      btn.className = "btn-edit";
+      btn.onclick = async () => {
+        const confirmado = await AppModal.confirm(
+          `Confirmar Adição`,
+          `Deseja marcar o item ${item[0]} como encontrado?`
+        );
+        if (confirmado) {
+          processBarcode(item[0], locationSelector.getSelectedLocation());
+          tr.remove();
+          if (tbody.childElementCount === 0) this.close();
+        }
+      };
+      tr.cells[3].appendChild(btn);
+      fragment.appendChild(tr);
+    });
+    tbody.appendChild(fragment);
+    this.open();
+  };
+  AssetsNotFound.prototype.getNotFoundItensOnLocation = function(location) {
+    const self2 = this;
+    const TIMEOUT = 25e3;
+    let isFinished = false;
+    const timeoutAlert = setTimeout(function() {
+      if (!isFinished) {
+        isFinished = true;
+        loadingModal.toggle(false);
+        scannerManager.unlock();
+        userWarnings.printUserWarning("Tempo esgotado. Verifique sua conexão com a planilha.");
+      }
+    }, TIMEOUT);
+    loadingModal.toggle(true);
+    backendService.getNotFoundItens(location).then(function(data) {
+      if (isFinished) return;
+      isFinished = true;
+      clearTimeout(timeoutAlert);
+      loadingModal.toggle(false);
+      if (!data || data.length === 0) {
+        scannerManager.unlock();
+        userWarnings.printUserWarning(`Nenhum item pendente para ${location}! Caso não apareça na sua tabela, foi encontrado por outro usuário.`);
+        return;
+      }
+      self2.addItensToNotFoundTable(data);
+    }).catch(function(error) {
+      if (isFinished) return;
+      isFinished = true;
+      clearTimeout(timeoutAlert);
+      loadingModal.toggle(false);
+      scannerManager.unlock();
+      console.error("Erro ao buscar itens não encontrados:", error);
+      userWarnings.printUserWarning("Erro ao consultar servidor.");
+    });
+  };
+  new AssetsNotFound();
+  function EditAssetModal() {
+    this.innerHTML();
+    this.modal = document.getElementById("assetDetailsModal");
+    this.fields = {
+      uid: document.getElementById("uidField"),
+      code: document.getElementById("tombamentoField"),
+      location: document.getElementById("locationField"),
+      state: document.getElementById("estadoBem"),
+      ipvu: document.getElementById("vidaUtil"),
+      obs: document.getElementById("observacoes")
+    };
+    this.open = this.open.bind(this);
+    this.submit = this.submit.bind(this);
+    this.close = this.close.bind(this);
+    this.handleCancel = null;
+    this.handleSave = null;
+    this.initEvents();
+    this.close();
+  }
+  EditAssetModal.prototype.innerHTML = function() {
+    if (document.getElementById("assetDetailsModal")) return;
+    const modalHtml = `
+        <div id="assetDetailsModal" class="modal-full">
+            
+            <div class="modal-header">
+                <h2>Editar Item</h2>
+            </div>
+            
+            <form id="editAssetForm" class="modal-body">
+                <input type="hidden" id="uidField">
+
+                <div class="form-group">
+                    <label>Tombamento</label>
+                    <input type="text" id="tombamentoField" class="input-modal-readonly" style="height: 40px;" readonly/>
+                </div>
+
+                <div class="form-group">
+                    <label>Localização</label>
+                    <textarea id="locationField" class="input-modal-readonly" readonly></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Estado do Bem</label>
+                    <select id="estadoBem" class="input-modal-edit">
+                        <option value="0">Péssimo</option>
+                        <option value="1">Ruim</option>
+                        <option value="2">Regular</option>
+                        <option value="3">Bom</option>
+                        <option value="4">Excelente</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Vida Útil Estimada</label>
+                    <select id="vidaUtil" class="input-modal-edit">
+                        <option value="0">0 anos</option>
+                        <option value="1">1 ano</option>
+                        <option value="2">2 anos</option>
+                        <option value="5">5 anos</option>
+                        <option value="8">8 anos</option>
+                        <option value="10">10 anos</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Observações</label>
+                    <textarea id="observacoes" class="input-modal-edit" rows="5" placeholder="Notas adicionais..."></textarea>
+                </div>
+
+                <div class="modal-footer-btns">
+                    <button type="button" id="btnCancelEdit" class="btn-modal btn-modal-cancel">Cancelar</button>
+                    <button type="button" id="btnSaveEdit" class="btn-modal btn-modal-save">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", modalHtml);
+  };
+  EditAssetModal.prototype.initEvents = function() {
+    const self2 = this;
+    this.handleCancel = function() {
+      self2.close();
+    };
+    this.handleSave = function() {
+      self2.submit();
+    };
+    document.getElementById("btnCancelEdit").addEventListener("click", this.handleCancel);
+    document.getElementById("btnSaveEdit").addEventListener("click", this.handleSave);
+    window.addEventListener("editItemRequested", function(e) {
+      self2.open(e.detail.uid);
+    });
+  };
+  EditAssetModal.prototype.removeEvents = function() {
+    if (this.handleCancel) {
+      document.getElementById("btnCancelEdit").removeEventListener("click", this.handleCancel);
+    }
+    if (this.handleSave) {
+      document.getElementById("btnSaveEdit").removeEventListener("click", this.handleSave);
+    }
+  };
+  EditAssetModal.prototype.open = function(uid) {
+    const item = assetRepository.getItem(uid);
+    if (!item) {
+      console.warn("EditAssetModal: Item não encontrado para UID:", uid);
+      return;
+    }
+    this.fields.uid.value = item.uid || "";
+    this.fields.code.value = item.code || "";
+    this.fields.location.value = item.location || "";
+    this.fields.state.value = item.state !== void 0 ? String(item.state) : "3";
+    this.fields.ipvu.value = item.ipvu !== void 0 ? String(item.ipvu) : "0";
+    this.fields.obs.value = item.obs || "";
+    this.modal.style.display = "block";
+    document.body.style.overflow = "hidden";
+    this.initEvents();
+  };
+  EditAssetModal.prototype.submit = function() {
+    const uid = this.fields.uid.value;
+    const newState = parseInt(this.fields.state.value, 10);
+    const newIpvu = parseInt(this.fields.ipvu.value, 10);
+    const newObs = this.fields.obs.value.trim();
+    if (!uid) {
+      console.error("EditAssetModal: UID não encontrado para salvar");
+      return;
+    }
+    const success = assetRepository.updateItem(uid, newState, newIpvu, newObs);
+    if (success) ;
+    else {
+      console.error("EditAssetModal: Falha ao atualizar item");
+    }
+    this.close();
+  };
+  EditAssetModal.prototype.close = function() {
+    this.modal.style.display = "none";
+    document.body.style.overflow = "auto";
+    this.removeEvents();
+  };
+  new EditAssetModal();
+  function ConnectivityManager() {
+    this.bannerId = "offlineBanner";
+    this.isOnline = navigator.onLine;
+    this.updateStatus = this.updateStatus.bind(this);
+    this.init = this.init.bind(this);
+    this.init();
+  }
+  ConnectivityManager.prototype.init = function() {
+    window.addEventListener("online", this.updateStatus);
+    window.addEventListener("offline", this.updateStatus);
+    if (document.readyState === "complete") {
+      this.updateStatus();
+    } else {
+      window.addEventListener("load", this.updateStatus);
+    }
+  };
+  ConnectivityManager.prototype.updateStatus = function() {
+    this.isOnline = navigator.onLine;
+    const banner = document.getElementById(this.bannerId);
+    if (banner) {
+      banner.style.display = this.isOnline ? "none" : "block";
+    }
+    if (!this.isOnline) {
+      console.warn("🔌 Dispositivo entrou em modo OFFLINE.");
+      window.dispatchEvent(new CustomEvent("connectivityStatusChanged", {
+        detail: { online: false }
+      }));
+    } else {
+      /* @__PURE__ */ console.log("🌐 Dispositivo está ONLINE.");
+      window.dispatchEvent(new CustomEvent("connectivityStatusChanged", {
+        detail: { online: true }
+      }));
+    }
+  };
+  new ConnectivityManager();
+  function StatsManager() {
+    this.containerId = "stats-area";
+    this.elements = {
+      total: "stat-total",
+      synced: "stat-synced",
+      pending: "stat-pending",
+      failed: "stat-failed",
+      contextCard: "location-context-card",
+      contextContent: "location-context-content"
+    };
+    this._lastLocationsData = [];
+    this._updateStats = this._updateStats.bind(this);
+    this._setupEvents = this._setupEvents.bind(this);
+    this._innerHtml();
+    this._setupEvents();
+    this._updateStats();
+  }
+  StatsManager.prototype._innerHtml = function(parentId) {
+    const parent = document.getElementById(parentId || this.containerId);
+    if (!parent) return;
+    parent.innerHTML = `
+        <div class="stats-container">
+
+            <div id="${this.elements.contextCard}" class="stat-card full-width">
+                <div class="flex-align-center" style="margin-bottom: 8px;">
+                    <span id="syncStatusIcon" class="is-fetching">🔁</span>
+                    <span class="stat-label">Resumo Geral do processo de Inventário:</span>
+                </div>
+                <div id="${this.elements.contextContent}"></div>
+            </div>
+        </div>
+
+        <div class="flex-align-center">
+            <span class="stat-label">Sincronização com a planilha</span>
+        </div>
+        <div class="stats-container"> 
+            <div class="stat-card">
+                <span class="stat-label">Lidos (Dispositivo)</span>
+                <span id="${this.elements.total}" class="stat-value">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Sincronizados</span>
+                <span id="${this.elements.synced}" class="stat-value text-success">0</span>
+            </div>
+            <div class="stat-card" id="card-pending">
+                <span class="stat-label">Pendentes</span>
+                <span id="${this.elements.pending}" class="stat-value text-warning">0</span>
+            </div>
+            <div class="stat-card clickable" id="card-failed">
+                <span class="stat-label">Falhas 🔄</span>
+                <span id="${this.elements.failed}" class="stat-value text-danger">0</span>
+            </div>
+        </div>
+    `;
+  };
+  StatsManager.prototype.renderLocationContext = function() {
+    const content = document.getElementById(this.elements.contextContent);
+    if (!content) return;
+    const locations = this._lastLocationsData;
+    if (locations.length > 0) {
+      const fragment = document.createDocumentFragment();
+      const table = document.createElement("table");
+      table.className = "compact-table";
+      const tbody = document.createElement("tbody");
+      locations.forEach((loc) => {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.style.padding = "8px 6px";
+        const nameDiv = document.createElement("div");
+        nameDiv.className = "clickable-location";
+        nameDiv.innerHTML = `🔍 <span>${loc.name}</span>`;
+        nameDiv.style.marginBottom = "4px";
+        nameDiv.onclick = () => {
+          locationSelector.setSelectedLocation(loc.name);
+          window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+          });
+        };
+        const metrics = document.createElement("div");
+        metrics.style.display = "flex";
+        metrics.style.justifyContent = "space-between";
+        metrics.style.fontSize = "12px";
+        metrics.style.gap = "6px";
+        const total = document.createElement("span");
+        total.innerHTML = `📦 <strong>${loc.totalAssets}</strong> total`;
+        const found = document.createElement("span");
+        found.innerHTML = `✅ <strong>${loc.assetsFindedCount}</strong> encontrados`;
+        found.style.color = "#188038";
+        const missing = document.createElement("span");
+        missing.innerHTML = `❌ <strong>${loc.missingAssets}</strong> faltantes`;
+        missing.style.color = "#d93025";
+        metrics.appendChild(total);
+        metrics.appendChild(found);
+        metrics.appendChild(missing);
+        td.appendChild(nameDiv);
+        td.appendChild(metrics);
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      fragment.appendChild(table);
+      content.innerHTML = "";
+      content.appendChild(fragment);
+    }
+  };
+  StatsManager.prototype._setupEvents = function() {
+    const self2 = this;
+    const statusIcon = document.getElementById("syncStatusIcon");
+    const fCard = document.getElementById("card-failed");
+    if (fCard) fCard.onclick = () => assetRepository.retryFailed();
+    ["syncCompleted", "syncStarted", "assetDataChanged", "assetAdded"].forEach((evt) => {
+      window.addEventListener(evt, () => self2._updateStats());
+    });
+    window.addEventListener("inventoryRegistryUpdated", function(event) {
+      self2._lastLocationsData = event.detail.locations || [];
+      self2.renderLocationContext();
+    });
+    window.addEventListener("inventoryRegistryIsFetching", (e) => {
+      const { isFetching } = e.detail;
+      if (!statusIcon) return;
+      if (isFetching) {
+        statusIcon.className = "is-fetching";
+        statusIcon.textContent = "🔁";
+      } else {
+        statusIcon.textContent = "✅";
+        if (statusIcon.classList.contains("is-fetching")) {
+          statusIcon.classList.remove("is-fetching");
+        }
+      }
+    });
+  };
+  StatsManager.prototype._updateStats = function() {
+    if (typeof assetRepository === "undefined") return;
+    const stats = assetRepository.getStats();
+    document.getElementById(this.elements.total).textContent = stats.total;
+    document.getElementById(this.elements.synced).textContent = stats.synced;
+    document.getElementById(this.elements.pending).textContent = stats.pending;
+    document.getElementById(this.elements.failed).textContent = stats.failed;
+    document.getElementById("card-pending").classList.toggle("highlight-warning", stats.pending > 0);
+    document.getElementById("card-failed").classList.toggle("highlight-danger", stats.failed > 0);
+  };
+  new StatsManager();
+  function SendMessage() {
+    this.storageKey = "pending_messages";
+    this.injectHTML();
+    this.setupEvents();
+    this.sync();
+  }
+  SendMessage.prototype.injectHTML = function() {
+    const container = document.getElementById("message-area");
+    if (!container) return;
+    if (!document.getElementById("openMessageModalBtn")) {
+      container.innerHTML += '<button id="openMessageModalBtn" class="btn btn-gray location-btn" style="display:none;">Enviar observação</button>';
+    }
+    if (document.getElementById("modalObs")) return;
+    const localOverlayHtml = `<div id="messageModalOverlay"></div>`;
+    const html = `
+        <div id="modalObs" class="modal-full">
+            <div class="modal-header">
+                <h2>Enviar observação</h2>
+            </div>
+            <form id="modalObsForm" class="modal-body">
+                
+                <div class="form-group">
+                    <label class="text-small" id="obsLocationName"></label>
+                    <textarea id="obsText" class="input-modal-edit" rows="5" maxlength="140" placeholder="Digite sua mensagem..."></textarea>
+                    <div id="obsCharCount" class="char-count">0 / 140</div>
+                </div>
+                                
+                <div class="modal-footer-btns">
+                    <button type="button" id="btnCancelObs" class="btn-modal btn-modal-cancel">Cancelar</button>
+                    <button type="button" id="btnSaveObs" class="btn-modal btn-modal-save">ENVIAR</button>
+                </div>
+
+            </form>
+        </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", localOverlayHtml);
+    document.body.insertAdjacentHTML("beforeend", html);
+  };
+  SendMessage.prototype.setupEvents = function() {
+    const self2 = this;
+    const textarea = document.getElementById("obsText");
+    const charCount = document.getElementById("obsCharCount");
+    const btn = document.getElementById("openMessageModalBtn");
+    if (btn) {
+      btn.onclick = function() {
+        self2.open();
+      };
+    }
+    textarea.oninput = () => {
+      charCount.textContent = `${textarea.value.length} / 140`;
+    };
+    document.getElementById("btnCancelObs").onclick = () => self2.close();
+    document.getElementById("btnSaveObs").onclick = () => {
+      const text = textarea.value.trim();
+      const location = locationSelector.getSelectedLocation();
+      if (!text) {
+        self2.close();
+        return;
+      }
+      const payload = {
+        uid: "msg_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+        location,
+        message: text
+      };
+      self2.saveAndSend(payload);
+    };
+    window.addEventListener("locationChanged", function(e) {
+      const novoLocal = e.detail.location;
+      if (novoLocal === null || novoLocal === void 0) return;
+      if (novoLocal === locationSelector.NONE_SELECTED) {
+        self2.hideButton();
+      } else {
+        self2.showButton();
+      }
+    });
+    window.addEventListener("online", () => {
+      /* @__PURE__ */ console.log("Conexão restabelecida. Sincronizando observações...");
+      self2.sync();
+    });
+  };
+  SendMessage.prototype.showButton = function() {
+    const btn = document.getElementById("openMessageModalBtn");
+    if (btn) btn.style.display = "block";
+  };
+  SendMessage.prototype.hideButton = function() {
+    const btn = document.getElementById("openMessageModalBtn");
+    if (btn) btn.style.display = "none";
+  };
+  SendMessage.prototype.open = function() {
+    const loc = locationSelector.getSelectedLocation();
+    if (loc === locationSelector.NONE_SELECTED) {
+      /* @__PURE__ */ console.log("Selecione uma localização primeiro!");
+      return;
+    }
+    document.getElementById("obsLocationName").textContent = `Local: ${loc}`;
+    document.getElementById("modalObs").style.display = "block";
+    document.getElementById("messageModalOverlay").style.display = "block";
+    document.getElementById("obsText").focus();
+  };
+  SendMessage.prototype.close = function() {
+    document.getElementById("modalObs").style.display = "none";
+    document.getElementById("messageModalOverlay").style.display = "none";
+    document.getElementById("obsText").value = "";
+    document.getElementById("obsCharCount").textContent = "0 / 140";
+  };
+  SendMessage.prototype.saveAndSend = function(payload) {
+    const pending = JSON.parse(localStorage.getItem(this.storageKey) || "[]");
+    pending.push(payload);
+    localStorage.setItem(this.storageKey, JSON.stringify(pending));
+    this.close();
+    this.sync();
+  };
+  SendMessage.prototype.sync = function() {
+    if (!navigator.onLine) return;
+    const self2 = this;
+    const pending = JSON.parse(localStorage.getItem(self2.storageKey) || "[]");
+    if (pending.length === 0) return;
+    pending.forEach((item) => {
+      backendService.saveMessage(item).then(function(response) {
+        self2.removeFromStorage(response);
+      }).catch(function(error) {
+        console.error("Erro saveMessage GAS:", error);
+      });
+    });
+  };
+  SendMessage.prototype.removeFromStorage = function(uid) {
+    try {
+      const rawData = localStorage.getItem(this.storageKey);
+      if (!rawData) return;
+      let pending = JSON.parse(rawData);
+      if (!Array.isArray(pending)) {
+        throw new Error("Dados no localStorage não são um array.");
+      }
+      const initialLength = pending.length;
+      pending = pending.filter((item) => item.uid !== uid);
+      if (pending.length < initialLength) {
+        localStorage.setItem(this.storageKey, JSON.stringify(pending));
+        /* @__PURE__ */ console.log(`✅ Mensagem ${uid} sincronizada e removida do cache.`);
+      }
+    } catch (error) {
+      console.error(`❌ Erro ao manipular localStorage para o UID ${uid}:`, error);
+      if (error instanceof SyntaxError) {
+        console.warn("Limpando cache de mensagens corrompido.");
+        localStorage.removeItem(this.storageKey);
+      }
+    }
+  };
+  new SendMessage();
+  const BATCH_SIZE = 10;
+  const SYNC_INTERVAL_MS = 2e3;
+  const MAX_RETRIES = 5;
+  function AssetSyncManager(repository) {
+    this.repo = repository;
+    this.timer = null;
+    this.isSyncing = false;
+    this._setupListeners();
+    this._startSyncLoop();
+  }
+  AssetSyncManager.prototype._setupListeners = function() {
+    const self2 = this;
+    window.addEventListener("online", function() {
+      /* @__PURE__ */ console.log("Online detectado. Reiniciando sync...");
+      self2.repo.retryFailed();
+      self2._startSyncLoop();
+    });
+    window.addEventListener("offline", function() {
+      self2._stopSyncLoop();
+    });
+    window.addEventListener("repositoryChanged", function() {
+      self2._startSyncLoop();
+    });
+  };
+  AssetSyncManager.prototype._startSyncLoop = function() {
+    const self2 = this;
+    if (this.timer) return;
+    window.dispatchEvent(new CustomEvent("syncStarted"));
+    this.timer = setInterval(function() {
+      self2._processQueue();
+    }, SYNC_INTERVAL_MS);
+  };
+  AssetSyncManager.prototype._stopSyncLoop = function() {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  };
+  AssetSyncManager.prototype._processQueue = async function() {
+    if (this.isSyncing || !navigator.onLine) return;
+    const batch = this.repo.getPendingBatch(BATCH_SIZE);
+    if (batch.length === 0) {
+      this._stopSyncLoop();
+      window.dispatchEvent(new CustomEvent("syncCompleted"));
+      return;
+    }
+    this.isSyncing = true;
+    const batchUids = batch.map(function(i) {
+      return i.uid;
+    });
+    this.repo.markBatchInFlight(batchUids);
+    try {
+      const payload = batch.map(function(i) {
+        return {
+          uid: i.uid,
+          code: parseInt(i.code, 10),
+          location: i.location,
+          state: i.state,
+          ipvu: i.ipvu,
+          obs: i.obs
+        };
+      });
+      const savedUids = await backendService.saveCodeBatch(payload);
+      if (!Array.isArray(savedUids)) throw new Error("Resposta inválida do backend");
+      this.repo.processSyncSuccess(savedUids);
+      const failedInBatch = batchUids.filter(function(uid) {
+        return savedUids.indexOf(uid) === -1;
+      });
+      if (failedInBatch.length > 0) {
+        this.repo.processSyncRetry(failedInBatch, MAX_RETRIES);
+      }
+      window.dispatchEvent(new CustomEvent("batchSynced", {
+        detail: { count: savedUids.length }
+      }));
+    } catch (error) {
+      console.error("SyncManager: Falha no lote", error);
+      this.repo.processSyncRetry(batchUids, MAX_RETRIES);
+    } finally {
+      this.isSyncing = false;
+    }
+  };
+  new AssetSyncManager(assetRepository);
+  {
+    /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-C-Ffbij5.js", document.baseURI).href).then((module) => {
+      module.setupDebug();
+    }).catch((err) => {
+      console.error("Falha ao carregar o módulo de debug:", err);
+    });
+  }
+  window.addEventListener("codeScanned", async function(e) {
+    const codigo = e.detail.code;
+    if (codigo === null || codigo === void 0) return;
+    const selectedLocation = locationSelector.getSelectedLocation();
+    await processBarcode(codigo, selectedLocation);
+    scannerManager.setFocus();
+  });
+  window.addEventListener("locationChanged", function(e) {
+    const novoLocal = e.detail.location;
+    if (novoLocal === null || novoLocal === void 0) return;
+    if (novoLocal === locationSelector.NONE_SELECTED) {
+      scannerManager.hide();
+    } else {
+      scannerManager.show();
+      scannerManager.setFocus();
+    }
+  });
+  window.addEventListener("beforeunload", function(e) {
+    e.preventDefault();
+    e.returnValue = "";
+    const stats = assetRepository.getStats();
+    if (stats.pending > 0) {
+      userWarnings.printUserWarning("Você tem dados não enviados. Aguarde a sincronização antes de sair.");
+    }
+  });
+  window.addEventListener("load", async () => {
+    /* @__PURE__ */ console.log("🚀 Aplicação de inventário inicializando...");
+    try {
+      loadingModal.toggle(true, "Buscando dados");
+      document.querySelector("main").style.display = "none";
+      let inventoryData;
+      let appSettings;
+      if (false) ;
+      if (true) {
+        const [settingsRes, inventoryRes] = await Promise.all([
+          backendService.getAppSettings(),
+          backendService.getInventoryData()
+        ]);
+        appSettings = settingsRes;
+        inventoryData = inventoryRes;
+      }
+      /* @__PURE__ */ console.log("⚙️ Configurações carregadas:", appSettings);
+      if (appSettings && appSettings.inventory_open === false) {
+        console.error("⚠️ Coleta de dados fechada.");
+        document.body.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; font-family: sans-serif; background: #f8f9fa; color: #333;">
+        <div style="font-size: 80px;">🔐</div>
+        <h1 style="margin-top: 20px;">Inventário fechado</h1>
+        <p style="max-width: 80%; color: #666;">O prazo para inventário está fechado.</p>
+      </div>
+      `;
+        loadingModal.toggle(false);
+        return;
+      }
+      document.querySelector("main").style.display = "block";
+      assetRepository.applyMaintenance(appSettings);
+      inventoryBaseline.setAssetsDatabase(inventoryData["inventory"]);
+      locationSelector.init(inventoryData["locations"]);
+      barcodeTable.renderTable();
+      /* @__PURE__ */ console.log("✅ Aplicação inicializada com sucesso");
+    } catch (error) {
+      console.error("❌ Erro crítico na inicialização:", error);
+      userWarnings.printUserWarning("Erro ao carregar dados. Recarregue a página.");
+    } finally {
+      loadingModal.toggle(false);
+    }
+  });
+  document.addEventListener("DOMContentLoaded", () => {
+    const el = document.getElementById("footer-version");
+    if (!el) return;
+    {
+      el.textContent = "2026.01.30-001";
+      el.title = `Versão do build: ${"2026.01.30-001"}`;
+    }
+  });
+  window.addEventListener("error", function(e) {
+    console.error("Erro global capturado:", e.error);
+  });
+  window.addEventListener("unhandledrejection", function(e) {
+    console.error("Promise rejeitada não tratada:", e.reason);
+  });
+  let debugTextarea = null;
+  function setupDebug() {
+    const container = document.querySelector("#debug-area");
+    if (!container) {
+      console.warn("Elemento #debug-area não encontrado. Sistema de debug não inicializado.");
+      return;
+    }
+    try {
+      container.innerHTML = `
+            <div id="debug-container" style="margin-top: 30px; border-top: 5px solid #333; padding: 10px; background: #f0f0f0;">
+                <h3 style="margin: 0 0 10px 0;" id="debug-heading" class="sr-only">Console de Debug</h3>
+                <div style="margin-bottom: 5px; display: flex; gap: 10px;">
+                    <button id="btn-clear-debug" style="padding: 8px 15px; background: #555; color: white; border: none; cursor: pointer;">Limpar Log</button>
+                    <button id="btn-download-debug" style="padding: 8px 15px; background: #28a745; color: white; border: none; cursor: pointer;">📥 Baixar Log</button>
+                </div>
+                <textarea id="debug-console" 
+                    style="width: 100%; height: 250px; background: #1e1e1e; color: #00ff00; font-family: monospace; font-size: 11px; padding: 10px; box-sizing: border-box; border: 1px solid #000;" 
+                    readonly></textarea>
+            </div>
+        `;
+      debugTextarea = document.getElementById("debug-console");
+      document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
+      document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
+      /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.01.30-001"}`);
+    } catch (error) {
+      console.error("Erro ao inicializar sistema de debug:", error);
+      throw new Error(`Falha na inicialização do debug: ${error.message}`);
+    }
+  }
+  const originalLog = console.log;
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  function writeToScreen(type, args) {
+    if (!debugTextarea) return;
+    const msg = Array.from(args).map((arg) => {
+      try {
+        return typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg);
+      } catch (e) {
+        /* @__PURE__ */ console.log("Erro ao converter objeto para string no debug:", e);
+        return "[Objeto complexo/Circular]";
+      }
+    }).join(" ");
+    const time = (/* @__PURE__ */ new Date()).toLocaleTimeString();
+    const prefix = `[${time}] [${type}]: `;
+    debugTextarea.value += prefix + msg + "\n" + "-".repeat(40) + "\n";
+    debugTextarea.scrollTop = debugTextarea.scrollHeight;
+  }
+  console.log = function(...args) {
+    originalLog.apply(console, args);
+    writeToScreen("LOG", args);
+  };
+  console.error = function(...args) {
+    originalError.apply(console, args);
+    writeToScreen("ERROR", args);
+  };
+  console.warn = function(...args) {
+    originalWarn.apply(console, args);
+    writeToScreen("WARN", args);
+  };
+  function clearDebug() {
+    if (confirm("Tem certeza que deseja limpar todo o log?")) {
+      if (debugTextarea) debugTextarea.value = "";
+    }
+  }
+  function downloadDebugLog() {
+    if (!debugTextarea || !debugTextarea.value) {
+      alert("O log está vazio.");
+      return;
+    }
+    try {
+      const filename = `debug_log_${(/* @__PURE__ */ new Date()).getTime()}.txt`;
+      const blob = new Blob([debugTextarea.value], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro ao baixar log:", error);
+      alert("Erro ao baixar o arquivo de log.");
+    }
+  }
+  window.onerror = function(message, source, lineno) {
+    console.error(`ERRO CRÍTICO: ${message} (${source}:${lineno})`);
+    return false;
+  };
+  const debug = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+    __proto__: null,
+    setupDebug
+  }, Symbol.toStringTag, { value: "Module" }));
+})();</script>
+  <style rel="stylesheet" crossorigin>:root{--color-primary: #007bff;--color-success: #198754;--color-danger: #dc3545;--color-warning: #ffc107;--color-gray-light: #eee;--color-gray: #ddd;--color-border: #ccc;--color-text: #333;--color-bg: #f4f4f4;--radius-sm: 5px;--radius-md: 8px;--control-height-sm: 34px;--control-height-lg: 45px}*,*:before,*:after{box-sizing:border-box}html,body{height:100%;margin:0;padding:0}body{font-family:sans-serif;padding:8px;background-color:var(--color-bg);color:var(--color-text);display:flex;flex-direction:column;min-height:100vh}main{flex:1 0 auto}h1{font-size:1.4rem;text-align:center;margin:5px 0 10px}.text-center{text-align:center}.text-small{font-size:.8rem;color:var(--color-primary);font-weight:700}.text-bold{font-weight:700}.no-margin{margin:0}.text-success{color:var(--color-success)}.text-warning{color:#fd7e14}.text-danger{color:var(--color-danger)}.clickable{cursor:pointer;transition:transform .1s}.clickable:active{transform:scale(.97)}input[type=text],input[type=number],textarea{font-size:.95rem;border:1px solid var(--color-border);border-radius:var(--radius-sm);background-color:#fff;padding:0 8px;height:auto}.btn{cursor:pointer;font-weight:700;height:var(--control-height-sm);display:flex;align-items:center;justify-content:center;text-transform:uppercase;font-size:.8rem;border:1px solid #999;border-radius:var(--radius-sm);padding:0 10px;user-select:none}.btn-primary{background-color:var(--color-primary);color:#fff}.btn-red{background-color:var(--color-danger);color:#fff}.btn-green{background-color:var(--color-success);color:#fff}.btn-danger-full{width:100%;background:var(--color-danger);color:#fff;font-weight:700;height:calc(var(--control-height-sm) * 1.5);margin:15px 0;border-radius:var(--radius-sm)}.location-btn{display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid #999;border-radius:4px;text-align:center;margin:15px 0}.control-row,#videoArea,.stats-container,select.w-100{max-width:100%;width:100%;margin-left:auto;margin-right:auto}select{width:100%;padding:8px;font-size:.95rem;border-radius:var(--radius-sm);background-color:#fff;height:auto!important;min-height:var(--control-height-sm);line-height:1.4;white-space:normal;display:block}.stats-container{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:10px 0;margin-bottom:15px;width:100%}@media(min-width:600px){.stats-container{grid-template-columns:repeat(4,1fr)}}.stat-card{background:#fff;padding:12px;border-radius:var(--radius-md);border:1px solid var(--color-border);text-align:center;display:flex;flex-direction:column;justify-content:center;box-shadow:0 2px 4px #0000000d;min-height:70px}.stat-card.full-width{grid-column:1 / -1;min-height:100px;margin-top:5px;text-align:left}.stat-label{font-size:.9rem;text-transform:uppercase;color:#666;margin-bottom:4px;font-weight:700}.stat-value{font-size:1.4rem;font-weight:800;line-height:1.2}.stat-card.highlight-warning{border-color:#fd7e14;background-color:#fffaf5;border-width:2px}.stat-card.highlight-danger{border-color:var(--color-danger);background-color:#fff5f5;border-width:2px}@keyframes app-icon-spin{0%{transform:rotate(0)}to{transform:rotate(360deg)}}.is-fetching{animation:app-icon-spin 1s linear infinite!important;color:var(--primary-color, #2c5aa0)!important;pointer-events:none;cursor:wait}#syncStatusIcon{display:inline-flex;align-items:center;justify-content:center;margin-right:0;font-size:.9rem;transition:color .3s ease,transform .3s ease;vertical-align:middle}.clickable-location{color:var(--primary-color, #2c5aa0);cursor:pointer;font-weight:500;transition:all .2s ease;padding:2px 4px;border-radius:4px;display:inline-block}.clickable-location:hover{background-color:#2c5aa01a;text-decoration:underline;transform:translate(4px)}.clickable-location:active{transform:scale(.98)}.focus-mode{text-align:center;width:100%;padding:5px 0}.focus-location{font-size:1rem;font-weight:700;color:var(--color-primary);margin:4px 0}.focus-count{font-size:1.8rem;font-weight:900;color:var(--color-text)}.focus-count small{font-size:.85rem;color:#888;font-weight:400}#videoArea{position:relative;background:#000;border-radius:var(--radius-sm);overflow:hidden;height:180px;min-height:125px;margin-top:5px;margin-bottom:5px;display:flex;align-items:center;justify-content:center}video{width:100%;height:100%;object-fit:cover}#reader{width:100%}#cameraPlaceholder{color:#666;position:absolute}#scanDelayOverlay{display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:#0f03;pointer-events:none;z-index:10;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.2rem}.control-row{display:flex;gap:10px;margin-top:10px}.control-row .btn,.control-row button{flex:1;padding:10px}#manualBarcode{flex:1;padding:8px}.compact-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.85rem}.compact-table th{text-align:center;border-bottom:1px solid var(--color-gray);padding-bottom:4px;color:#777;font-size:.75rem;text-transform:uppercase}.compact-table td{padding:6px 0;border-bottom:1px solid #f5f5f5}.table-header-container{display:flex;justify-content:space-between;align-items:center;padding:10px;background-color:#f8f9fa;border:1px solid var(--color-border);border-radius:8px 8px 0 0;margin-top:10px;margin-bottom:0}#barcode-table{width:100%;border-collapse:collapse;background:#fff;font-size:.85rem;border:1px solid var(--color-border);border-top:none;margin-top:0}#barcode-table th{background-color:var(--color-gray-light);padding:8px;border:1px solid var(--color-border)}#barcode-table td{padding:8px;border:1px solid var(--color-gray);vertical-align:middle}.pagination-container{display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--color-gray-light);border:1px solid var(--color-border);border-top:none;width:100%;box-sizing:border-box}.pagination-buttons{display:flex;gap:8px}.pagination-info{font-size:.85rem;color:var(--color-text);font-weight:700}.pagination-btn{padding:6px 12px;white-space:nowrap;border:1px solid var(--color-border);background:#fff;cursor:pointer;border-radius:4px}.modal-full{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#fff;z-index:2000;overflow-y:auto;box-sizing:border-box;animation:fadeIn .2s ease-out}@keyframes fadeIn{0%{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.modal-header{padding:10px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:center;background:#88b6c2}.modal-header h2{margin:0;color:var(--color-text);font-size:1.4rem}.modal-body{padding:20px}.app-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#0009;z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;visibility:hidden}.app-modal-overlay.active{opacity:1;visibility:visible}.app-modal-box{position:fixed;top:20px;transform:translate(-50%) scale(.9);background:#fff;width:90%;max-width:400px;padding:20px;border-radius:8px;box-shadow:0 4px 15px #0000004d;transition:transform .2s;font-family:sans-serif}.app-modal-overlay.active .app-modal-box{transform:scale(1)}.app-modal-title{font-size:1.2rem;font-weight:700;margin-bottom:10px;color:#d9534f}.app-modal-body{font-size:1rem;color:#333;margin-bottom:20px;white-space:pre-line;line-height:1.5}.app-modal-actions{display:flex;justify-content:flex-end;gap:10px}.app-btn{padding:10px 20px;border:none;border-radius:4px;cursor:pointer;font-weight:700}.app-btn-cancel{background:#f0f0f0;color:#333}.app-btn-confirm{background:#2196f3;color:#fff}.app-btn:hover{opacity:.9}.char-count{font-size:.75rem;text-align:right;color:#888;margin-bottom:5px}.popup-header{display:flex;justify-content:space-between;align-items:center}.popup-title{margin:0;font-size:1.1rem;color:var(--color-text)}.table-scroll{flex:1;overflow-y:auto;padding:10px;-webkit-overflow-scrolling:touch}.form-group{margin-bottom:15px}.form-group label{display:block;font-weight:700;font-size:.85rem;color:#666;margin-bottom:5px}.input-modal-readonly{width:100%;padding:12px;height:auto;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;color:#777;font-size:1rem;pointer-events:none}.input-modal-edit{width:100%;padding:12px;border:1px solid #ccc;border-radius:4px;font-size:1rem;min-height:48px}.modal-footer-btns{display:flex;gap:12px;margin-top:20px;margin-bottom:30px}.btn-modal{flex:1;padding:10px;border-radius:8px;font-weight:700;font-size:1rem;cursor:pointer;border:none}.btn-modal-cancel{background:#f0f0f0;color:#333;border:1px solid #ccc}.btn-modal-save{background:var(--color-success);color:#fff}.app-footer{padding:15px;background:var(--color-gray-light);border-top:1px solid var(--color-border);color:#666;font-size:.75rem;text-align:center;width:100%}#offlineBanner{display:none;position:fixed;top:0;left:0;width:100%;background:var(--color-danger);color:#fff;padding:10px;text-align:center;z-index:9999;font-weight:700}#warning-area{text-align:center;font-size:.9rem;margin:5px 0;min-height:1.2em;transition:all .2s ease;border-radius:4px}#warning-area.warning-active{background-color:#ff0;color:#856404;padding:8px;border:1px solid #ffeeba}@media(min-width:768px){#videoArea{height:400px}input[type=text],select,.btn{height:var(--control-height-lg)}}@media(max-width:768px){#assetNotFoundModal .table-scroll{padding-bottom:40px}#notFoundTable{margin-bottom:20px}}#assetNotFoundModal.full-screen{height:100svh;height:-webkit-fill-available}#notFoundOverlay,#messageModalOverlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#0006;z-index:1900;backdrop-filter:blur(2px)}#assetNotFoundModal.full-screen{position:fixed;top:0;left:0;width:100vw;height:100vh;height:100svh;background-color:#fff;z-index:2000;display:none;flex-direction:column;overflow:hidden}#assetNotFoundModal .popup-header{background:#f8f9fa;padding:15px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center}#assetNotFoundModal .table-scroll{flex:1;overflow-y:auto;padding:10px;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,30px)}#notFoundTable{width:100%;border-collapse:collapse;font-size:.9rem}#notFoundTable thead tr{background:#eee}#notFoundTable th,#notFoundTable td{border:1px solid var(--color-border);padding:10px;text-align:left}#notFoundTable thead th{top:0;text-align:left;font-weight:700;background:#eee;z-index:10}#notFoundTable td:nth-child(1),#notFoundTable td:nth-child(2),#notFoundTable td:nth-child(4){text-align:center}#notFoundTable td:nth-child(2){font-weight:700}#notFoundTable .btn-edit{padding:4px 8px;cursor:pointer;background:var(--color-primary);color:#fff;border:none;border-radius:4px}#consultingAlert{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#fff;padding:25px;border-radius:8px;box-shadow:0 10px 30px #00000080;text-align:center;min-width:250px;border:2px solid #ddd}#consultingAlert p{margin:0;font-weight:700;font-size:1.1rem}</style>
+</head>
+
+<body>
+
+  <!-- 
+    Estrutura principal da aplicação
+    Seguindo hierarquia semântica para melhor acessibilidade 
+  -->
+  <main role="main" aria-label="Aplicação principal do leitor de patrimônio">
+
+    <!-- ============================================================================
+         CONTEÚDO PRINCIPAL DA APLICAÇÃO
+    ============================================================================ -->
+
+    <h1>Leitor de Patrimônio</h1>
+
+    <!-- Banner de status offline -->
+    <div id="offlineBanner" role="status" aria-live="polite" aria-atomic="true" style="display:none;"
+      class="offline-banner">
+      📡 OFFLINE: Dados salvos localmente.
+    </div>
+
+    <!-- Seção de seleção de localização -->
+    <section aria-labelledby="location-heading" class="control-section">
+      <div id="location-selector" class="control-row" role="combobox" aria-haspopup="listbox"></div>
+    </section>
+
+    <!-- Área do scanner de câmera -->
+    <section aria-labelledby="scanner-heading" class="scanner-section">
+      <div id="scanner-area" role="region" aria-live="polite"></div>
+    </section>
+
+    <!-- Área de alertas e avisos do usuário -->
+    <section aria-labelledby="warnings-heading">
+      <div id="warning-area" role="alert" aria-live="assertive"></div>
+    </section>
+
+    <!-- Área de itens não encontrados -->
+    <section aria-labelledby="not-found-heading">
+      <div id="not-found-area" role="region"></div>
+    </section>
+
+    <!-- Área de mensagens e observações -->
+    <section aria-labelledby="messages-heading">
+      <div id="message-area" role="region"></div>
+    </section>
+
+    <!-- Tabela de códigos de barras lidos -->
+    <section aria-labelledby="table-heading">
+      <div id="barcode-table-area" role="region" aria-live="polite"></div>
+    </section>
+
+
+
+    <!-- Dashboard de estatísticas -->
+    <section aria-labelledby="stats-heading">
+      <div id="stats-area" role="region" aria-live="polite"></div>
+    </section>
+
+
+
+    <!-- ============================================================================
+         FALLBACK PARA JAVASCRIPT DESATIVADO
+    ============================================================================ -->
+    <noscript>
+      <div style="background: #f8d7da; color: #721c24; padding: 1rem; text-align: center;">
+        <h3>JavaScript Requerido</h3>
+        <p>Esta aplicação requer JavaScript para funcionar corretamente.</p>
+        <p>Por favor, habilite o JavaScript em seu navegador e recarregue a página.</p>
+      </div>
+    </noscript>
+
+  </main>
+
+  <!-- Área de debug (visível apenas em desenvolvimento) -->
+  <section aria-labelledby="debug-heading">
+    <div id="debug-area" role="region"></div>
+  </section>
+
+  <!-- ============================================================================
+       RODAPÉ DA APLICAÇÃO
+  ============================================================================ -->
+
+  <footer class="app-footer" role="contentinfo">
+    <div>
+      App Inventário &copy; IFC 2026 | Build: <a id="footer-version" title="Informações da versão">---</a>
+    </div>
+  </footer>
+
+  <!-- 
+    Script principal da aplicação
+    Carregado como módulo ES6 para melhor organização
+  -->
+</body>
+
+</html>

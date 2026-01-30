@@ -1,0 +1,940 @@
+/* =========================================================
+   1. CORE: VARIÁVEIS, RESET E BASE
+========================================================= */
+:root {
+  /* Cores */
+  --color-primary: #007bff;
+  --color-success: #198754;
+  --color-danger: #dc3545;
+  --color-warning: #ffc107;
+  --color-gray-light: #eee;
+  --color-gray: #ddd;
+  --color-border: #ccc;
+  --color-text: #333;
+  --color-bg: #f4f4f4;
+
+  /* UI */
+  --radius-sm: 5px;
+  --radius-md: 8px;
+
+  /* Alturas padrão */
+  --control-height-sm: 34px;
+  --control-height-lg: 45px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: sans-serif;
+  padding: 8px;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+main {
+  flex: 1 0 auto;
+}
+
+/* =========================================================
+   2. TIPOGRAFIA E UTILITÁRIOS
+========================================================= */
+h1 {
+  font-size: 1.4rem;
+  text-align: center;
+  margin: 5px 0 10px;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-small {
+  font-size: 0.8rem;
+  color: var(--color-primary);
+  font-weight: bold;
+}
+
+.text-bold {
+  font-weight: bold;
+}
+
+.no-margin {
+  margin: 0;
+}
+
+/* Status Colors & Highlights */
+.text-success {
+  color: var(--color-success);
+}
+
+.text-warning {
+  color: #fd7e14;
+}
+
+.text-danger {
+  color: var(--color-danger);
+}
+
+.clickable {
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.clickable:active {
+  transform: scale(0.97);
+}
+
+/* =========================================================
+   3. CONTROLES BÁSICOS (INPUTS, BOTÕES, SELECTS)
+========================================================= */
+/* [GEMINI: Inconsistência] Select e Input definidos separadamente, mas inputs dentro de modais tem classes próprias (.input-modal-edit). */
+input[type="text"],
+input[type="number"],
+textarea {
+  font-size: 0.95rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: #fff;
+  padding: 0 8px;
+  height: auto;
+}
+
+/* [GEMINI: Duplicação/Conflito] A classe .control-row .btn (definida mais abaixo no módulo scanner) sobrepõe paddings definidos aqui. */
+.btn {
+  cursor: pointer;
+  font-weight: bold;
+  height: var(--control-height-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  border: 1px solid #999;
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
+  user-select: none;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: #fff;
+}
+
+.btn-red {
+  background-color: var(--color-danger);
+  color: #fff;
+}
+
+.btn-green {
+  background-color: var(--color-success);
+  color: #fff;
+}
+
+.btn-danger-full {
+  width: 100%;
+  background: var(--color-danger);
+  color: #fff;
+  font-weight: bold;
+  height: calc(var(--control-height-sm) * 1.5);
+  margin: 15px 0;
+  border-radius: var(--radius-sm);
+}
+
+/* [GEMINI: Redundância] Esta classe recria estilos de botão (.btn) manualmente (padding, border-radius) em vez de compor classes. */
+.location-btn {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid #999;
+  border-radius: 4px;
+  text-align: center;
+  margin: 15px 0;
+}
+
+/* Container de uniformidade */
+/* [GEMINI: Mistura de responsabilidades] Mistura layout de containers (.stats-container) com elementos de formulário (select.w-100). */
+.control-row,
+#videoArea,
+.stats-container,
+select.w-100 {
+  max-width: 100%;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+select {
+  width: 100%;
+  padding: 8px;
+  font-size: 0.95rem;
+  border-radius: var(--radius-sm);
+  background-color: #fff;
+  /* [GEMINI: Code Smell] Uso de !important para sobrescrever especificidade desconhecida. */
+  height: auto !important;
+  min-height: var(--control-height-sm);
+  line-height: 1.4;
+  white-space: normal;
+  display: block;
+}
+
+/* =========================================================
+   4. DASHBOARD & ESTATÍSTICAS
+========================================================= */
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 10px 0;
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+@media (min-width: 600px) {
+  .stats-container {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.stat-card {
+  background: white;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  min-height: 70px;
+}
+
+.stat-card.full-width {
+  grid-column: 1 / -1;
+  min-height: 100px;
+  margin-top: 5px;
+  text-align: left;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.stat-card.highlight-warning {
+  border-color: #fd7e14;
+  background-color: #fffaf5;
+  border-width: 2px;
+}
+
+.stat-card.highlight-danger {
+  border-color: var(--color-danger);
+  background-color: #fff5f5;
+  border-width: 2px;
+}
+
+/* 1. DEFINIÇÃO ÚNICA DE ANIMAÇÃO 
+   Usamos um nome mais específico para evitar conflitos com bibliotecas externas 
+*/
+@keyframes app-icon-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 2. CLASSES DE ESTADO (Lógica) */
+
+/* Estado: Carregando/Buscando
+   Aplicamos a animação e o bloqueio de cliques
+*/
+.is-fetching {
+  animation: app-icon-spin 1s linear infinite !important;
+  color: var(--primary-color, #2c5aa0) !important;
+  pointer-events: none;
+  /* Previne cliques duplos durante o processo */
+  cursor: wait;
+}
+
+/* 3. COMPONENTE DE ÍCONE DE STATUS 
+   Refinado para garantir que o ícone rotacione sobre o próprio eixo
+*/
+#syncStatusIcon {
+  display: inline-flex;
+  /* Melhor que inline-block para alinhar ícones */
+  align-items: center;
+  justify-content: center;
+  margin-right: 0px;
+  font-size: 0.9rem;
+  transition: color 0.3s ease, transform 0.3s ease;
+  vertical-align: middle;
+  /* Alinha com o texto ao lado */
+}
+
+/* Classe para itens de localização clicáveis */
+.clickable-location {
+  color: var(--primary-color, #2c5aa0);
+  /* Cor de destaque */
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Efeito ao passar o mouse */
+.clickable-location:hover {
+  background-color: rgba(44, 90, 160, 0.1);
+  /* Fundo leve da cor primária */
+  text-decoration: underline;
+  transform: translateX(4px);
+  /* Pequeno deslocamento para a direita */
+}
+
+/* Efeito de clique (feedback tátil) */
+.clickable-location:active {
+  transform: scale(0.98);
+}
+
+/* 4. CLASSES DE CORES (Opcional, para simplificar o JS) */
+/* Modo Foco */
+.focus-mode {
+  text-align: center;
+  width: 100%;
+  padding: 5px 0;
+}
+
+.focus-location {
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--color-primary);
+  margin: 4px 0;
+}
+
+.focus-count {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--color-text);
+}
+
+.focus-count small {
+  font-size: 0.85rem;
+  color: #888;
+  font-weight: 400;
+}
+
+/* =========================================================
+   5. MÓDULO SCANNER & CÂMERA
+========================================================= */
+/* [GEMINI: Definição Fragmentada] #videoArea já recebeu estilos em "CONTROLES BÁSICOS" (width/margin). Aqui recebe o resto. */
+#videoArea {
+  position: relative;
+  background: #000;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  height: 180px;
+  min-height: 125px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#reader {
+  width: 100%;
+}
+
+#cameraPlaceholder {
+  color: #666;
+  position: absolute;
+}
+
+#scanDelayOverlay {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 255, 0, 0.2);
+  pointer-events: none;
+  z-index: 10;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.control-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.control-row .btn,
+.control-row button {
+  flex: 1;
+  padding: 10px;
+}
+
+#manualBarcode {
+  flex: 1;
+  padding: 8px;
+}
+
+/* =========================================================
+   6. TABELAS E PAGINAÇÃO
+========================================================= */
+/* Tabela Resumo */
+.compact-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.compact-table th {
+  text-align: center;
+  border-bottom: 1px solid var(--color-gray);
+  padding-bottom: 4px;
+  color: #777;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.compact-table td {
+  padding: 6px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+/* Tabela Principal de Leitura */
+.table-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border: 1px solid var(--color-border);
+  border-radius: 8px 8px 0 0;
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+#barcode-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-top: none;
+  margin-top: 0;
+}
+
+#barcode-table th {
+  background-color: var(--color-gray-light);
+  padding: 8px;
+  border: 1px solid var(--color-border);
+}
+
+#barcode-table td {
+  padding: 8px;
+  border: 1px solid var(--color-gray);
+  vertical-align: middle;
+}
+
+/* Paginação */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: var(--color-gray-light);
+  border: 1px solid var(--color-border);
+  border-top: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  font-weight: bold;
+}
+
+.pagination-btn {
+  padding: 6px 12px;
+  white-space: nowrap;
+  border: 1px solid var(--color-border);
+  background: white;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+/* =========================================================
+   7. MODAIS E POPUPS (AGRUPADOS)
+========================================================= */
+
+/* --- Modal Edição Full Screen --- */
+.modal-full {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: white;
+  z-index: 2000;
+  overflow-y: auto;
+  box-sizing: border-box;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #88b6c2;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1.4rem;
+
+  /* color: #777; */
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+/* --- Modal Genérico (AppModal) --- */
+/* [GEMINI: Inconsistência de UI] Temos .app-modal-overlay (escuro, flex center) e .modal-full (branco, full screen). UI mista. */
+.app-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  visibility: hidden;
+}
+
+.app-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.app-modal-box {
+  position: fixed;
+  top: 20px;
+  /* Distância do topo */
+  transform: translateX(-50%) scale(0.9);
+  /* Ajusta a centralização */
+  background: #fff;
+  width: 90%;
+  max-width: 400px;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s;
+  font-family: sans-serif;
+}
+
+.app-modal-overlay.active .app-modal-box {
+  transform: scale(1);
+}
+
+.app-modal-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #d9534f;
+}
+
+.app-modal-body {
+  font-size: 1rem;
+  color: #333;
+  margin-bottom: 20px;
+  white-space: pre-line;
+  line-height: 1.5;
+}
+
+.app-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.app-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.app-btn-cancel {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.app-btn-confirm {
+  background: #2196F3;
+  color: white;
+}
+
+.app-btn:hover {
+  opacity: 0.9;
+}
+
+/* --- Modal de Observação --- */
+
+/* Contador de caracteres discreto */
+.char-count {
+  font-size: 0.75rem;
+  text-align: right;
+  color: #888;
+  margin-bottom: 5px;
+}
+
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.popup-title {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--color-text);
+}
+
+.table-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Elementos de Formulário dentro de Modais */
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: bold;
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.input-modal-readonly {
+  width: 100%;
+  padding: 12px;
+  height: auto;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #777;
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+.input-modal-edit {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  min-height: 48px;
+}
+
+.modal-footer-btns {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  margin-bottom: 30px;
+}
+
+.btn-modal {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-modal-cancel {
+  background: #f0f0f0;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+.btn-modal-save {
+  background: var(--color-success);
+  color: white;
+}
+
+/* =========================================================
+   8. FOOTER, ALERTS E BANNERS
+========================================================= */
+.app-footer {
+  padding: 15px;
+  background: var(--color-gray-light);
+  border-top: 1px solid var(--color-border);
+  color: #666;
+  font-size: 0.75rem;
+  text-align: center;
+  width: 100%;
+}
+
+#offlineBanner {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: var(--color-danger);
+  color: white;
+  padding: 10px;
+  text-align: center;
+  z-index: 9999;
+  font-weight: bold;
+}
+
+#warning-area {
+  text-align: center;
+  font-size: 0.9rem;
+  margin: 5px 0;
+  min-height: 1.2em;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+
+#warning-area.warning-active {
+  background-color: #ffff00;
+  color: #856404;
+  padding: 8px;
+  border: 1px solid #ffeeba;
+}
+
+/* =========================================================
+   9. RESPONSIVIDADE
+========================================================= */
+@media (min-width: 768px) {
+  #videoArea {
+    height: 400px;
+  }
+
+  input[type="text"],
+  select,
+  .btn {
+    height: var(--control-height-lg);
+  }
+}
+
+/* Ajuste para evitar que o conteúdo fique por baixo da navegação do celular */
+@media (max-width: 768px) {
+  #assetNotFoundModal .table-scroll {
+    /* Adiciona um respiro generoso no final da lista */
+    padding-bottom: 40px;
+  }
+
+  #notFoundTable {
+    /* Garante que a tabela não "cole" nas bordas laterais */
+    margin-bottom: 20px;
+  }
+}
+
+/* Garante que o modal ocupe a altura visual real, 
+   mesmo com a barra de endereços do navegador mudando */
+#assetNotFoundModal.full-screen {
+  height: 100svh;
+  height: -webkit-fill-available;
+  /* Suporte para Safari iOS */
+}
+
+/* =========================================================
+   10. MÓDULO: ASSETS NOT FOUND (ITENS NÃO ENCONTRADOS)
+========================================================= */
+/* Overlay exclusivo para este módulo */
+#notFoundOverlay,
+#messageModalOverlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1900;
+  backdrop-filter: blur(2px);
+}
+
+/* --- Modal Itens Não Encontrados --- */
+/* [GEMINI: Duplicação Exata] #assetNotFoundModal.full-screen duplica 90% das regras de .modal-full. */
+#assetNotFoundModal.full-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  /* Usa svh para respeitar os botões do sistema e barras do browser */
+  height: 100vh;
+  height: 100svh;
+  background-color: #ffffff;
+  z-index: 2000;
+  display: none;
+  flex-direction: column;
+  /* Garante que nada escape para baixo */
+  overflow: hidden;
+}
+
+#assetNotFoundModal .popup-header {
+  background: #f8f9fa;
+  padding: 15px;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#assetNotFoundModal .table-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  -webkit-overflow-scrolling: touch;
+  /* Adiciona uma margem de segurança no final da rolagem */
+  padding-bottom: env(safe-area-inset-bottom, 30px);
+}
+
+/* [GEMINI: Triplicação de Tabela] #notFoundTable é a terceira definição de tabela no arquivo. */
+#notFoundTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+#notFoundTable thead tr {
+  background: #eee;
+}
+
+#notFoundTable th,
+#notFoundTable td {
+  border: 1px solid var(--color-border);
+  padding: 10px;
+  text-align: left;
+}
+
+#notFoundTable thead th {
+  top: 0;
+  text-align: left;
+  font-weight: bold;
+  background: #eee;
+  z-index: 10;
+}
+
+#notFoundTable td:nth-child(1),
+#notFoundTable td:nth-child(2),
+#notFoundTable td:nth-child(4) {
+  text-align: center;
+}
+
+#notFoundTable td:nth-child(2) {
+  font-weight: bold;
+}
+
+#notFoundTable .btn-edit {
+  padding: 4px 8px;
+  cursor: pointer;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+
+/* Alerta de "Consultando Planilha" */
+#consultingAlert {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  background: white;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  min-width: 250px;
+  border: 2px solid #ddd;
+}
+
+#consultingAlert p {
+  margin: 0;
+  font-weight: bold;
+  font-size: 1.1rem;
+}

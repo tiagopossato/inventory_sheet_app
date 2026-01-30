@@ -1,0 +1,8 @@
+# Ignora tudo por padrão
+**/*
+
+# Abre exceção apenas para o que o Vite gera na pasta dist
+!index.html
+!*.gs
+!*.js
+!appsscript.json

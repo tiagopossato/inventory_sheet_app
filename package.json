@@ -1,0 +1,38 @@
+{
+  "name": "inventory_sheet_app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:vite -- --host\" \"npm run mock_server\"",
+    "dev:vite": "vite",
+    "build": "vite build",
+    "preview:dev": "vite build --mode development && vite preview --host",
+    "deploy:homolog": "node deploy.js --env=homolog",
+    "deploy": "node deploy.js",
+    "lint": "eslint .",
+    "mock_server": "node local_server/server.js --host --https"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "googleapis": "^126.0.1"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.1.3",
+    "@types/google-apps-script": "^2.0.8",
+    "@vitejs/plugin-basic-ssl": "^2.1.0",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.39.2",
+    "globals": "^16.5.0",
+    "html5-qrcode": "^2.3.8",
+    "https": "^1.0.0",
+    "selfsigned": "^5.5.0",
+    "vite": "^7.2.4",
+    "vite-plugin-html": "^3.2.2",
+    "vite-plugin-singlefile": "^2.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

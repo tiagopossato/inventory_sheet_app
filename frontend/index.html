@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Sistema de inventário patrimonial com leitor de código de barras">
+  <meta name="author" content="IFC">
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+
+<body>
+
+  <!-- 
+    Estrutura principal da aplicação
+    Seguindo hierarquia semântica para melhor acessibilidade 
+  -->
+  <main role="main" aria-label="Aplicação principal do leitor de patrimônio">
+
+    <!-- ============================================================================
+         CONTEÚDO PRINCIPAL DA APLICAÇÃO
+    ============================================================================ -->
+
+    <h1>Leitor de Patrimônio</h1>
+
+    <!-- Banner de status offline -->
+    <div id="offlineBanner" role="status" aria-live="polite" aria-atomic="true" style="display:none;"
+      class="offline-banner">
+      📡 OFFLINE: Dados salvos localmente.
+    </div>
+
+    <!-- Seção de seleção de localização -->
+    <section aria-labelledby="location-heading" class="control-section">
+      <div id="location-selector" class="control-row" role="combobox" aria-haspopup="listbox"></div>
+    </section>
+
+    <!-- Área do scanner de câmera -->
+    <section aria-labelledby="scanner-heading" class="scanner-section">
+      <div id="scanner-area" role="region" aria-live="polite"></div>
+    </section>
+
+    <!-- Área de alertas e avisos do usuário -->
+    <section aria-labelledby="warnings-heading">
+      <div id="warning-area" role="alert" aria-live="assertive"></div>
+    </section>
+
+    <!-- Área de itens não encontrados -->
+    <section aria-labelledby="not-found-heading">
+      <div id="not-found-area" role="region"></div>
+    </section>
+
+    <!-- Área de mensagens e observações -->
+    <section aria-labelledby="messages-heading">
+      <div id="message-area" role="region"></div>
+    </section>
+
+    <!-- Tabela de códigos de barras lidos -->
+    <section aria-labelledby="table-heading">
+      <div id="barcode-table-area" role="region" aria-live="polite"></div>
+    </section>
+
+
+
+    <!-- Dashboard de estatísticas -->
+    <section aria-labelledby="stats-heading">
+      <div id="stats-area" role="region" aria-live="polite"></div>
+    </section>
+
+
+
+    <!-- ============================================================================
+         FALLBACK PARA JAVASCRIPT DESATIVADO
+    ============================================================================ -->
+    <noscript>
+      <div style="background: #f8d7da; color: #721c24; padding: 1rem; text-align: center;">
+        <h3>JavaScript Requerido</h3>
+        <p>Esta aplicação requer JavaScript para funcionar corretamente.</p>
+        <p>Por favor, habilite o JavaScript em seu navegador e recarregue a página.</p>
+      </div>
+    </noscript>
+
+  </main>
+
+  <!-- Área de debug (visível apenas em desenvolvimento) -->
+  <section aria-labelledby="debug-heading">
+    <div id="debug-area" role="region"></div>
+  </section>
+
+  <!-- ============================================================================
+       RODAPÉ DA APLICAÇÃO
+  ============================================================================ -->
+
+  <footer class="app-footer" role="contentinfo">
+    <div>
+      App Inventário &copy; IFC 2026 | Build: <a id="footer-version" title="Informações da versão">---</a>
+    </div>
+  </footer>
+
+  <!-- 
+    Script principal da aplicação
+    Carregado como módulo ES6 para melhor organização
+  -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
