@@ -111,6 +111,10 @@ Seu `credentials.json` terá esta estrutura:
 - Abra sua planilha no Google Sheets
 - Olhe a URL: `https://docs.google.com/spreadsheets/d/SEU_ID_DA_PLANILHA/edit`
 - Copie o ID que aparece entre `/d/` e `/edit`
+- edite o arquivo `.env` na raiz do projeto, adicionando:
+```
+MOCK_SPREADSHEET_ID=SEU_ID_DA_PLANILHA
+```
 
 ![](https://i.imgur.com/10.png)
 
@@ -134,11 +138,6 @@ local_server/
 ├── credentials.json          # Credenciais da Google (NÃO COMMITAR!)
 ├── server.js
 └── package.json
-```
-
-### 14. Teste a Configuração
-```bash
-npm start
 ```
 
 ---
@@ -174,8 +173,6 @@ npm start
 # Verificar se o servidor está rodando
 curl http://localhost:3000/api/health
 
-# Verificar conexão com Google Sheets
-npm run test
 ```
 
 ---
@@ -187,5 +184,5 @@ npm run test
 - [ ] Service Account criada
 - [ ] Chave JSON baixada e renomeada para `credentials.json`
 - [ ] Planilha compartilhada com o email da service account
-- [ ] Arquivo `.env` criado com `SPREADSHEET_ID`
+- [ ] Arquivo `.env` criado com `MOCK_SPREADSHEET_ID`
 - [ ] Servidor testado e funcionando

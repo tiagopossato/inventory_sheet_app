@@ -7,7 +7,7 @@
     "dev": "concurrently \"npm run dev:vite -- --host\" \"npm run mock_server\"",
     "dev:vite": "vite",
     "build": "vite build",
-    "preview:dev": "vite build --mode development && vite preview --host",
+    "preview": "concurrently \"npm run mock_server\" \"vite build --mode development && vite preview --host\"",
     "deploy:homolog": "node deploy.js --env=homolog",
     "deploy": "node deploy.js",
     "lint": "eslint .",
