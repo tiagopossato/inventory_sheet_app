@@ -1,4 +1,649 @@
-<!DOCTYPE html>
+
+/* --- Arquivo: Código.js --- */
+/**
+ * Executa quando o usuário abre o aplicativo web pela URL.
+ * Essa função é responsável por servir o arquivo HTML principal (index.html).
+ */
+function doGet(event, title='Aplicativo leitor', faviconUrl='https://videira.ifc.edu.br/wp-content/themes/ifc/img/ifc.png') {
+  return HtmlService
+    // 1. Cria um template a partir do arquivo 'index.html'.
+    // Isso permite que o código Apps Script (como <?!= include() ?>) seja executado.
+    //.createTemplateFromFile('index') // Se usar template, alterar minify para false no arquivo vite.config.js
+
+    // 2. Avalia (processa) o template, executando qualquer código Apps Script embutido.
+    //.evaluate()
+
+    .createHtmlOutput(getHtmlContent())
+
+    // 3. Define o título que aparece na aba do navegador.
+    .setTitle(title)
+
+    // 4. Define o ícone de favoritos (favicon) da aplicação.
+    .setFaviconUrl(faviconUrl)
+
+    // 5. Configura o modo sandbox de segurança. IFRAME é o modo mais seguro e moderno.
+    .setSandboxMode(HtmlService.SandboxMode.IFRAME)
+    
+    // 6. Adiciona a meta tag viewport, essencial para garantir que a interface seja
+    // responsiva e se adapte corretamente a telas de celular.
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+
+/**
+ * Inclui o conteúdo de um arquivo HTML como string dentro de um HTML Template.
+ *
+ * Esta função é chamada dentro de um HTML Template usando a sintaxe de impressão de scriptlets:
+ * Exemplo: <?!= include('Style'); ?>
+ *
+ * @param {string} filename O nome do arquivo .html no projeto (sem a extensão).
+ * @returns {string} O conteúdo do arquivo HTML espec
+ */
+function include(filename) {
+  return HtmlService
+    // 1. Cria um objeto HtmlOutput a partir do arquivo nomeado.
+    .createHtmlOutputFromFile(filename)
+
+    // 2. Extrai o conteúdo HTML/texto do objeto.
+    // É esse conteúdo que é injetado no lugar do scriptlet <?!= include(...) ?>.
+    .getContent();
+}
+
+/* --- Arquivo: main.js --- */
+/**
+ * Obtém um objeto consolidado contendo a lista oficial de localidades (com metadados) e o inventário atual agrupado por local.
+ * @return {Object} Dados formatados com locations e inventory
+ * @property {Array<{name: string, assetsCount: number}>} locations - Lista de localidades com contagem de bens
+ * @property {Array<{location: string, assets: number[]}>} inventory - Inventário agrupado por localidade
+ */
+function getInventoryData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetInventario = ss.getSheetByName('inventario');
+
+  // Early return com array vazio se a aba não existir
+  if (!sheetInventario) {
+    throw new Error("getInventoryData: Aba 'inventario' não encontrada.");
+  }
+
+  const lastRowInv = sheetInventario.getLastRow();
+
+  // Early return se não houver dados além do cabeçalho
+  if (lastRowInv < 2) {
+    return { locations: [], inventory: [] };
+  }
+
+  /** ===============================
+   * 1. LEITURA E PROCESSAMENTO OTIMIZADO
+   * =============================== */
+
+  // Ler as colunas necessárias: D (local) e F (tombamento)
+  const invData = sheetInventario.getRange(2, 4, lastRowInv - 1, 3).getValues();
+  const inventoryMap = new Map(); // Usar Map para melhor performance
+
+  // Processamento otimizado com for loop
+  for (let i = 0; i < invData.length; i++) {
+    const row = invData[i];
+    const local = String(row[0]).trim();
+
+    // Validação rápida: pular linhas sem local
+    if (!local) continue;
+
+    const asset = parseInt(row[2], 10);
+
+    // Validação numérica mais eficiente
+    if (isNaN(asset)) continue;
+
+    // Usar Map para agrupamento (mais eficiente que Object)
+    if (!inventoryMap.has(local)) {
+      inventoryMap.set(local, []);
+    }
+    inventoryMap.get(local).push(asset);
+  }
+
+  /** ===============================
+   * 2. ESTRUTURAÇÃO DE SAÍDA OTIMIZADA
+   * =============================== */
+
+  // Converter Map para arrays de saída em uma única operação
+  const locationsOutput = [];
+  const inventoryOutput = [];
+
+  // Single-pass conversion: processar o Map apenas uma vez
+  for (const [key, assetsList] of inventoryMap) {
+    // Ambas as saídas usam os mesmos dados
+    inventoryOutput.push({
+      location: key,
+      assets: assetsList
+    });
+
+    locationsOutput.push({
+      name: key,
+      assetsCount: assetsList.length
+    });
+  }
+
+  /** ===============================
+   * 3. ORDENAÇÃO FINAL
+   * =============================== */
+
+  // Ordenar apenas uma vez, por referência
+  locationsOutput.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  // Manter inventoryOutput na mesma ordem para consistência
+  inventoryOutput.sort((a, b) => a.location.localeCompare(b.location, 'pt-BR'));
+
+  return {
+    locations: locationsOutput,
+    inventory: inventoryOutput
+  };
+}
+
+/**
+ * @typedef {Object} LocationSummary
+ * @property {string} name - Nome da localidade
+ * @property {number} totalAssets - Quantidade total de bens
+ * @property {number} assetsFindedCount - Bens encontrados no local
+ * @property {number} missingAssets - Bens faltantes
+ */
+
+/**
+ * @typedef {Object} AssetMapping
+ * @property {string} location - O nome da localidade correspondente
+ * @property {number[]} assets - Array contendo os números de tombamento
+ */
+
+/**
+ * @typedef {Object} InventoryDataResponse
+ * @property {LocationSummary[]} locations - Lista resumida para preenchimento de seletores de UI
+ * @property {AssetMapping[]} assetsFinded - Mapeamento detalhado de bens agrupados por local
+ */
+
+/**
+ * Processa os dados da aba "leituras" para gerar um resumo do inventário agrupado por localidade
+ * @param {string} [targetLocation] - A localidade que o usuário está inventariando (opcional)
+ * @return {InventoryDataResponse} Objeto contendo o resumo das localidades e o mapa de bens
+ */
+function getInventorySummary(targetLocation = null) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const groups = {};
+
+  /** ===============================
+   * 1. PROCESSAMENTO DA ABA "leituras" (Otimizado)
+   * =============================== */
+  const sheetDados = ss.getSheetByName("leituras");
+
+  // Early return com array vazio se a aba não existir
+  if (!sheetDados) {
+    throw new Error("getInventorySummary: Aba 'leituras' não encontrada.");
+  }
+  const sheetDadosLastRow = sheetDados.getLastRow();
+  if (sheetDadosLastRow >= 2) {
+    const data = sheetDados.getRange(2, 2, sheetDadosLastRow - 1, 3).getValues();
+
+    // Loop otimizado
+    for (let i = 0; i < data.length; i++) {
+      const code = parseInt(data[i][1], 10);
+      if (isNaN(code)) continue;
+
+      const location = String(data[i][2]).trim();
+      if (!location) continue;
+
+      groups[location] = groups[location] || [];
+      groups[location].push(code);
+    }
+  }
+
+  /** ===============================
+   * 2. PROCESSAMENTO DA ABA "localidades" (Otimizado)
+   * =============================== */
+  const sheetLoc = ss.getSheetByName("localidades");
+
+  // Early return com array vazio se a aba não existir
+  if (!sheetLoc) {
+    throw new Error("getInventorySummary: Aba 'localidades' não encontrada.");
+  }
+
+  let locations = [];
+  const sheetLocGetLastRow = sheetLoc.getLastRow();
+  if (sheetLocGetLastRow >= 6) {
+    const locData = sheetLoc.getRange('A6:D' + sheetLocGetLastRow).getValues();
+    const target = targetLocation ? String(targetLocation).trim() : null;
+
+    locations = locData
+      .filter(row => row[0] && (!target || String(row[0]).trim() === target))
+      .map(row => ({
+        name: String(row[0]).trim(),
+        totalAssets: Number(row[1]) || 0,
+        assetsFindedCount: Number(row[2]) || 0,
+        missingAssets: Number(row[3]) || 0
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }));
+  }
+
+  /** ===============================
+   * 3. ESTRUTURAÇÃO FINAL (Otimizada)
+   * =============================== */
+  const assetsFinded = Object.keys(groups)
+    .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
+    .map(loc => ({ location: loc, assets: groups[loc] }));
+
+  return { locations, assetsFinded };
+}
+
+/**
+ * Obtém o nome do usuário atual baseado no email
+ * @return {string} Nome do usuário ou 'anonimo' se não identificado
+ */
+function getUserName() {
+  const userEmail = Session.getActiveUser().getEmail();
+  return userEmail ? userEmail.split('@')[0] : 'anonimo';
+}
+
+/**
+ * Salva ou atualiza um lote de itens na planilha "leituras" de forma segura, idempotente e otimizada
+ * @param {Array<Object>} items - Array de itens para salvar
+ * @param {string} items[].uid - Identificador único do item
+ * @param {string|number} items[].code - Código do item
+ * @param {string} items[].location - Localidade do item
+ * @param {number} items[].state - Estado do item
+ * @param {number} items[].ipvu - Valor IPVU do item
+ * @param {string} items[].obs - Observações sobre o item
+ * @return {Array<string>} UIDs efetivamente persistidos
+ */
+function saveCodeBatch(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return [];
+  }
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (e) {
+    throw new Error('Servidor ocupado. Tente novamente.');
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("leituras");
+    if (!sheet) {
+      throw new Error('Aba "leituras" não encontrada.');
+    }
+
+    const LAST_COL = 8;
+    const HEADER_ROWS = 1;
+
+    const now = new Date();
+    const formattedDate = Utilities.formatDate(
+      now,
+      Session.getScriptTimeZone(),
+      'dd/MM/yyyy HH:mm:ss'
+    );
+    const user = getUserName();
+
+    /* ------------------------------------------------------------
+     * 1. Leitura única da planilha (UID -> linha)
+     * ------------------------------------------------------------ */
+    const lastRow = sheet.getLastRow();
+    const uidToRow = Object.create(null);
+
+    if (lastRow > HEADER_ROWS) {
+      const values = sheet
+        .getRange(HEADER_ROWS + 1, 1, lastRow - HEADER_ROWS, LAST_COL)
+        .getValues();
+
+      values.forEach((row, index) => {
+        const uid = row[0];
+        if (uid && !uidToRow[uid]) {
+          uidToRow[uid] = HEADER_ROWS + 1 + index;
+        }
+      });
+    }
+
+    /* ------------------------------------------------------------
+     * 2. Separação entre updates e appends
+     * ------------------------------------------------------------ */
+    const rowsToUpdate = [];
+    const rowsToAppend = [];
+    const persistedUids = [];
+
+    items.forEach(item => {
+      if (!item || !item.uid) return;
+
+      const rowData = [
+        String(item.uid),
+        formattedDate,
+        String(item.code ?? ''), // preserva zeros/EAN
+        String(item.location ?? ''),
+        user,
+        Number(item.state ?? ''),
+        Number(item.ipvu ?? ''),
+        String(item.obs ?? '')
+      ];
+
+      const existingRow = uidToRow[item.uid];
+
+      if (existingRow) {
+        rowsToUpdate.push({ row: existingRow, data: rowData });
+      } else {
+        rowsToAppend.push(rowData);
+      }
+
+      persistedUids.push(item.uid);
+    });
+
+    /* ------------------------------------------------------------
+     * 3. Escrita segura
+     * ------------------------------------------------------------ */
+
+    // Updates
+    rowsToUpdate
+      .sort((a, b) => a.row - b.row)
+      .forEach(update => {
+        sheet
+          .getRange(update.row, 1, 1, LAST_COL)
+          .setValues([update.data]);
+      });
+
+    // Appends (recalcula lastRow para evitar race lógica)
+    if (rowsToAppend.length > 0) {
+      const appendStartRow = sheet.getLastRow() + 1;
+      sheet
+        .getRange(appendStartRow, 1, rowsToAppend.length, LAST_COL)
+        .setValues(rowsToAppend);
+    }
+
+    return persistedUids;
+
+  } catch (err) {
+    Logger.log('Erro em saveCodeBatch:', err);
+    throw new Error(`Falha ao salvar lote: ${err.message}`);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Salva uma mensagem na aba 'observacoes'
+ * @param {Object} payload - Objeto contendo dados da mensagem
+ * @param {string} payload.uid - Identificador único
+ * @param {string} payload.location - Localidade
+ * @param {string} payload.message - Mensagem a ser salva
+ * @return {string} O UID da mensagem salva
+ */
+function saveMessage(payload) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (e) {
+    throw new Error('Servidor ocupado. Tente novamente.');
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName("observacoes");
+
+    // Early return com array vazio se a aba não existir
+    if (!sheet) {
+      throw new Error("saveMessage: Aba 'observacoes' não encontrada.");
+    }
+
+    const now = new Date();
+    const formattedDate = Utilities.formatDate(
+      now,
+      Session.getScriptTimeZone(),
+      'dd/MM/yyyy HH:mm:ss'
+    );
+    const aferidor = getUserName();
+
+
+    // Preparação dos dados
+    const uuid = payload.uid;
+    const localidade = payload.location;
+    const mensagem = payload.message;
+
+    // Inserção na planilha (A:E)
+    sheet.appendRow([
+      uuid,           // Coluna A
+      formattedDate,  // Coluna B
+      localidade,     // Coluna C
+      aferidor,       // Coluna D
+      mensagem        // Coluna E
+    ]);
+
+    // Retorna o UID para o frontend confirmar o sucesso
+    return uuid;
+
+  } catch (error) {
+    Logger.log("Erro ao salvar mensagem:", error);
+    throw new Error("Falha ao salvar observação: " + error.message);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+/**
+ * Obtém itens não encontrados filtrados por localidade
+ * @param {string} targetLocation Nome da localidade (Obrigatório)
+ * @return {Array<Array<string>>} Lista de [Tombamento, Descrição]
+ */
+function getNotFoundItens(targetLocation) {
+  // 1. Validação de Entrada (Parâmetro Obrigatório)
+  if (!targetLocation) {
+    throw new Error("getNotFoundItens: targetLocation não fornecido.");
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('nao_encontrados_geral');
+
+  if (!sheet) {
+    throw new Error("getNotFoundItens: aba nao_encontrados_geral não encontrada");
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 3) return [];
+
+  // 2. Otimização de I/O: Leitura em lote
+  // Inicia na linha 3, coluna 1, pega (lastRow - 2) linhas e 3 colunas (A, B, C)
+  const data = sheet.getRange(3, 1, lastRow - 2, 3).getValues();
+
+  // 3. Normalização fora do loop (Evita repetir trim() milhares de vezes)
+  const target = String(targetLocation).trim();
+  const result = [];
+
+  // 4. Otimização de Processamento (Single Pass Loop)
+  // Usar for tradicional é mais rápido que filter/map no Apps Script
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+
+    // Compara Localidade (Coluna A -> índice 0)
+    if (String(row[0]).trim() === target) {
+      // Adiciona direto [Tombamento, Descrição] (Colunas B e C -> índices 1 e 2)
+      result.push([row[1], row[2]]);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Lê as configurações da aba 'app_config' e retorna um objeto chave-valor
+ * @return {Object} Objeto contendo todas as configurações
+ */
+function getAppSettings() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('app_config');
+
+  // Objeto de retorno padrão caso a aba não exista
+  const settings = {};
+
+  if (!sheet) {
+    Logger.log("Aba 'app_config' não encontrada.");
+    return settings;
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 1) return settings;
+
+  // Lê as colunas A e B (Chave e Valor)
+  const data = sheet.getRange(2, 1, lastRow, 2).getValues();
+
+  // Transforma o array bidimensional em um objeto { chave: valor }
+  for (let i = 0; i < data.length; i++) {
+    const key = String(data[i][0]).trim();
+    const value = data[i][1];
+
+    if (key) {
+      // Type handling
+      if (value instanceof Date) {
+        settings[key] = value.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+      } else if (value === 'true' || value === true) {
+        settings[key] = true;
+      } else if (value === 'false' || value === false) {
+        settings[key] = false;
+      } else {
+        settings[key] = value;
+      }
+    }
+  }
+  Logger.log(settings);
+  return settings;
+}
+
+/* --- Arquivo: Menu.js --- */
+const deploymentId = ""; // Substitua pelo ID real do deployment da interface web
+
+function onOpen(e) {
+  const menu = SpreadsheetApp.getUi().createMenu("APP Inventário");
+  menu
+    .addItem('Exibir link do leitor', 'openReader')
+    // .addItem('Gerar e Baixar JSON do inventário base', 'mostrarPromptDownload')
+    .addToUi();
+}
+
+/**
+ * Exibe uma janela modal com o link direto para o aplicativo.
+ */
+function openReader() {
+  const url = `https://script.google.com/a/macros/ifc.edu.br/s/${deploymentId}/exec`;
+
+  // Usando QuickChart.io (API Externa estável)
+  // Parâmetros: width, height e data (URL codificada)
+  const qrCodeUrl = `https://quickchart.io/qr?text=${encodeURIComponent(url)}&size=200&margin=1`;
+
+  const htmlContent = `
+    <style>
+      body { margin: 0; padding: 20px; font-family: 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa; }
+      .container { 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center; 
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+      .qr-code {
+        margin: 10px 0 20px 0;
+        mix-blend-mode: multiply; /* Melhora visualização em fundos brancos */
+      }
+      .btn {
+        background-color: #1a73e8;
+        color: white;
+        padding: 14px 20px;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        text-align: center;
+        width: 90%;
+        display: block;
+        box-sizing: border-box;
+        transition: background 0.2s;
+      }
+      .btn:hover { background-color: #1557b0; }
+      .url-text { 
+        font-size: 10px; 
+        color: #999; 
+        margin-top: 20px; 
+        word-break: break-all; 
+        text-align: center;
+      }
+      p { color: #5f6368; font-size: 14px; margin-bottom: 5px; text-align: center; }
+    </style>
+    <div class="container">
+      <p>Aponte a câmera do smartphone para o código:</p>
+      
+      <img src="${qrCodeUrl}" class="qr-code" alt="QR Code" width="180" height="180">
+      
+      <a href="${url}" target="_blank" class="btn" onclick="google.script.host.close()">ABRIR NO COMPUTADOR</a>
+      
+      <div class="url-text">Link direto: ${url}</div>
+    </div>
+  `;
+
+  const html = HtmlService.createHtmlOutput(htmlContent)
+    .setWidth(400)
+    .setHeight(480)
+    .setTitle('Acesso ao Inventário');
+
+  SpreadsheetApp.getUi().showModalDialog(html, '🚀 QR Code Gerado');
+}
+
+function mostrarPromptDownload() {
+  const dadosJson = getInventoryData();
+  const stringJson = JSON.stringify(dadosJson);
+
+  Logger.log(stringJson);
+
+  // Usamos um template literal para injetar os dados de forma segura
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <body>
+        <p>Iniciando download...</p>
+        <script>
+          (function() {
+            try {
+              const data = ${stringJson};
+              const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+              const url = window.URL.createObjectURL(blob);
+              
+              const a = document.createElement('a');
+              a.style.display = 'none';
+              a.href = url;
+              a.download = 'inventario.json';
+              
+              // Garante que o body existe antes de anexar
+              document.body.appendChild(a);
+              a.click();
+              
+              // Pequeno delay para garantir que o navegador processe o download antes de fechar
+              setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+                google.script.host.close();
+              }, 500);
+            } catch (e) {
+              alert("Erro ao gerar download: " + e.message);
+            }
+          })();
+        </script>
+      </body>
+    </html>
+  `;
+
+  const htmlOutput = HtmlService.createHtmlOutput(htmlContent)
+    .setWidth(300)
+    .setHeight(150);
+
+  SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Processando Inventário');
+}
+
+/**
+ * Retorna o conteúdo HTML embutido gerado pelo build.
+ * @return {string}
+ */
+function getHtmlContent() {
+  return `<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -56,7 +701,7 @@ var __spreadValues = (a, b) => {
           const link$1 = links[i$1];
           if (link$1.href === dep && (!isCss || link$1.rel === "stylesheet")) return;
         }
-        else if (document.querySelector(`link[href="${dep}"]${cssSelector}`)) return;
+        else if (document.querySelector(\`link[href="\${dep}"]\${cssSelector}\`)) return;
         const link = document.createElement("link");
         link.rel = isCss ? "stylesheet" : scriptRel;
         if (!isCss) link.as = "script";
@@ -66,7 +711,7 @@ var __spreadValues = (a, b) => {
         document.head.appendChild(link);
         if (isCss) return new Promise((res, rej) => {
           link.addEventListener("load", res);
-          link.addEventListener("error", () => rej(/* @__PURE__ */ new Error(`Unable to preload CSS for ${dep}`)));
+          link.addEventListener("error", () => rej(/* @__PURE__ */ new Error(\`Unable to preload CSS for \${dep}\`)));
         });
       }));
     }
@@ -107,7 +752,7 @@ var __spreadValues = (a, b) => {
       container.innerHTML = '<p class="error">Nenhuma localização encontrada.</p>';
       return;
     }
-    let optionsHtml = `<option value="${this.NONE_SELECTED}">Selecione uma localização</option>`;
+    let optionsHtml = \`<option value="\${this.NONE_SELECTED}">Selecione uma localização</option>\`;
     for (let i = 0; i < locations.length; i++) {
       const item = locations[i];
       if (!item || typeof item.name !== "string") {
@@ -188,7 +833,7 @@ var __spreadValues = (a, b) => {
   ScannerManager.prototype.init = function() {
     const container = document.querySelector("#scanner-area");
     if (!container) return;
-    container.innerHTML = `
+    container.innerHTML = \`
         <div id="videoArea">
             <div id="reader"></div>
             <div id="cameraPlaceholder">Câmera Desligada</div>
@@ -204,7 +849,7 @@ var __spreadValues = (a, b) => {
             <input type="number" id="manualBarcode" placeholder="Código (13 dig)" inputmode="numeric">
             <button id="submitManualBarcode" class="btn btn-gray">Enviar</button>
         </div>
-    `;
+    \`;
     document.getElementById("toggleCamera").addEventListener("click", () => this.handleCameraAction());
     document.getElementById("toggleFlash").addEventListener("click", () => this.toggleFlash());
     this._setupManualInput();
@@ -601,7 +1246,7 @@ var __spreadValues = (a, b) => {
     this._itemsPerPage = 10;
     this._currentFilter = null;
     const tableArea = document.getElementById("barcode-table-area");
-    tableArea.innerHTML = `
+    tableArea.innerHTML = \`
         <div class="table-wrapper">
             <h4 class="table-header-container" id="table-heading">Itens Encontrados por este dispositivo</h4>
             <table id="barcode-table">
@@ -624,7 +1269,7 @@ var __spreadValues = (a, b) => {
                 <button id="next-page" class="pagination-btn">Próximo</button>
             </div>
         </div>
-    `;
+    \`;
     this._setupTableEvents();
   }
   BarcodeTable.prototype._createCell = function(content, className) {
@@ -955,7 +1600,7 @@ var __spreadValues = (a, b) => {
     try {
       JSON.stringify(params);
     } catch (e) {
-      return Promise.reject(new Error(`Parâmetros inválidos para ${functionName}: Não serializável`));
+      return Promise.reject(new Error(\`Parâmetros inválidos para \${functionName}: Não serializável\`));
     }
     const operation = () => {
       return new Promise((resolve, reject) => {
@@ -964,7 +1609,7 @@ var __spreadValues = (a, b) => {
           return;
         }
         const timeoutId = setTimeout(() => {
-          reject(new Error(`Timeout na chamada ${functionName} após ${config.timeout}ms`));
+          reject(new Error(\`Timeout na chamada \${functionName} após \${config.timeout}ms\`));
         }, config.timeout);
         google.script.run.withSuccessHandler((result) => {
           clearTimeout(timeoutId);
@@ -1012,7 +1657,7 @@ var __spreadValues = (a, b) => {
       try {
         const result = await operation();
         if (attempt > 0) {
-          /* @__PURE__ */ console.log(`✅ Retry bem-sucedido na tentativa ${attempt + 1}`);
+          /* @__PURE__ */ console.log(\`✅ Retry bem-sucedido na tentativa \${attempt + 1}\`);
         }
         return result;
       } catch (error) {
@@ -1024,7 +1669,7 @@ var __spreadValues = (a, b) => {
           baseDelay * Math.pow(2, attempt) * (0.5 + Math.random()),
           maxDelay
         );
-        console.warn(`🔄 Tentativa ${attempt + 1} falhou, tentando novamente em ${Math.round(delay)}ms:`, error.message);
+        console.warn(\`🔄 Tentativa \${attempt + 1} falhou, tentando novamente em \${Math.round(delay)}ms:\`, error.message);
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
@@ -1070,7 +1715,7 @@ var __spreadValues = (a, b) => {
   BackendService.prototype.mockCall = function(functionName, mockData, delay = 500) {
     return new Promise((resolve) => {
       setTimeout(() => {
-        /* @__PURE__ */ console.log(`Mock call: ${functionName}`, mockData);
+        /* @__PURE__ */ console.log(\`Mock call: \${functionName}\`, mockData);
         resolve(mockData);
       }, delay);
     });
@@ -1259,7 +1904,7 @@ var __spreadValues = (a, b) => {
       if (this.elements) return;
       const overlay = document.createElement("div");
       overlay.className = "app-modal-overlay";
-      overlay.innerHTML = `
+      overlay.innerHTML = \`
             <div class="app-modal-box">
                 <div class="app-modal-title"></div>
                 <div class="app-modal-body"></div>
@@ -1268,7 +1913,7 @@ var __spreadValues = (a, b) => {
                     <button class="app-btn app-btn-confirm">Confirmar</button>
                 </div>
             </div>
-        `;
+        \`;
       document.body.appendChild(overlay);
       this.elements = {
         overlay,
@@ -1283,7 +1928,7 @@ var __spreadValues = (a, b) => {
      * Substitui o window.confirm() nativo com interface mais amigável.
      * 
      * @param {string} title - Título do modal (pode conter emojis)
-     * @param {string} message - Mensagem do modal (suporta \n para quebra de linha)
+     * @param {string} message - Mensagem do modal (suporta \\n para quebra de linha)
      * @returns {Promise<boolean>} Promise que resolve para true se confirmado, false se cancelado
      * 
      * @example
@@ -1295,7 +1940,7 @@ var __spreadValues = (a, b) => {
      * 
      * @example
      * // Com quebras de linha
-     * AppModal.confirm("Aviso", "Esta ação é irreversível.\n\nDeseja continuar?");
+     * AppModal.confirm("Aviso", "Esta ação é irreversível.\\n\\nDeseja continuar?");
      * 
      * @throws {Error} Se não for executado em ambiente browser com DOM disponível
      */
@@ -1335,15 +1980,15 @@ var __spreadValues = (a, b) => {
         userWarnings.printUserWarning("Selecione uma localização antes de bipar.");
         return false;
       }
-      const regex = /^(199[0-9]|20[0-2][0-9]|2030)\d{6}$/;
+      const regex = /^(199[0-9]|20[0-2][0-9]|2030)\\d{6}$/;
       if (!regex.test(rawValue)) {
         audioManager.playError();
-        userWarnings.printUserWarning(`Tombamento inválido: ${rawValue}`);
+        userWarnings.printUserWarning(\`Tombamento inválido: \${rawValue}\`);
         return false;
       }
       if (await assetRepository.hasItem(rawValue, selectedLocation)) {
         audioManager.playWarning();
-        userWarnings.printUserWarning(`${rawValue} já adicionado na lista local`);
+        userWarnings.printUserWarning(\`\${rawValue} já adicionado na lista local\`);
         return false;
       }
       const retorno = await inventoryBaseline.verifyItem(rawValue, selectedLocation);
@@ -1357,15 +2002,15 @@ var __spreadValues = (a, b) => {
         scannerManager.lock();
         try {
           const userConfirmed = await AppModal.confirm(
-            `⚠️ ATENÇÃO: LOCALIZAÇÃO DIVERGENTE`,
-            `Este bem deveria estar na localidade 
+            \`⚠️ ATENÇÃO: LOCALIZAÇÃO DIVERGENTE\`,
+            \`Este bem deveria estar na localidade 
 
-📍${retorno.local}
+📍\${retorno.local}
 
-Confirma que o código ${rawValue} está correto?`
+Confirma que o código \${rawValue} está correto?\`
           );
           if (!userConfirmed) {
-            userWarnings.printUserWarning(`Cancelado: Item deveria estar em ${retorno.local}`);
+            userWarnings.printUserWarning(\`Cancelado: Item deveria estar em \${retorno.local}\`);
             return false;
           }
         } finally {
@@ -1381,17 +2026,17 @@ Confirma que o código ${rawValue} está correto?`
         scannerManager.lock();
         try {
           const userConfirmed = await AppModal.confirm(
-            `⚠️ CONFLITO DE LOCALIZAÇÃO`,
-            `O bem patrimonial '${rawValue}' já está registrado em:
-📍 ${foundLocation}
+            \`⚠️ CONFLITO DE LOCALIZAÇÃO\`,
+            \`O bem patrimonial '\${rawValue}' já está registrado em:
+📍 \${foundLocation}
 
 Você está tentando inserir em:
-📍 ${selectedLocation}
+📍 \${selectedLocation}
 
-Deseja prosseguir mesmo assim?`
+Deseja prosseguir mesmo assim?\`
           );
           if (!userConfirmed) {
-            userWarnings.printUserWarning(`Cancelado: Item ${rawValue} encontrado em ${foundLocation}`);
+            userWarnings.printUserWarning(\`Cancelado: Item \${rawValue} encontrado em \${foundLocation}\`);
             return false;
           }
         } finally {
@@ -1436,12 +2081,12 @@ Deseja prosseguir mesmo assim?`
   }
   LoadingModal.prototype.injectHTML = function() {
     if (document.getElementById("consultingAlert")) return;
-    const html = `
+    const html = \`
         <div id="loadingOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:9998; cursor:wait;"></div>
         <div id="consultingAlert">
             <p>⏳ Consultando planilha ...</p>
         </div>
-    `;
+    \`;
     document.body.insertAdjacentHTML("beforeend", html);
   };
   LoadingModal.prototype.toggle = function(show, message = "⏳ Consultando planilha ...") {
@@ -1476,15 +2121,15 @@ Deseja prosseguir mesmo assim?`
     const container = document.getElementById("not-found-area");
     if (!container) return;
     if (!document.getElementById("notFoundBtn")) {
-      container.innerHTML += `
+      container.innerHTML += \`
             <button id="notFoundBtn" class="btn location-btn">
                 Buscar itens não encontrados
             </button>
-        `;
+        \`;
     }
     if (document.getElementById("assetNotFoundModal")) return;
-    const localOverlayHtml = `<div id="notFoundOverlay"></div>`;
-    const modalHtml = `
+    const localOverlayHtml = \`<div id="notFoundOverlay"></div>\`;
+    const modalHtml = \`
         <div id="assetNotFoundModal" class="full-screen">
             <div class="popup-header">
                 <h3 class="popup-title">Itens Não Encontrados</h3>
@@ -1504,7 +2149,7 @@ Deseja prosseguir mesmo assim?`
                 </table>
             </div>
         </div>
-    `;
+    \`;
     document.body.insertAdjacentHTML("beforeend", localOverlayHtml);
     document.body.insertAdjacentHTML("beforeend", modalHtml);
   };
@@ -1565,19 +2210,19 @@ Deseja prosseguir mesmo assim?`
     const fragment = document.createDocumentFragment();
     itens.forEach((item, index) => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `
-            <td>${index + 1}</td>
-            <td>${item[0]}</td>
-            <td>${item[1]}</td>
+      tr.innerHTML = \`
+            <td>\${index + 1}</td>
+            <td>\${item[0]}</td>
+            <td>\${item[1]}</td>
             <td></td>
-        `;
+        \`;
       const btn = document.createElement("button");
       btn.textContent = "Adicionar";
       btn.className = "btn-edit";
       btn.onclick = async () => {
         const confirmado = await AppModal.confirm(
-          `Confirmar Adição`,
-          `Deseja marcar o item ${item[0]} como encontrado?`
+          \`Confirmar Adição\`,
+          \`Deseja marcar o item \${item[0]} como encontrado?\`
         );
         if (confirmado) {
           processBarcode(item[0], locationSelector.getSelectedLocation());
@@ -1611,7 +2256,7 @@ Deseja prosseguir mesmo assim?`
       loadingModal.toggle(false);
       if (!data || data.length === 0) {
         scannerManager.unlock();
-        userWarnings.printUserWarning(`Nenhum item pendente para ${location}! Caso não apareça na sua tabela, foi encontrado por outro usuário.`);
+        userWarnings.printUserWarning(\`Nenhum item pendente para \${location}! Caso não apareça na sua tabela, foi encontrado por outro usuário.\`);
         return;
       }
       self2.addItensToNotFoundTable(data);
@@ -1647,7 +2292,7 @@ Deseja prosseguir mesmo assim?`
   }
   EditAssetModal.prototype.innerHTML = function() {
     if (document.getElementById("assetDetailsModal")) return;
-    const modalHtml = `
+    const modalHtml = \`
         <div id="assetDetailsModal" class="modal-full">
             
             <div class="modal-header">
@@ -1701,7 +2346,7 @@ Deseja prosseguir mesmo assim?`
                 </div>
             </form>
         </div>
-    `;
+    \`;
     document.body.insertAdjacentHTML("beforeend", modalHtml);
   };
   EditAssetModal.prototype.initEvents = function() {
@@ -1819,15 +2464,15 @@ Deseja prosseguir mesmo assim?`
   StatsManager.prototype._innerHtml = function(parentId) {
     const parent = document.getElementById(parentId || this.containerId);
     if (!parent) return;
-    parent.innerHTML = `
+    parent.innerHTML = \`
         <div class="stats-container">
 
-            <div id="${this.elements.contextCard}" class="stat-card full-width">
+            <div id="\${this.elements.contextCard}" class="stat-card full-width">
                 <div class="flex-align-center" style="margin-bottom: 8px;">
                     <span id="syncStatusIcon" class="is-fetching">🔁</span>
                     <span class="stat-label">Resumo Geral do processo de Inventário:</span>
                 </div>
-                <div id="${this.elements.contextContent}"></div>
+                <div id="\${this.elements.contextContent}"></div>
             </div>
         </div>
 
@@ -1837,22 +2482,22 @@ Deseja prosseguir mesmo assim?`
         <div class="stats-container"> 
             <div class="stat-card">
                 <span class="stat-label">Lidos (Dispositivo)</span>
-                <span id="${this.elements.total}" class="stat-value">0</span>
+                <span id="\${this.elements.total}" class="stat-value">0</span>
             </div>
             <div class="stat-card">
                 <span class="stat-label">Sincronizados</span>
-                <span id="${this.elements.synced}" class="stat-value text-success">0</span>
+                <span id="\${this.elements.synced}" class="stat-value text-success">0</span>
             </div>
             <div class="stat-card" id="card-pending">
                 <span class="stat-label">Pendentes</span>
-                <span id="${this.elements.pending}" class="stat-value text-warning">0</span>
+                <span id="\${this.elements.pending}" class="stat-value text-warning">0</span>
             </div>
             <div class="stat-card clickable" id="card-failed">
                 <span class="stat-label">Falhas 🔄</span>
-                <span id="${this.elements.failed}" class="stat-value text-danger">0</span>
+                <span id="\${this.elements.failed}" class="stat-value text-danger">0</span>
             </div>
         </div>
-    `;
+    \`;
   };
   StatsManager.prototype.renderLocationContext = function() {
     const content = document.getElementById(this.elements.contextContent);
@@ -1869,7 +2514,7 @@ Deseja prosseguir mesmo assim?`
         td.style.padding = "8px 6px";
         const nameDiv = document.createElement("div");
         nameDiv.className = "clickable-location";
-        nameDiv.innerHTML = `🔍 <span>${loc.name}</span>`;
+        nameDiv.innerHTML = \`🔍 <span>\${loc.name}</span>\`;
         nameDiv.style.marginBottom = "4px";
         nameDiv.onclick = () => {
           locationSelector.setSelectedLocation(loc.name);
@@ -1884,12 +2529,12 @@ Deseja prosseguir mesmo assim?`
         metrics.style.fontSize = "12px";
         metrics.style.gap = "6px";
         const total = document.createElement("span");
-        total.innerHTML = `📦 <strong>${loc.totalAssets}</strong> total`;
+        total.innerHTML = \`📦 <strong>\${loc.totalAssets}</strong> total\`;
         const found = document.createElement("span");
-        found.innerHTML = `✅ <strong>${loc.assetsFindedCount}</strong> encontrados`;
+        found.innerHTML = \`✅ <strong>\${loc.assetsFindedCount}</strong> encontrados\`;
         found.style.color = "#188038";
         const missing = document.createElement("span");
-        missing.innerHTML = `❌ <strong>${loc.missingAssets}</strong> faltantes`;
+        missing.innerHTML = \`❌ <strong>\${loc.missingAssets}</strong> faltantes\`;
         missing.style.color = "#d93025";
         metrics.appendChild(total);
         metrics.appendChild(found);
@@ -1955,8 +2600,8 @@ Deseja prosseguir mesmo assim?`
       container.innerHTML += '<button id="openMessageModalBtn" class="btn btn-gray location-btn" style="display:none;">Enviar observação</button>';
     }
     if (document.getElementById("modalObs")) return;
-    const localOverlayHtml = `<div id="messageModalOverlay"></div>`;
-    const html = `
+    const localOverlayHtml = \`<div id="messageModalOverlay"></div>\`;
+    const html = \`
         <div id="modalObs" class="modal-full">
             <div class="modal-header">
                 <h2>Enviar observação</h2>
@@ -1976,7 +2621,7 @@ Deseja prosseguir mesmo assim?`
 
             </form>
         </div>
-    `;
+    \`;
     document.body.insertAdjacentHTML("beforeend", localOverlayHtml);
     document.body.insertAdjacentHTML("beforeend", html);
   };
@@ -1991,7 +2636,7 @@ Deseja prosseguir mesmo assim?`
       };
     }
     textarea.oninput = () => {
-      charCount.textContent = `${textarea.value.length} / 140`;
+      charCount.textContent = \`\${textarea.value.length} / 140\`;
     };
     document.getElementById("btnCancelObs").onclick = () => self2.close();
     document.getElementById("btnSaveObs").onclick = () => {
@@ -2036,7 +2681,7 @@ Deseja prosseguir mesmo assim?`
       /* @__PURE__ */ console.log("Selecione uma localização primeiro!");
       return;
     }
-    document.getElementById("obsLocationName").textContent = `Local: ${loc}`;
+    document.getElementById("obsLocationName").textContent = \`Local: \${loc}\`;
     document.getElementById("modalObs").style.display = "block";
     document.getElementById("messageModalOverlay").style.display = "block";
     document.getElementById("obsText").focus();
@@ -2079,10 +2724,10 @@ Deseja prosseguir mesmo assim?`
       pending = pending.filter((item) => item.uid !== uid);
       if (pending.length < initialLength) {
         localStorage.setItem(this.storageKey, JSON.stringify(pending));
-        /* @__PURE__ */ console.log(`✅ Mensagem ${uid} sincronizada e removida do cache.`);
+        /* @__PURE__ */ console.log(\`✅ Mensagem \${uid} sincronizada e removida do cache.\`);
       }
     } catch (error) {
-      console.error(`❌ Erro ao manipular localStorage para o UID ${uid}:`, error);
+      console.error(\`❌ Erro ao manipular localStorage para o UID \${uid}:\`, error);
       if (error instanceof SyntaxError) {
         console.warn("Limpando cache de mensagens corrompido.");
         localStorage.removeItem(this.storageKey);
@@ -2174,7 +2819,7 @@ Deseja prosseguir mesmo assim?`
   new AssetSyncManager(assetRepository);
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-C-Ffbij5.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-D0wsxano.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
@@ -2224,13 +2869,13 @@ Deseja prosseguir mesmo assim?`
       /* @__PURE__ */ console.log("⚙️ Configurações carregadas:", appSettings);
       if (appSettings && appSettings.inventory_open === false) {
         console.error("⚠️ Coleta de dados fechada.");
-        document.body.innerHTML = `
+        document.body.innerHTML = \`
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; font-family: sans-serif; background: #f8f9fa; color: #333;">
         <div style="font-size: 80px;">🔐</div>
         <h1 style="margin-top: 20px;">Inventário fechado</h1>
         <p style="max-width: 80%; color: #666;">O prazo para inventário está fechado.</p>
       </div>
-      `;
+      \`;
         loadingModal.toggle(false);
         return;
       }
@@ -2251,8 +2896,8 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.01.30-001";
-      el.title = `Versão do build: ${"2026.01.30-001"}`;
+      el.textContent = "2026.01.30-006";
+      el.title = \`Versão do build: \${"2026.01.30-006"}\`;
     }
   });
   window.addEventListener("error", function(e) {
@@ -2269,7 +2914,7 @@ Deseja prosseguir mesmo assim?`
       return;
     }
     try {
-      container.innerHTML = `
+      container.innerHTML = \`
             <div id="debug-container" style="margin-top: 30px; border-top: 5px solid #333; padding: 10px; background: #f0f0f0;">
                 <h3 style="margin: 0 0 10px 0;" id="debug-heading" class="sr-only">Console de Debug</h3>
                 <div style="margin-bottom: 5px; display: flex; gap: 10px;">
@@ -2280,15 +2925,15 @@ Deseja prosseguir mesmo assim?`
                     style="width: 100%; height: 250px; background: #1e1e1e; color: #00ff00; font-family: monospace; font-size: 11px; padding: 10px; box-sizing: border-box; border: 1px solid #000;" 
                     readonly></textarea>
             </div>
-        `;
+        \`;
       debugTextarea = document.getElementById("debug-console");
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.01.30-001"}`);
+      /* @__PURE__ */ console.log(\`🚀 Build: \${"2026.01.30-006"}\`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
-      throw new Error(`Falha na inicialização do debug: ${error.message}`);
+      throw new Error(\`Falha na inicialização do debug: \${error.message}\`);
     }
   }
   const originalLog = console.log;
@@ -2305,8 +2950,8 @@ Deseja prosseguir mesmo assim?`
       }
     }).join(" ");
     const time = (/* @__PURE__ */ new Date()).toLocaleTimeString();
-    const prefix = `[${time}] [${type}]: `;
-    debugTextarea.value += prefix + msg + "\n" + "-".repeat(40) + "\n";
+    const prefix = \`[\${time}] [\${type}]: \`;
+    debugTextarea.value += prefix + msg + "\\n" + "-".repeat(40) + "\\n";
     debugTextarea.scrollTop = debugTextarea.scrollHeight;
   }
   console.log = function(...args) {
@@ -2332,7 +2977,7 @@ Deseja prosseguir mesmo assim?`
       return;
     }
     try {
-      const filename = `debug_log_${(/* @__PURE__ */ new Date()).getTime()}.txt`;
+      const filename = \`debug_log_\${(/* @__PURE__ */ new Date()).getTime()}.txt\`;
       const blob = new Blob([debugTextarea.value], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -2346,7 +2991,7 @@ Deseja prosseguir mesmo assim?`
     }
   }
   window.onerror = function(message, source, lineno) {
-    console.error(`ERRO CRÍTICO: ${message} (${source}:${lineno})`);
+    console.error(\`ERRO CRÍTICO: \${message} (\${source}:\${lineno})\`);
     return false;
   };
   const debug = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -2447,7 +3092,9 @@ Deseja prosseguir mesmo assim?`
   <!-- 
     Script principal da aplicação
     Carregado como módulo ES6 para melhor organização
-  -->
+  -->
+
 </body>
 
-</html>
+</html>`;
+}
