@@ -84,27 +84,20 @@ O servidor local é configurado em `local_server/`. Para documentação completa
 
 ---
 
-## Implantação em produção
+## Exemplo de Implantação em produção
 
 Para implantar uma cópia em produção do projeto como está, siga os seguintes passos:
 1. Faça uma cópia da planilha modelo em [Planilha base Modelo](https://docs.google.com/spreadsheets/d/1pCbZJPe1I_3hWBJbHfE7AipeEZzQyJsmKNdKlOJIVi8).
 2. Carregue os dados do seu inventário na aba "inventario" (ou mantenha os dados de exemplo para testar).
 3. Abra o Apps Script vinculado à planilha (Extensões > Apps Script).
-4. Renomeie o projeto.
-5. Abra as configurações do projeto (ícone de engrenagem) e copie o ID do projeto (Código do script).
-6. Cole o ID do script no arquivo `.env` na variável `CLASP_SCRIPT_ID`.
-7. No editor do Apps Script, vá em Implantar > Nova Implantação > Selecione o tipo > App da web.
-8. Configure quem tem acesso ao aplicativo
+4. Renomeie o projeto caso desejar.
+5. No editor do Apps Script, vá em Implantar > Nova Implantação > Selecione o tipo > App da web.
+6. Configure quem tem acesso ao aplicativo
     1. Executar como: Usuário com acesso ao app da Web
     2. Quem pode acessar: "Qualquer pessoa com uma Conta do Google".
-9. Clique em "Implantar" e copie Código de implantação para o arquivo `.env` na variável `DEPLOYMENT_ID`.
-10. Copie e salve o URL do app da web para acessar o sistema de inventário.
-    1. Ao abrir o URL, deve ser exibida uma mensagem como "Função de script não encontrada: doGet". Isso é esperado, pois os arquivos ainda não foram implantados.
-11. Agora, volte ao terminal e execute `clasp login` e faça login com a conta Google vinculada à planilha.
-12. Finalmente, execute `npm run deploy` para enviar os arquivos para o Apps Script.
-    1. Caso solicite 'Manifest file has been updated. Do you want to push and overwrite?', responda 'y'.
-13. Ao solicitar "Deseja implantar (deploy) uma nova versão de produção no Google?", responda 's'.
-14. Após o deploy, acesse novamente o URL do app da web. Agora o sistema de inventário deve estar funcionando corretamente.
+9. Clique em "Implantar"
+10. Copie a URL do app da web.
+11. Acesse a URL em um navegador.
     1. Caso solicite permissões, conceda acesso à conta Google vinculada à planilha.
 
 Para alterar o título do app e o ícone exibido na aba do navegador, edite os parâmetros da função `doGet` em `backend/Código.gs`.
