@@ -78,7 +78,7 @@ function EditAssetModal() {
     this.handleSave = null;
 
     this.initEvents();
-    this.close();
+    // this.close();
 }
 
 /**
@@ -158,16 +158,16 @@ EditAssetModal.prototype.initEvents = function () {
      * Handler para o botão cancelar
      * @private
      */
-    this.handleCancel = function () { self.close(); };
+    self.handleCancel = function () { self.close(); };
 
     /**
      * Handler para o botão salvar
      * @private
      */
-    this.handleSave = function () { self.submit(); };
+    self.handleSave = function () { self.submit(); };
 
-    document.getElementById('btnCancelEdit').addEventListener('click', this.handleCancel);
-    document.getElementById('btnSaveEdit').addEventListener('click', this.handleSave);
+    document.getElementById('btnCancelEdit').addEventListener('click', self.handleCancel);
+    document.getElementById('btnSaveEdit').addEventListener('click', self.handleSave);
 
     /**
      * Evento customizado para abrir o modal de edição
@@ -214,7 +214,7 @@ EditAssetModal.prototype.open = function (uid) {
     this.modal.style.display = 'block';
     document.body.style.overflow = 'hidden'; // Trava o scroll do fundo
 
-    this.initEvents();
+    // this.initEvents();
 };
 
 /**
@@ -235,9 +235,7 @@ EditAssetModal.prototype.submit = function () {
     // Captura o item retornado pelo storage
     const success = assetRepository.updateItem(uid, newState, newIpvu, newObs);
 
-    if (success) {
-        //console.log('EditAssetModal: Item atualizado com sucesso');
-    } else {
+    if (!success) {
         console.error('EditAssetModal: Falha ao atualizar item');
     }
 
@@ -251,7 +249,7 @@ EditAssetModal.prototype.submit = function () {
 EditAssetModal.prototype.close = function () {
     this.modal.style.display = 'none';
     document.body.style.overflow = 'auto'; // Destrava o scroll
-    this.removeEvents();
+    // this.removeEvents();
 };
 
 /**

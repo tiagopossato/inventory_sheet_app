@@ -168,26 +168,42 @@ AssetRepository.prototype._emit = function (name, detail) {
 
 /**
  * Adiciona um novo item ao repositório
- * @param {string} rawCode - Código do ativo (código de barras)
+ * @param {string|number} rawCode - Código do ativo (código de barras)
  * @param {string} location - Localização do ativo
  * @returns {Promise<Object|null>} Item criado ou null se já existir
  */
 AssetRepository.prototype.addItem = async function (rawCode, location) {
-  // Validações
-  if (typeof rawCode === 'undefined' || rawCode === null) return null;
-  if (typeof location === 'undefined' || location === null) return null;
+  // Validações rigorosas
+  if (typeof rawCode === 'undefined' || rawCode === null || rawCode === '') {
+    console.warn('AssetRepository.addItem: Código do ativo é inválido', rawCode);
+    return null;
+  }
 
-  const barcode = parseInt(rawCode, 10);
-  if (isNaN(barcode) || barcode <= 0) return null;
+  if (typeof location === 'undefined' || location === null || typeof location !== 'string' || location.trim() === '') {
+    console.warn('AssetRepository.addItem: Localização é inválida', location);
+    return null;
+  }
 
-  const loc = String(location || '').trim();
-  if (!barcode || !loc) return null;
+  const barcode = parseInt(String(rawCode).trim(), 10);
+  if (isNaN(barcode) || barcode <= 0 || !Number.isSafeInteger(barcode)) {
+    console.warn('AssetRepository.addItem: Código do ativo não é um número válido', rawCode);
+    return null;
+  }
+
+  const loc = location.trim();
+  if (loc.length > 200) { // Limite razoável para localização
+    console.warn('AssetRepository.addItem: Localização é muito longa', loc);
+    return null;
+  }
 
   const exists = this.items.some(function (i) {
     return i.code === barcode && i.location === loc;
   });
 
-  if (exists) return null;
+  if (exists) {
+    console.info('AssetRepository.addItem: Item já existe', { code: barcode, location: loc });
+    return null;
+  }
 
   const item = {
     uid: Date.now().toString(36) + Math.random().toString(36).slice(2),
@@ -218,12 +234,39 @@ AssetRepository.prototype.addItem = async function (rawCode, location) {
  * @returns {boolean} True se o item foi atualizado, false se não encontrado
  */
 AssetRepository.prototype.updateItem = function (uid, state, ipvu, obs) {
+  // Validações rigorosas
+  if (typeof uid !== 'string' || uid.trim() === '') {
+    console.warn('AssetRepository.updateItem: UID é inválido', uid);
+    return false;
+  }
+
+  if (typeof state !== 'number' || isNaN(state) || state < 0 || state > 5) { // Assumindo estado entre 0-5
+    console.warn('AssetRepository.updateItem: Estado é inválido', state);
+    return false;
+  }
+
+  if (typeof ipvu !== 'number' || isNaN(ipvu) || ipvu < 0 || ipvu > 10) {
+    console.warn('AssetRepository.updateItem: IPVU é inválido', ipvu);
+    return false;
+  }
+
+  if (typeof obs !== 'undefined' && obs !== null && typeof obs !== 'string') {
+    console.warn('AssetRepository.updateItem: Observações devem ser uma string', obs);
+    return false;
+  }
+
+  // Limite razoável para observações
+  const observation = typeof obs === 'string' ? obs.substring(0, 140) : '';
+
   const item = this.items.find(function (i) { return i.uid === uid; });
-  if (!item) return false;
+  if (!item) {
+    console.warn('AssetRepository.updateItem: Item não encontrado', uid);
+    return false;
+  }
 
   item.state = state;
   item.ipvu = ipvu;
-  item.obs = obs || '';
+  item.obs = observation;
   item.updatedAt = Date.now();
   item.status = AssetStatus.PENDING;
   item.retryCount = 0;
@@ -241,9 +284,28 @@ AssetRepository.prototype.updateItem = function (uid, state, ipvu, obs) {
  * @returns {Promise<boolean>} True se o item existe, false caso contrário
  */
 AssetRepository.prototype.hasItem = async function (barcode, location) {
-  const code = parseInt(String(barcode || '').trim(), 10);
-  const loc = String(location || '').trim();
-  if (isNaN(code) || !loc) return false;
+  // Validações rigorosas
+  if (typeof barcode === 'undefined' || barcode === null || barcode === '') {
+    console.warn('AssetRepository.hasItem: Código do ativo é inválido', barcode);
+    return false;
+  }
+
+  if (typeof location === 'undefined' || location === null || typeof location !== 'string' || location.trim() === '') {
+    console.warn('AssetRepository.hasItem: Localização é inválida', location);
+    return false;
+  }
+
+  const code = parseInt(String(barcode).trim(), 10);
+  if (isNaN(code) || code <= 0 || !Number.isSafeInteger(code)) {
+    console.warn('AssetRepository.hasItem: Código do ativo não é um número válido', barcode);
+    return false;
+  }
+
+  const loc = location.trim();
+  if (loc.length > 200) {
+    console.warn('AssetRepository.hasItem: Localização é muito longa', loc);
+    return false;
+  }
 
   return this.items.some(function (item) {
     return item.code === code && item.location === loc;
@@ -256,6 +318,12 @@ AssetRepository.prototype.hasItem = async function (barcode, location) {
  * @returns {Object|null} Item encontrado ou null se não existir
  */
 AssetRepository.prototype.getItem = function (uid) {
+  // Validação rigorosa
+  if (typeof uid !== 'string' || uid.trim() === '') {
+    console.warn('AssetRepository.getItem: UID é inválido', uid);
+    return null;
+  }
+
   return this.items.find(function (i) { return i.uid === uid; }) || null;
 };
 
@@ -273,8 +341,17 @@ AssetRepository.prototype.getAllItems = function () {
  * @returns {Array<Object>} Array com cópia dos itens filtrados por localização
  */
 AssetRepository.prototype.getItemsByLocation = function (location) {
-  const targetLoc = String(location || '').trim();
-  if (!targetLoc) return this.getAllItems();
+  // Validação rigorosa
+  if (typeof location === 'undefined' || location === null || typeof location !== 'string' || location.trim() === '') {
+    // console.warn('AssetRepository.getItemsByLocation: Localização é inválida', location);
+    return this.getAllItems();
+  }
+
+  const targetLoc = location.trim();
+  if (targetLoc.length > 200) {
+    console.warn('AssetRepository.getItemsByLocation: Localização é muito longa', targetLoc);
+    return [];
+  }
 
   return this.items
     .filter(function (item) { return item.location === targetLoc; })
@@ -308,6 +385,12 @@ AssetRepository.prototype.getStats = function () {
  * @returns {Array<Object>} Array com os itens pendentes (até batchSize)
  */
 AssetRepository.prototype.getPendingBatch = function (batchSize) {
+  // Validação rigorosa
+  if (typeof batchSize !== 'number' || isNaN(batchSize) || batchSize <= 0 || batchSize > 1000) { // Limite razoável
+    console.warn('AssetRepository.getPendingBatch: Tamanho do lote é inválido', batchSize);
+    return [];
+  }
+
   return this.items
     .filter(function (i) { return i.status === AssetStatus.PENDING; })
     .slice(0, batchSize);
@@ -318,6 +401,26 @@ AssetRepository.prototype.getPendingBatch = function (batchSize) {
  * @param {Array<string>} uids - Array de UIDs dos itens a serem marcados
  */
 AssetRepository.prototype.markBatchInFlight = function (uids) {
+  // Validação rigorosa
+  if (!Array.isArray(uids) || uids.length === 0) {
+    console.warn('AssetRepository.markBatchInFlight: Lista de UIDs é inválida ou vazia', uids);
+    return;
+  }
+
+  // Validar que todos os elementos são strings válidas
+  for (let i = 0; i < uids.length; i++) {
+    if (typeof uids[i] !== 'string' || uids[i].trim() === '') {
+      console.warn('AssetRepository.markBatchInFlight: UID inválido encontrado', uids[i]);
+      return;
+    }
+  }
+
+  // Limitar o tamanho do lote para evitar problemas de desempenho
+  if (uids.length > 1000) {
+    console.warn('AssetRepository.markBatchInFlight: Lote muito grande, limitando a 1000 itens');
+    uids = uids.slice(0, 1000);
+  }
+
   this.items.forEach(function (item) {
     if (uids.indexOf(item.uid) !== -1) {
       item.status = AssetStatus.IN_FLIGHT;
@@ -331,6 +434,26 @@ AssetRepository.prototype.markBatchInFlight = function (uids) {
  * @param {Array<string>} syncedUids - Array de UIDs dos itens sincronizados com sucesso
  */
 AssetRepository.prototype.processSyncSuccess = function (syncedUids) {
+  // Validação rigorosa
+  if (!Array.isArray(syncedUids) || syncedUids.length === 0) {
+    console.warn('AssetRepository.processSyncSuccess: Lista de UIDs sincronizados é inválida ou vazia', syncedUids);
+    return;
+  }
+
+  // Validar que todos os elementos são strings válidas
+  for (let i = 0; i < syncedUids.length; i++) {
+    if (typeof syncedUids[i] !== 'string' || syncedUids[i].trim() === '') {
+      console.warn('AssetRepository.processSyncSuccess: UID inválido encontrado', syncedUids[i]);
+      return;
+    }
+  }
+
+  // Limitar o tamanho do lote para evitar problemas de desempenho
+  if (syncedUids.length > 1000) {
+    console.warn('AssetRepository.processSyncSuccess: Lote muito grande, limitando a 1000 itens');
+    syncedUids = syncedUids.slice(0, 1000);
+  }
+
   const self = this;
   let changed = false;
   this.items.forEach(function (item) {
@@ -351,6 +474,31 @@ AssetRepository.prototype.processSyncSuccess = function (syncedUids) {
  * @param {number} maxRetries - Número máximo de tentativas permitidas
  */
 AssetRepository.prototype.processSyncRetry = function (failedUids, maxRetries) {
+  // Validações rigorosas
+  if (!Array.isArray(failedUids) || failedUids.length === 0) {
+    console.warn('AssetRepository.processSyncRetry: Lista de UIDs com falha é inválida ou vazia', failedUids);
+    return;
+  }
+
+  if (typeof maxRetries !== 'number' || isNaN(maxRetries) || maxRetries < 0) {
+    console.warn('AssetRepository.processSyncRetry: Número máximo de tentativas é inválido', maxRetries);
+    return;
+  }
+
+  // Validar que todos os elementos são strings válidas
+  for (let i = 0; i < failedUids.length; i++) {
+    if (typeof failedUids[i] !== 'string' || failedUids[i].trim() === '') {
+      console.warn('AssetRepository.processSyncRetry: UID inválido encontrado', failedUids[i]);
+      return;
+    }
+  }
+
+  // Limitar o tamanho do lote para evitar problemas de desempenho
+  if (failedUids.length > 1000) {
+    console.warn('AssetRepository.processSyncRetry: Lote muito grande, limitando a 1000 itens');
+    failedUids = failedUids.slice(0, 1000);
+  }
+
   const self = this;
   let changed = false;
   this.items.forEach(function (item) {
@@ -394,14 +542,28 @@ AssetRepository.prototype.retryFailed = function () {
  * @param {string} appSettings.app_version - Versão atual da aplicação
  */
 AssetRepository.prototype.applyMaintenance = function (appSettings) {
-  if (!appSettings) return;
+  // Validações rigorosas
+  if (!appSettings || typeof appSettings !== 'object') {
+    console.warn('AssetRepository.applyMaintenance: Configurações da aplicação são inválidas', appSettings);
+    return;
+  }
 
   const min_valid_date = appSettings.min_valid_date;
   const app_version = appSettings.app_version;
 
-  if (!min_valid_date || !app_version) return;
+  // Validar formato da data
+  const minDateTimestamp = new Date(min_valid_date).getTime();
+  if (isNaN(minDateTimestamp)) {
+    console.warn('AssetRepository.applyMaintenance: Data mínima inválida', min_valid_date);
+    return;
+  }
 
   const newVersion = String(app_version).trim();
+  if (!newVersion) {
+    console.warn('AssetRepository.applyMaintenance: Versão do aplicativo é inválida', app_version);
+    return;
+  }
+
   const localVersion = localStorage.getItem(VERSION_KEY);
   let forceSave = false;
 
@@ -410,11 +572,11 @@ AssetRepository.prototype.applyMaintenance = function (appSettings) {
   } else if (localVersion !== newVersion) {
     this.clearStorage();
     localStorage.setItem(VERSION_KEY, newVersion);
+    console.info('AssetRepository.applyMaintenance: Versão mudou, limpeza completa realizada');
     return;
   }
 
-  if (min_valid_date && this.items.length > 0) {
-    const minDateTimestamp = new Date(min_valid_date).getTime();
+  if (this.items.length > 0) {
     const initialCount = this.items.length;
 
     this.items = this.items.filter(function (item) {
@@ -423,6 +585,11 @@ AssetRepository.prototype.applyMaintenance = function (appSettings) {
 
     if (this.items.length !== initialCount) {
       forceSave = true;
+      console.info('AssetRepository.applyMaintenance: Itens antigos removidos', {
+        initialCount,
+        remainingCount: this.items.length,
+        removedCount: initialCount - this.items.length
+      });
     }
   }
 

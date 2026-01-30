@@ -11,7 +11,7 @@ function doGet(event, title='Aplicativo leitor', faviconUrl='https://videira.ifc
     // 2. Avalia (processa) o template, executando qualquer código Apps Script embutido.
     //.evaluate()
 
-    .createHtmlOutput(getHtmlContent())
+    .createHtmlOutputFromFile('index')
 
     // 3. Define o título que aparece na aba do navegador.
     .setTitle(title)
