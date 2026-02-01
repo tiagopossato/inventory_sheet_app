@@ -87,7 +87,7 @@ O servidor local é configurado em `local_server/`. Para documentação completa
 ## Exemplo de Implantação em produção
 
 Para implantar uma cópia em produção do projeto como está, siga os seguintes passos:
-1. Faça uma cópia da planilha modelo em [Planilha base Modelo](https://docs.google.com/spreadsheets/d/1pCbZJPe1I_3hWBJbHfE7AipeEZzQyJsmKNdKlOJIVi8).
+1. Faça uma cópia da planilha modelo em [Planilha base Modelo](https://bit.ly/example-inventory-sheet).
 2. Carregue os dados do seu inventário na aba "inventario" (ou mantenha os dados de exemplo para testar).
 3. Abra o Apps Script vinculado à planilha (Extensões > Apps Script).
 4. Renomeie o projeto caso desejar.
