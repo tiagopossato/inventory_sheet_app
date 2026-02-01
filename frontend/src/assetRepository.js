@@ -36,6 +36,19 @@ function AssetRepository() {
   /** @type {number|null} saveTimer - Timer para debounce das operações de salvamento */
   this.saveTimer = null;
   this._load();
+
+  // Reativa itens que estavam marcados como sendo enviados na última sessão 
+  // mas que não foram confirmados como sincronizados
+  let saveNeeded = false;
+  this.items.forEach(function (item) {
+    if (item.status === AssetStatus.IN_FLIGHT) {
+      item.status = AssetStatus.PENDING;
+      saveNeeded = true;
+    }
+  });
+  if (saveNeeded) {
+    this._save();
+  }
 }
 
 // --- Métodos Internos de Persistência ---

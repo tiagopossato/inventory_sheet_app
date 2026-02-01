@@ -172,8 +172,8 @@ export class GASSimulation {
 
     let locations = [];
 
-    if (await sheetLoc.getLastRow() >= 6) {
-      const locData = await this.sheetsService.getRangeData('localidades!A6:D' + (await sheetLoc.getLastRow()));
+    if (await sheetLoc.getLastRow() >= 2) {
+      const locData = await this.sheetsService.getRangeData('localidades!A2:D' + (await sheetLoc.getLastRow()));
       const target = targetLocation ? String(targetLocation).trim() : null;
 
       locations = locData
