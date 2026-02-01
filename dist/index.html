@@ -356,6 +356,16 @@ var __spreadValues = (a, b) => {
     this.items = [];
     this.saveTimer = null;
     this._load();
+    let saveNeeded = false;
+    this.items.forEach(function(item) {
+      if (item.status === AssetStatus.IN_FLIGHT) {
+        item.status = AssetStatus.PENDING;
+        saveNeeded = true;
+      }
+    });
+    if (saveNeeded) {
+      this._save();
+    }
   }
   AssetRepository.prototype._save = function(immediate) {
     const self2 = this;
@@ -410,16 +420,31 @@ var __spreadValues = (a, b) => {
     window.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
   };
   AssetRepository.prototype.addItem = async function(rawCode, location) {
-    if (typeof rawCode === "undefined" || rawCode === null) return null;
-    if (typeof location === "undefined" || location === null) return null;
-    const barcode = parseInt(rawCode, 10);
-    if (isNaN(barcode) || barcode <= 0) return null;
-    const loc = String(location || "").trim();
-    if (!barcode || !loc) return null;
+    if (typeof rawCode === "undefined" || rawCode === null || rawCode === "") {
+      console.warn("AssetRepository.addItem: Código do ativo é inválido", rawCode);
+      return null;
+    }
+    if (typeof location === "undefined" || location === null || typeof location !== "string" || location.trim() === "") {
+      console.warn("AssetRepository.addItem: Localização é inválida", location);
+      return null;
+    }
+    const barcode = parseInt(String(rawCode).trim(), 10);
+    if (isNaN(barcode) || barcode <= 0 || !Number.isSafeInteger(barcode)) {
+      console.warn("AssetRepository.addItem: Código do ativo não é um número válido", rawCode);
+      return null;
+    }
+    const loc = location.trim();
+    if (loc.length > 200) {
+      console.warn("AssetRepository.addItem: Localização é muito longa", loc);
+      return null;
+    }
     const exists = this.items.some(function(i) {
       return i.code === barcode && i.location === loc;
     });
-    if (exists) return null;
+    if (exists) {
+      /* @__PURE__ */ console.info("AssetRepository.addItem: Item já existe", { code: barcode, location: loc });
+      return null;
+    }
     const item = {
       uid: Date.now().toString(36) + Math.random().toString(36).slice(2),
       code: barcode,
@@ -439,13 +464,33 @@ var __spreadValues = (a, b) => {
     return item;
   };
   AssetRepository.prototype.updateItem = function(uid, state, ipvu, obs) {
+    if (typeof uid !== "string" || uid.trim() === "") {
+      console.warn("AssetRepository.updateItem: UID é inválido", uid);
+      return false;
+    }
+    if (typeof state !== "number" || isNaN(state) || state < 0 || state > 5) {
+      console.warn("AssetRepository.updateItem: Estado é inválido", state);
+      return false;
+    }
+    if (typeof ipvu !== "number" || isNaN(ipvu) || ipvu < 0 || ipvu > 10) {
+      console.warn("AssetRepository.updateItem: IPVU é inválido", ipvu);
+      return false;
+    }
+    if (typeof obs !== "undefined" && obs !== null && typeof obs !== "string") {
+      console.warn("AssetRepository.updateItem: Observações devem ser uma string", obs);
+      return false;
+    }
+    const observation = typeof obs === "string" ? obs.substring(0, 140) : "";
     const item = this.items.find(function(i) {
       return i.uid === uid;
     });
-    if (!item) return false;
+    if (!item) {
+      console.warn("AssetRepository.updateItem: Item não encontrado", uid);
+      return false;
+    }
     item.state = state;
     item.ipvu = ipvu;
-    item.obs = obs || "";
+    item.obs = observation;
     item.updatedAt = Date.now();
     item.status = AssetStatus.PENDING;
     item.retryCount = 0;
@@ -455,14 +500,33 @@ var __spreadValues = (a, b) => {
     return true;
   };
   AssetRepository.prototype.hasItem = async function(barcode, location) {
-    const code = parseInt(String(barcode || "").trim(), 10);
-    const loc = String(location || "").trim();
-    if (isNaN(code) || !loc) return false;
+    if (typeof barcode === "undefined" || barcode === null || barcode === "") {
+      console.warn("AssetRepository.hasItem: Código do ativo é inválido", barcode);
+      return false;
+    }
+    if (typeof location === "undefined" || location === null || typeof location !== "string" || location.trim() === "") {
+      console.warn("AssetRepository.hasItem: Localização é inválida", location);
+      return false;
+    }
+    const code = parseInt(String(barcode).trim(), 10);
+    if (isNaN(code) || code <= 0 || !Number.isSafeInteger(code)) {
+      console.warn("AssetRepository.hasItem: Código do ativo não é um número válido", barcode);
+      return false;
+    }
+    const loc = location.trim();
+    if (loc.length > 200) {
+      console.warn("AssetRepository.hasItem: Localização é muito longa", loc);
+      return false;
+    }
     return this.items.some(function(item) {
       return item.code === code && item.location === loc;
     });
   };
   AssetRepository.prototype.getItem = function(uid) {
+    if (typeof uid !== "string" || uid.trim() === "") {
+      console.warn("AssetRepository.getItem: UID é inválido", uid);
+      return null;
+    }
     return this.items.find(function(i) {
       return i.uid === uid;
     }) || null;
@@ -473,8 +537,14 @@ var __spreadValues = (a, b) => {
     });
   };
   AssetRepository.prototype.getItemsByLocation = function(location) {
-    const targetLoc = String(location || "").trim();
-    if (!targetLoc) return this.getAllItems();
+    if (typeof location === "undefined" || location === null || typeof location !== "string" || location.trim() === "") {
+      return this.getAllItems();
+    }
+    const targetLoc = location.trim();
+    if (targetLoc.length > 200) {
+      console.warn("AssetRepository.getItemsByLocation: Localização é muito longa", targetLoc);
+      return [];
+    }
     return this.items.filter(function(item) {
       return item.location === targetLoc;
     }).map(function(item) {
@@ -496,11 +566,29 @@ var __spreadValues = (a, b) => {
     };
   };
   AssetRepository.prototype.getPendingBatch = function(batchSize) {
+    if (typeof batchSize !== "number" || isNaN(batchSize) || batchSize <= 0 || batchSize > 1e3) {
+      console.warn("AssetRepository.getPendingBatch: Tamanho do lote é inválido", batchSize);
+      return [];
+    }
     return this.items.filter(function(i) {
       return i.status === AssetStatus.PENDING;
     }).slice(0, batchSize);
   };
   AssetRepository.prototype.markBatchInFlight = function(uids) {
+    if (!Array.isArray(uids) || uids.length === 0) {
+      console.warn("AssetRepository.markBatchInFlight: Lista de UIDs é inválida ou vazia", uids);
+      return;
+    }
+    for (let i = 0; i < uids.length; i++) {
+      if (typeof uids[i] !== "string" || uids[i].trim() === "") {
+        console.warn("AssetRepository.markBatchInFlight: UID inválido encontrado", uids[i]);
+        return;
+      }
+    }
+    if (uids.length > 1e3) {
+      console.warn("AssetRepository.markBatchInFlight: Lote muito grande, limitando a 1000 itens");
+      uids = uids.slice(0, 1e3);
+    }
     this.items.forEach(function(item) {
       if (uids.indexOf(item.uid) !== -1) {
         item.status = AssetStatus.IN_FLIGHT;
@@ -509,6 +597,20 @@ var __spreadValues = (a, b) => {
     this._save();
   };
   AssetRepository.prototype.processSyncSuccess = function(syncedUids) {
+    if (!Array.isArray(syncedUids) || syncedUids.length === 0) {
+      console.warn("AssetRepository.processSyncSuccess: Lista de UIDs sincronizados é inválida ou vazia", syncedUids);
+      return;
+    }
+    for (let i = 0; i < syncedUids.length; i++) {
+      if (typeof syncedUids[i] !== "string" || syncedUids[i].trim() === "") {
+        console.warn("AssetRepository.processSyncSuccess: UID inválido encontrado", syncedUids[i]);
+        return;
+      }
+    }
+    if (syncedUids.length > 1e3) {
+      console.warn("AssetRepository.processSyncSuccess: Lote muito grande, limitando a 1000 itens");
+      syncedUids = syncedUids.slice(0, 1e3);
+    }
     const self2 = this;
     let changed = false;
     this.items.forEach(function(item) {
@@ -522,6 +624,24 @@ var __spreadValues = (a, b) => {
     if (changed) this._save(true);
   };
   AssetRepository.prototype.processSyncRetry = function(failedUids, maxRetries) {
+    if (!Array.isArray(failedUids) || failedUids.length === 0) {
+      console.warn("AssetRepository.processSyncRetry: Lista de UIDs com falha é inválida ou vazia", failedUids);
+      return;
+    }
+    if (typeof maxRetries !== "number" || isNaN(maxRetries) || maxRetries < 0) {
+      console.warn("AssetRepository.processSyncRetry: Número máximo de tentativas é inválido", maxRetries);
+      return;
+    }
+    for (let i = 0; i < failedUids.length; i++) {
+      if (typeof failedUids[i] !== "string" || failedUids[i].trim() === "") {
+        console.warn("AssetRepository.processSyncRetry: UID inválido encontrado", failedUids[i]);
+        return;
+      }
+    }
+    if (failedUids.length > 1e3) {
+      console.warn("AssetRepository.processSyncRetry: Lote muito grande, limitando a 1000 itens");
+      failedUids = failedUids.slice(0, 1e3);
+    }
     const self2 = this;
     let changed = false;
     this.items.forEach(function(item) {
@@ -552,11 +672,22 @@ var __spreadValues = (a, b) => {
     return changed;
   };
   AssetRepository.prototype.applyMaintenance = function(appSettings) {
-    if (!appSettings) return;
+    if (!appSettings || typeof appSettings !== "object") {
+      console.warn("AssetRepository.applyMaintenance: Configurações da aplicação são inválidas", appSettings);
+      return;
+    }
     const min_valid_date = appSettings.min_valid_date;
     const app_version = appSettings.app_version;
-    if (!min_valid_date || !app_version) return;
+    const minDateTimestamp = new Date(min_valid_date).getTime();
+    if (isNaN(minDateTimestamp)) {
+      console.warn("AssetRepository.applyMaintenance: Data mínima inválida", min_valid_date);
+      return;
+    }
     const newVersion = String(app_version).trim();
+    if (!newVersion) {
+      console.warn("AssetRepository.applyMaintenance: Versão do aplicativo é inválida", app_version);
+      return;
+    }
     const localVersion = localStorage.getItem(VERSION_KEY);
     let forceSave = false;
     if (!localVersion) {
@@ -564,16 +695,21 @@ var __spreadValues = (a, b) => {
     } else if (localVersion !== newVersion) {
       this.clearStorage();
       localStorage.setItem(VERSION_KEY, newVersion);
+      /* @__PURE__ */ console.info("AssetRepository.applyMaintenance: Versão mudou, limpeza completa realizada");
       return;
     }
-    if (min_valid_date && this.items.length > 0) {
-      const minDateTimestamp = new Date(min_valid_date).getTime();
+    if (this.items.length > 0) {
       const initialCount = this.items.length;
       this.items = this.items.filter(function(item) {
         return item.createdAt >= minDateTimestamp;
       });
       if (this.items.length !== initialCount) {
         forceSave = true;
+        /* @__PURE__ */ console.info("AssetRepository.applyMaintenance: Itens antigos removidos", {
+          initialCount,
+          remainingCount: this.items.length,
+          removedCount: initialCount - this.items.length
+        });
       }
     }
     if (forceSave) {
@@ -1643,7 +1779,6 @@ Deseja prosseguir mesmo assim?`
     this.handleCancel = null;
     this.handleSave = null;
     this.initEvents();
-    this.close();
   }
   EditAssetModal.prototype.innerHTML = function() {
     if (document.getElementById("assetDetailsModal")) return;
@@ -1706,14 +1841,14 @@ Deseja prosseguir mesmo assim?`
   };
   EditAssetModal.prototype.initEvents = function() {
     const self2 = this;
-    this.handleCancel = function() {
+    self2.handleCancel = function() {
       self2.close();
     };
-    this.handleSave = function() {
+    self2.handleSave = function() {
       self2.submit();
     };
-    document.getElementById("btnCancelEdit").addEventListener("click", this.handleCancel);
-    document.getElementById("btnSaveEdit").addEventListener("click", this.handleSave);
+    document.getElementById("btnCancelEdit").addEventListener("click", self2.handleCancel);
+    document.getElementById("btnSaveEdit").addEventListener("click", self2.handleSave);
     window.addEventListener("editItemRequested", function(e) {
       self2.open(e.detail.uid);
     });
@@ -1740,7 +1875,6 @@ Deseja prosseguir mesmo assim?`
     this.fields.obs.value = item.obs || "";
     this.modal.style.display = "block";
     document.body.style.overflow = "hidden";
-    this.initEvents();
   };
   EditAssetModal.prototype.submit = function() {
     const uid = this.fields.uid.value;
@@ -1752,8 +1886,7 @@ Deseja prosseguir mesmo assim?`
       return;
     }
     const success = assetRepository.updateItem(uid, newState, newIpvu, newObs);
-    if (success) ;
-    else {
+    if (!success) {
       console.error("EditAssetModal: Falha ao atualizar item");
     }
     this.close();
@@ -1761,7 +1894,6 @@ Deseja prosseguir mesmo assim?`
   EditAssetModal.prototype.close = function() {
     this.modal.style.display = "none";
     document.body.style.overflow = "auto";
-    this.removeEvents();
   };
   new EditAssetModal();
   function ConnectivityManager() {
@@ -2174,7 +2306,7 @@ Deseja prosseguir mesmo assim?`
   new AssetSyncManager(assetRepository);
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-C-Ffbij5.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-DFghhoIo.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
@@ -2251,8 +2383,8 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.01.30-001";
-      el.title = `Versão do build: ${"2026.01.30-001"}`;
+      el.textContent = "2026.02.01-003";
+      el.title = `Versão do build: ${"2026.02.01-003"}`;
     }
   });
   window.addEventListener("error", function(e) {
@@ -2285,7 +2417,7 @@ Deseja prosseguir mesmo assim?`
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.01.30-001"}`);
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.02.01-003"}`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
       throw new Error(`Falha na inicialização do debug: ${error.message}`);

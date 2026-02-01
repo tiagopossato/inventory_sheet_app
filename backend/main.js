@@ -152,8 +152,8 @@ function getInventorySummary(targetLocation = null) {
 
   let locations = [];
   const sheetLocGetLastRow = sheetLoc.getLastRow();
-  if (sheetLocGetLastRow >= 6) {
-    const locData = sheetLoc.getRange('A6:D' + sheetLocGetLastRow).getValues();
+  if (sheetLocGetLastRow >= 2) {
+    const locData = sheetLoc.getRange('A2:D' + sheetLocGetLastRow).getValues();
     const target = targetLocation ? String(targetLocation).trim() : null;
 
     locations = locData
