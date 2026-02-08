@@ -20,6 +20,7 @@
  * @property {boolean} isEnabled - Scanner ativo/inativo
  * @property {boolean} isLocked - Bloqueado externamente
  * @property {string} buffer - Buffer de caracteres acumulados
+ * @property {number} scanCount - Contador de escaneamentos válidos
  */
 
 /**
@@ -28,14 +29,19 @@
  * @public
  */
 function BarcodeScanner(config = {}) {
+    // Validação de configuração
+    if (typeof config !== 'object') {
+        throw new TypeError('Configuração inválida: esperado um objeto');
+    }
+
     /**
      * Configuração do scanner
      * @type {BarcodeScannerConfig}
      * @private
      */
     this.config = {
-        scanDelay: config.scanDelay || 100,
-        minLength: config.minLength || 8,
+        scanDelay: Math.max(0, config.scanDelay || 100),
+        minLength: Math.max(1, config.minLength || 8),
     };
 
     /**
@@ -48,7 +54,8 @@ function BarcodeScanner(config = {}) {
         isLocked: false,
         buffer: '',
         timeoutId: null,
-        lastScanTime: 0
+        lastScanTime: 0,
+        scanCount: 0 // Contador de escaneamentos válidos
     };
 
     this.init();
@@ -138,6 +145,7 @@ BarcodeScanner.prototype.finishScan = function () {
         }));
 
         this.state.lastScanTime = Date.now();
+        this.state.scanCount++; // Incrementa contador de escaneamentos válidos
     }
 
     this.resetBuffer();
@@ -210,31 +218,6 @@ BarcodeScanner.prototype.unlock = function () {
 };
 
 /**
- * Atualiza a configuração do scanner
- * @param {BarcodeScannerConfig} newConfig - Nova configuração
- * @public
- */
-BarcodeScanner.prototype.updateConfig = function (newConfig) {
-    this.config = { ...this.config, ...newConfig };
-    console.log('⚙️ Configuração do BarcodeScanner atualizada');
-};
-
-/**
- * Obtém estatísticas de uso
- * @returns {Object} Estatísticas do scanner
- * @public
- */
-BarcodeScanner.prototype.getStats = function () {
-    return {
-        isEnabled: this.state.isEnabled,
-        isLocked: this.state.isLocked,
-        bufferLength: this.state.buffer.length,
-        lastScanTime: this.state.lastScanTime,
-        totalScans: this.state.lastScanTime > 0 ? 1 : 0 // Simplificado
-    };
-};
-
-/**
  * Destrói o scanner e remove listeners
  * @public
  */
@@ -249,6 +232,6 @@ BarcodeScanner.prototype.destroy = function () {
  * @type {BarcodeScanner}
  */
 export const barcodeScanner = new BarcodeScanner({
-    scanDelay: 150,       // 150ms entre caracteres
+    scanDelay: 500,       // 150ms entre caracteres
     minLength: 8         // Mínimo 8 caracteres
 });

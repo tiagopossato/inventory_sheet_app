@@ -2304,9 +2304,115 @@ Deseja prosseguir mesmo assim?`
     }
   };
   new AssetSyncManager(assetRepository);
+  function BarcodeScanner(config = {}) {
+    if (typeof config !== "object") {
+      throw new TypeError("Configuração inválida: esperado um objeto");
+    }
+    this.config = {
+      scanDelay: Math.max(0, config.scanDelay || 100),
+      minLength: Math.max(1, config.minLength || 8)
+    };
+    this.state = {
+      isEnabled: false,
+      isLocked: false,
+      buffer: "",
+      timeoutId: null,
+      lastScanTime: 0,
+      scanCount: 0
+      // Contador de escaneamentos válidos
+    };
+    this.init();
+  }
+  BarcodeScanner.prototype.init = function() {
+    this.bindEvents();
+    this.enable();
+    /* @__PURE__ */ console.log("🔌 BarcodeScanner OTG inicializado");
+  };
+  BarcodeScanner.prototype.bindEvents = function() {
+    document.removeEventListener("keydown", this._handleKeyDownBound);
+    this._handleKeyDownBound = this.handleKeyDown.bind(this);
+    document.addEventListener("keydown", this._handleKeyDownBound);
+  };
+  BarcodeScanner.prototype.handleKeyDown = function(event) {
+    if (!this.state.isEnabled || this.state.isLocked) return;
+    if (this.isInputFieldFocused()) return;
+    if (event.key.length === 1 || event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (this.state.timeoutId) {
+      clearTimeout(this.state.timeoutId);
+      this.state.timeoutId = null;
+    }
+    if (event.key === "Enter") {
+      this.finishScan();
+    } else if (event.key.length === 1) {
+      this.state.buffer += event.key;
+      this.state.timeoutId = setTimeout(() => {
+        this.finishScan();
+      }, this.config.scanDelay);
+    }
+  };
+  BarcodeScanner.prototype.finishScan = function() {
+    const code = this.state.buffer.trim();
+    /* @__PURE__ */ console.log(`Digitado: ${code}`);
+    if (code.length >= this.config.minLength) {
+      window.dispatchEvent(new CustomEvent("codeScanned", {
+        detail: {
+          code,
+          source: "otg"
+        }
+      }));
+      this.state.lastScanTime = Date.now();
+      this.state.scanCount++;
+    }
+    this.resetBuffer();
+  };
+  BarcodeScanner.prototype.isInputFieldFocused = function() {
+    const active = document.activeElement;
+    return active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
+  };
+  BarcodeScanner.prototype.resetBuffer = function() {
+    this.state.buffer = "";
+    if (this.state.timeoutId) {
+      clearTimeout(this.state.timeoutId);
+      this.state.timeoutId = null;
+    }
+  };
+  BarcodeScanner.prototype.enable = function() {
+    this.state.isEnabled = true;
+    this.state.isLocked = false;
+    this.resetBuffer();
+    /* @__PURE__ */ console.log("🔊 BarcodeScanner habilitado");
+  };
+  BarcodeScanner.prototype.disable = function() {
+    this.state.isEnabled = false;
+    this.resetBuffer();
+    /* @__PURE__ */ console.log("🔇 BarcodeScanner desabilitado");
+  };
+  BarcodeScanner.prototype.lock = function() {
+    this.state.isLocked = true;
+    this.resetBuffer();
+    /* @__PURE__ */ console.log("🔒 BarcodeScanner bloqueado");
+  };
+  BarcodeScanner.prototype.unlock = function() {
+    this.state.isLocked = false;
+    /* @__PURE__ */ console.log("🔓 BarcodeScanner desbloqueado");
+  };
+  BarcodeScanner.prototype.destroy = function() {
+    document.removeEventListener("keydown", this._handleKeyDownBound);
+    this.resetBuffer();
+    /* @__PURE__ */ console.log("🗑️ BarcodeScanner destruído");
+  };
+  new BarcodeScanner({
+    scanDelay: 500,
+    // 150ms entre caracteres
+    minLength: 8
+    // Mínimo 8 caracteres
+  });
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-DFghhoIo.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-CgpXtWWV.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
@@ -2383,8 +2489,8 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.02.01-003";
-      el.title = `Versão do build: ${"2026.02.01-003"}`;
+      el.textContent = "2026.02.08-001";
+      el.title = `Versão do build: ${"2026.02.08-001"}`;
     }
   });
   window.addEventListener("error", function(e) {
@@ -2417,7 +2523,7 @@ Deseja prosseguir mesmo assim?`
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.02.01-003"}`);
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.02.08-001"}`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
       throw new Error(`Falha na inicialização do debug: ${error.message}`);
