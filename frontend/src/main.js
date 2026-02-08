@@ -58,6 +58,7 @@ import './connectivityManager.js';
 import './statsManager.js';
 import './messageSendModal.js';
 import './assetSyncManager.js';
+import './barcodeScanner.js';
 
 // ============================================================================
 // CONFIGURAÇÃO DE EVENTOS GLOBAIS
