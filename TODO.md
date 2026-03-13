@@ -12,5 +12,3 @@
 - [ ] Verify memory leaks in event listeners (especially modals)
 
 - [ ] Test concurrent operations in `barcodeTable.js`
-
-- [ ] Inserir checkbox ou radio button para selecionar se o app deve verificar a localidade do item antes de salvar.

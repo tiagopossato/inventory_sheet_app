@@ -58,7 +58,9 @@ import { locationSelector } from './locationSelector.js';
  * 
  * @throws {Error} Em caso de erro não tratado durante o processo
  */
-export async function processBarcode(rawValue, selectedLocation) {
+export async function processBarcode(rawValue, selectedLocation, bypassCheckLocation = false) {
+    let observations = '';
+
     try {
         // 1. Validação de Local Selecionado
         if (!selectedLocation || selectedLocation === locationSelector.NONE_SELECTED) {
@@ -95,7 +97,7 @@ export async function processBarcode(rawValue, selectedLocation) {
         }
 
         // 4.2 Alerta de Localização Divergente (Aviso, mas permite prosseguir)
-        if (retorno.status === 'check') {
+        if (bypassCheckLocation === false && retorno.status === 'check') {
             audioManager.playWarning();
             // 1. BLOQUEIA O SCANNER
             scannerManager.lock();
@@ -115,6 +117,10 @@ export async function processBarcode(rawValue, selectedLocation) {
                 // eslint-disable-next-line no-unused-vars
                 try { scannerManager.unlock(); } catch (e) { /* ignore */ }
             }
+        }
+        if (bypassCheckLocation === true && retorno.status === 'check') {
+            userWarnings.printUserWarning(`AVISO: Item inserido automaticamente. Deveria estar em ${retorno.local}.`);
+            observations = `Verificação de localização ignorada`;
         }
 
         // 5. Verifica se o item já foi encontrado em outra localidade
@@ -145,13 +151,15 @@ export async function processBarcode(rawValue, selectedLocation) {
         }
 
         // 6. Sucesso: Adiciona ao Storage e atualiza Interface
-        const newItem = await assetRepository.addItem(rawValue, selectedLocation);
+        const newItem = await assetRepository.addItem(rawValue, selectedLocation, observations);
 
         if (newItem) {
             audioManager.playSuccess();
             // Adiciona à tabela.
             barcodeTable.renderTable(selectedLocation);
-            userWarnings.clearUserWarning();
+            if (bypassCheckLocation === false) {
+                userWarnings.clearUserWarning();
+            }
             return true;
         }
 

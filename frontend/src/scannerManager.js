@@ -78,6 +78,10 @@ ScannerManager.prototype.init = function () {
             <input type="number" id="manualBarcode" placeholder="Código (13 dig)" inputmode="numeric">
             <button id="submitManualBarcode" class="btn btn-gray">Enviar</button>
         </div>
+        <div class="control-row">
+            <input type="checkbox" id="bypassCheckLocation" name="bypassCheckLocation" value="bypassCheckLocation">
+            <label for="bypassCheckLocation"> Ignorar verificação de localização?</label><br>
+        </div>
     `;
 
     // Bind de eventos (usando arrow function para preservar o 'this' da instância)

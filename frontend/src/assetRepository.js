@@ -185,7 +185,7 @@ AssetRepository.prototype._emit = function (name, detail) {
  * @param {string} location - Localização do ativo
  * @returns {Promise<Object|null>} Item criado ou null se já existir
  */
-AssetRepository.prototype.addItem = async function (rawCode, location) {
+AssetRepository.prototype.addItem = async function (rawCode, location, obs = '') {
   // Validações rigorosas
   if (typeof rawCode === 'undefined' || rawCode === null || rawCode === '') {
     console.warn('AssetRepository.addItem: Código do ativo é inválido', rawCode);
@@ -224,7 +224,7 @@ AssetRepository.prototype.addItem = async function (rawCode, location) {
     location: loc,
     state: 3,
     ipvu: 8,
-    obs: '',
+    obs: obs ? String(obs).substring(0, 140) : '',
     status: AssetStatus.PENDING,
     retryCount: 0,
     createdAt: Date.now(),

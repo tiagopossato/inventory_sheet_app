@@ -91,7 +91,7 @@ app.use(timeout(TIMEOUT_DURATION, {
 // Middleware de rate limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100, // Limite de 100 requisições por janela
+    max: 1000, // Limite de 1000 requisições por janela
     message: {
         error: 'Muitas requisições',
         message: 'Limite de requisições excedido, tente novamente mais tarde'

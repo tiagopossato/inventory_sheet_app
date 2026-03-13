@@ -77,7 +77,9 @@ window.addEventListener('codeScanned', async function (e) {
    * @type {string}
    */
   const selectedLocation = locationSelector.getSelectedLocation();
-  await processBarcode(codigo, selectedLocation);
+  const bypassCheckLocation = document.querySelector("#bypassCheckLocation");
+
+  await processBarcode(codigo, selectedLocation, bypassCheckLocation.checked);
   scannerManager.setFocus();
 });
 
