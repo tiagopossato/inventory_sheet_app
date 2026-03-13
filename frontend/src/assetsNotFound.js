@@ -10,7 +10,7 @@
  * @author Tiago Possato
  */
 
-import { processBarcode } from './processBarcode.js';
+// import { processBarcode } from './processBarcode.js';
 import { locationSelector } from './locationSelector.js'
 import { userWarnings } from './userWarnings.js';
 import { AppModal } from './appModal.js';
@@ -224,7 +224,10 @@ AssetsNotFound.prototype.addItensToNotFoundTable = function (itens) {
             );
 
             if (confirmado) {
-                processBarcode(item[0], locationSelector.getSelectedLocation());
+                window.dispatchEvent(new CustomEvent('codeScanned', {
+                    detail: { code: item[0] }
+                }));
+                // processBarcode(item[0], locationSelector.getSelectedLocation());
                 tr.remove();
                 if (tbody.childElementCount === 0) this.close();
             }
