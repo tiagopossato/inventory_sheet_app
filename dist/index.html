@@ -204,33 +204,39 @@ var __spreadValues = (a, b) => {
             <input type="number" id="manualBarcode" placeholder="Código (13 dig)" inputmode="numeric">
             <button id="submitManualBarcode" class="btn btn-gray">Enviar</button>
         </div>
+        <div class="control-row">
+            <input type="checkbox" id="bypassCheckLocation" name="bypassCheckLocation" value="bypassCheckLocation">
+            <label for="bypassCheckLocation"> Ignorar verificação de localização?</label><br>
+        </div>
     `;
     document.getElementById("toggleCamera").addEventListener("click", () => this.handleCameraAction());
     document.getElementById("toggleFlash").addEventListener("click", () => this.toggleFlash());
+    this.manualBarcodeInput = document.getElementById("manualBarcode");
     this._setupManualInput();
     this.hide();
   };
   ScannerManager.prototype.setFocus = function() {
-    document.getElementById("manualBarcode").focus();
+    this.manualBarcodeInput.disabled = false;
+    this.manualBarcodeInput.value = "";
+    this.manualBarcodeInput.focus();
   };
   ScannerManager.prototype._setupManualInput = function() {
     const self2 = this;
     const btn = document.getElementById("submitManualBarcode");
-    const input = document.getElementById("manualBarcode");
     btn.addEventListener("click", () => {
-      const cleanValue = (input.value || "").trim();
+      const cleanValue = (self2.manualBarcodeInput.value || "").trim();
       if (cleanValue === "") {
         self2.setFocus();
         return;
       }
       btn.disabled = true;
-      window.dispatchEvent(new CustomEvent("codeScanned", {
-        detail: { code: cleanValue }
-      }));
-      input.value = "";
       setTimeout(() => {
         btn.disabled = false;
       }, 500);
+      window.dispatchEvent(new CustomEvent("codeScanned", {
+        detail: { code: cleanValue }
+      }));
+      self2.manualBarcodeInput.value = "";
     });
   };
   ScannerManager.prototype.show = function() {
@@ -419,7 +425,7 @@ var __spreadValues = (a, b) => {
   AssetRepository.prototype._emit = function(name, detail) {
     window.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
   };
-  AssetRepository.prototype.addItem = async function(rawCode, location) {
+  AssetRepository.prototype.addItem = async function(rawCode, location, obs = "") {
     if (typeof rawCode === "undefined" || rawCode === null || rawCode === "") {
       console.warn("AssetRepository.addItem: Código do ativo é inválido", rawCode);
       return null;
@@ -451,7 +457,7 @@ var __spreadValues = (a, b) => {
       location: loc,
       state: 3,
       ipvu: 8,
-      obs: "",
+      obs: obs ? String(obs).substring(0, 140) : "",
       status: AssetStatus.PENDING,
       retryCount: 0,
       createdAt: Date.now(),
@@ -1465,7 +1471,8 @@ var __spreadValues = (a, b) => {
       });
     }
   };
-  async function processBarcode(rawValue, selectedLocation) {
+  async function processBarcode(rawValue, selectedLocation, bypassCheckLocation = false) {
+    let observations = "";
     try {
       if (!selectedLocation || selectedLocation === locationSelector.NONE_SELECTED) {
         userWarnings.printUserWarning("Selecione uma localização antes de bipar.");
@@ -1488,7 +1495,7 @@ var __spreadValues = (a, b) => {
         userWarnings.printUserWarning(retorno.msg);
         return false;
       }
-      if (retorno.status === "check") {
+      if (bypassCheckLocation === false && retorno.status === "check") {
         audioManager.playWarning();
         scannerManager.lock();
         try {
@@ -1510,6 +1517,10 @@ Confirma que o código ${rawValue} está correto?`
           } catch (e) {
           }
         }
+      }
+      if (bypassCheckLocation === true && retorno.status === "check") {
+        userWarnings.printUserWarning(`AVISO: ${rawValue} inserido automaticamente. Deveria estar em ${retorno.local}.`);
+        observations = `Verificação de localização ignorada`;
       }
       const foundLocation = await remoteInventoryRegistry.checkAssetLocation(rawValue);
       if (foundLocation && foundLocation !== selectedLocation) {
@@ -1537,11 +1548,13 @@ Deseja prosseguir mesmo assim?`
           }
         }
       }
-      const newItem = await assetRepository.addItem(rawValue, selectedLocation);
+      const newItem = await assetRepository.addItem(rawValue, selectedLocation, observations);
       if (newItem) {
         audioManager.playSuccess();
         barcodeTable.renderTable(selectedLocation);
-        userWarnings.clearUserWarning();
+        if (bypassCheckLocation === false) {
+          userWarnings.clearUserWarning();
+        }
         return true;
       }
       return false;
@@ -1716,7 +1729,9 @@ Deseja prosseguir mesmo assim?`
           `Deseja marcar o item ${item[0]} como encontrado?`
         );
         if (confirmado) {
-          processBarcode(item[0], locationSelector.getSelectedLocation());
+          window.dispatchEvent(new CustomEvent("codeScanned", {
+            detail: { code: item[0] }
+          }));
           tr.remove();
           if (tbody.childElementCount === 0) this.close();
         }
@@ -2304,126 +2319,50 @@ Deseja prosseguir mesmo assim?`
     }
   };
   new AssetSyncManager(assetRepository);
-  function BarcodeScanner(config = {}) {
-    if (typeof config !== "object") {
-      throw new TypeError("Configuração inválida: esperado um objeto");
-    }
-    this.config = {
-      scanDelay: Math.max(0, config.scanDelay || 100),
-      minLength: Math.max(1, config.minLength || 8)
-    };
-    this.state = {
-      isEnabled: false,
-      isLocked: false,
-      buffer: "",
-      timeoutId: null,
-      lastScanTime: 0,
-      scanCount: 0
-      // Contador de escaneamentos válidos
-    };
-    this.init();
-  }
-  BarcodeScanner.prototype.init = function() {
-    this.bindEvents();
-    this.enable();
-    /* @__PURE__ */ console.log("🔌 BarcodeScanner OTG inicializado");
-  };
-  BarcodeScanner.prototype.bindEvents = function() {
-    document.removeEventListener("keydown", this._handleKeyDownBound);
-    this._handleKeyDownBound = this.handleKeyDown.bind(this);
-    document.addEventListener("keydown", this._handleKeyDownBound);
-  };
-  BarcodeScanner.prototype.handleKeyDown = function(event) {
-    if (!this.state.isEnabled || this.state.isLocked) return;
-    if (this.isInputFieldFocused()) return;
-    if (event.key.length === 1 || event.key === "Enter") {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    if (this.state.timeoutId) {
-      clearTimeout(this.state.timeoutId);
-      this.state.timeoutId = null;
-    }
-    if (event.key === "Enter") {
-      this.finishScan();
-    } else if (event.key.length === 1) {
-      this.state.buffer += event.key;
-      this.state.timeoutId = setTimeout(() => {
-        this.finishScan();
-      }, this.config.scanDelay);
-    }
-  };
-  BarcodeScanner.prototype.finishScan = function() {
-    const code = this.state.buffer.trim();
-    /* @__PURE__ */ console.log(`Digitado: ${code}`);
-    if (code.length >= this.config.minLength) {
-      window.dispatchEvent(new CustomEvent("codeScanned", {
-        detail: {
-          code,
-          source: "otg"
+  (function() {
+    var buffer = "";
+    var lastKeyTime = Date.now();
+    window.addEventListener("keydown", function(e) {
+      var currentTime = Date.now();
+      if (currentTime - lastKeyTime > 50) {
+        buffer = "";
+      }
+      if (e.key.length > 1 && e.key !== "Enter") return;
+      if (e.key === "Enter") {
+        if (buffer.length > 2) {
+          /* @__PURE__ */ console.log(" barcodes lido globalmente:", buffer);
+          window.dispatchEvent(new CustomEvent("codeScanned", {
+            detail: { code: buffer }
+          }));
+          buffer = "";
         }
-      }));
-      this.state.lastScanTime = Date.now();
-      this.state.scanCount++;
-    }
-    this.resetBuffer();
-  };
-  BarcodeScanner.prototype.isInputFieldFocused = function() {
-    const active = document.activeElement;
-    return active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
-  };
-  BarcodeScanner.prototype.resetBuffer = function() {
-    this.state.buffer = "";
-    if (this.state.timeoutId) {
-      clearTimeout(this.state.timeoutId);
-      this.state.timeoutId = null;
-    }
-  };
-  BarcodeScanner.prototype.enable = function() {
-    this.state.isEnabled = true;
-    this.state.isLocked = false;
-    this.resetBuffer();
-    /* @__PURE__ */ console.log("🔊 BarcodeScanner habilitado");
-  };
-  BarcodeScanner.prototype.disable = function() {
-    this.state.isEnabled = false;
-    this.resetBuffer();
-    /* @__PURE__ */ console.log("🔇 BarcodeScanner desabilitado");
-  };
-  BarcodeScanner.prototype.lock = function() {
-    this.state.isLocked = true;
-    this.resetBuffer();
-    /* @__PURE__ */ console.log("🔒 BarcodeScanner bloqueado");
-  };
-  BarcodeScanner.prototype.unlock = function() {
-    this.state.isLocked = false;
-    /* @__PURE__ */ console.log("🔓 BarcodeScanner desbloqueado");
-  };
-  BarcodeScanner.prototype.destroy = function() {
-    document.removeEventListener("keydown", this._handleKeyDownBound);
-    this.resetBuffer();
-    /* @__PURE__ */ console.log("🗑️ BarcodeScanner destruído");
-  };
-  new BarcodeScanner({
-    scanDelay: 500,
-    // 150ms entre caracteres
-    minLength: 8
-    // Mínimo 8 caracteres
-  });
+      } else {
+        buffer += e.key;
+      }
+      lastKeyTime = currentTime;
+    });
+  })();
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-CgpXtWWV.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-CGfXuRK5.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
     });
   }
+  let isProcessing = false;
   window.addEventListener("codeScanned", async function(e) {
     const codigo = e.detail.code;
-    if (codigo === null || codigo === void 0) return;
-    const selectedLocation = locationSelector.getSelectedLocation();
-    await processBarcode(codigo, selectedLocation);
-    scannerManager.setFocus();
+    if (!codigo || isProcessing) return;
+    isProcessing = true;
+    try {
+      const selectedLocation = locationSelector.getSelectedLocation();
+      const bypassCheckLocation = document.querySelector("#bypassCheckLocation").checked;
+      await processBarcode(codigo, selectedLocation, bypassCheckLocation);
+    } finally {
+      isProcessing = false;
+      scannerManager.setFocus();
+    }
   });
   window.addEventListener("locationChanged", function(e) {
     const novoLocal = e.detail.location;
@@ -2489,8 +2428,8 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.02.08-001";
-      el.title = `Versão do build: ${"2026.02.08-001"}`;
+      el.textContent = "2026.03.17-002";
+      el.title = `Versão do build: ${"2026.03.17-002"}`;
     }
   });
   window.addEventListener("error", function(e) {
@@ -2523,7 +2462,7 @@ Deseja prosseguir mesmo assim?`
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.02.08-001"}`);
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.03.17-002"}`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
       throw new Error(`Falha na inicialização do debug: ${error.message}`);
@@ -2685,7 +2624,7 @@ Deseja prosseguir mesmo assim?`
   <!-- 
     Script principal da aplicação
     Carregado como módulo ES6 para melhor organização
-  -->
+  -->
 </body>
 
 </html>

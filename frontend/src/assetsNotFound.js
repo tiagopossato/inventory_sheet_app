@@ -225,9 +225,11 @@ AssetsNotFound.prototype.addItensToNotFoundTable = function (itens) {
 
             if (confirmado) {
                 window.dispatchEvent(new CustomEvent('codeScanned', {
-                    detail: { code: item[0] }
+                    detail: {
+                        code: item[0],
+                        source: 'not_found_list'
+                    }
                 }));
-                // processBarcode(item[0], locationSelector.getSelectedLocation());
                 tr.remove();
                 if (tbody.childElementCount === 0) this.close();
             }

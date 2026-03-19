@@ -119,7 +119,7 @@ export async function processBarcode(rawValue, selectedLocation, bypassCheckLoca
             }
         }
         if (bypassCheckLocation === true && retorno.status === 'check') {
-            userWarnings.printUserWarning(`AVISO: Item inserido automaticamente. Deveria estar em ${retorno.local}.`);
+            userWarnings.printUserWarning(`AVISO: ${rawValue} inserido automaticamente. Deveria estar em ${retorno.local}.`);
             observations = `Verificação de localização ignorada`;
         }
 

@@ -28,6 +28,7 @@ function logStructured(level, message, meta = {}) {
         ...meta
     };
     console.log(JSON.stringify(logEntry));
+    console.log('\n');
 }
 
 // Função para criar middleware de validação
@@ -48,7 +49,7 @@ function validate(schema, property = 'body') {
                 method: req.method,
                 url: req.url,
                 errors,
-                userAgent: req.get('User-Agent'),
+                //userAgent: req.get('User-Agent'),
                 ip: req.ip
             });
 
@@ -117,7 +118,7 @@ app.use((req, res, next) => {
         logStructured('error', 'Requisição expirou', {
             method: req.method,
             url: req.url,
-            userAgent: req.get('User-Agent'),
+            //userAgent: req.get('User-Agent'),
             ip: req.ip,
             timeout: TIMEOUT_DURATION
         });
@@ -228,7 +229,7 @@ app.get('/api/inventory-data', async (req, res) => {
         logStructured('info', 'Recebendo requisição para dados de inventário', {
             method: req.method,
             url: req.url,
-            userAgent: req.get('User-Agent'),
+            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -240,7 +241,7 @@ app.get('/api/inventory-data', async (req, res) => {
             stack: error.stack,
             method: req.method,
             url: req.url,
-            userAgent: req.get('User-Agent'),
+            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -257,7 +258,7 @@ app.get('/api/inventory-summary', async (req, res) => {
             method: req.method,
             url: req.url,
             query: sanitizedQuery,
-            userAgent: req.get('User-Agent'),
+            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -271,7 +272,7 @@ app.get('/api/inventory-summary', async (req, res) => {
             method: req.method,
             url: req.url,
             query: req.query,
-            userAgent: req.get('User-Agent'),
+            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -288,7 +289,7 @@ app.get('/api/not-found-items', async (req, res) => {
             method: req.method,
             url: req.url,
             query: sanitizedQuery,
-            userAgent: req.get('User-Agent'),
+            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -298,7 +299,7 @@ app.get('/api/not-found-items', async (req, res) => {
                 method: req.method,
                 url: req.url,
                 query: sanitizedQuery,
-                userAgent: req.get('User-Agent'),
+                //userAgent: req.get('User-Agent'),
                 ip: req.ip
             });
 
@@ -314,7 +315,7 @@ app.get('/api/not-found-items', async (req, res) => {
             method: req.method,
             url: req.url,
             query: req.query,
-            userAgent: req.get('User-Agent'),
+            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -327,7 +328,7 @@ app.get('/api/app-settings', async (req, res) => {
         logStructured('info', 'Recebendo requisição para configurações do app', {
             method: req.method,
             url: req.url,
-            userAgent: req.get('User-Agent'),
+            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -339,7 +340,7 @@ app.get('/api/app-settings', async (req, res) => {
             stack: error.stack,
             method: req.method,
             url: req.url,
-            userAgent: req.get('User-Agent'),
+            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -372,7 +373,7 @@ app.post('/api/save-batch', validate(saveBatchSchema, 'body'), async (req, res) 
             method: req.method,
             url: req.url,
             body: { itemsCount: req.body.items?.length },
-            userAgent: req.get('User-Agent'),
+            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -391,7 +392,7 @@ app.post('/api/save-batch', validate(saveBatchSchema, 'body'), async (req, res) 
             method: req.method,
             url: req.url,
             body: req.body,
-            userAgent: req.get('User-Agent'),
+            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -405,7 +406,7 @@ app.post('/api/save-message', validate(saveMessageSchema, 'body'), async (req, r
             method: req.method,
             url: req.url,
             body: { uid: req.body.uid, location: req.body.location },
-            userAgent: req.get('User-Agent'),
+            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -420,7 +421,7 @@ app.post('/api/save-message', validate(saveMessageSchema, 'body'), async (req, r
             method: req.method,
             url: req.url,
             body: req.body,
-            userAgent: req.get('User-Agent'),
+            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -475,7 +476,7 @@ app.use((err, req, res, next) => {
         stack: err.stack,
         url: req.url,
         method: req.method,
-        userAgent: req.get('User-Agent'),
+        //userAgent: req.get('User-Agent'),
         ip: req.ip
     });
 
@@ -492,7 +493,7 @@ app.use('*', (req, res) => {
     logStructured('warn', 'Rota não encontrada', {
         url: req.url,
         method: req.method,
-        userAgent: req.get('User-Agent'),
+        //userAgent: req.get('User-Agent'),
         ip: req.ip
     });
 

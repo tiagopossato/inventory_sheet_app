@@ -88,12 +88,15 @@ ScannerManager.prototype.init = function () {
     document.getElementById('toggleCamera').addEventListener('click', () => this.handleCameraAction());
     document.getElementById('toggleFlash').addEventListener('click', () => this.toggleFlash());
 
+    this.manualBarcodeInput = document.getElementById('manualBarcode');
     this._setupManualInput();
     this.hide();
 };
 
 ScannerManager.prototype.setFocus = function () {
-    document.getElementById('manualBarcode').focus();
+    this.manualBarcodeInput.disabled = false;
+    this.manualBarcodeInput.value = "";
+    this.manualBarcodeInput.focus();
 }
 
 /**
@@ -103,16 +106,16 @@ ScannerManager.prototype.setFocus = function () {
 ScannerManager.prototype._setupManualInput = function () {
     const self = this;
     const btn = document.getElementById('submitManualBarcode');
-    const input = document.getElementById('manualBarcode');
 
     btn.addEventListener('click', () => {
-        const cleanValue = (input.value || "").trim();
+        const cleanValue = (self.manualBarcodeInput.value || "").trim();
         if (cleanValue === "") {
             self.setFocus();
             return;
         }
 
         btn.disabled = true;
+        setTimeout(() => { btn.disabled = false; }, 500);
 
         /**
          * Evento global disparado quando um código é escaneado ou inserido manualmente
@@ -120,11 +123,14 @@ ScannerManager.prototype._setupManualInput = function () {
          * @property {string} code - Código escaneado/inserido
          */
         window.dispatchEvent(new CustomEvent('codeScanned', {
-            detail: { code: cleanValue }
+            detail: {
+                code: cleanValue,
+                source: 'manual_input'
+            }
         }));
 
-        input.value = '';
-        setTimeout(() => { btn.disabled = false; }, 500);
+        self.manualBarcodeInput.value = "";
+
     });
 };
 
@@ -278,7 +284,10 @@ ScannerManager.prototype._onScanSuccess = function (decodedText) {
     }
 
     window.dispatchEvent(new CustomEvent('codeScanned', {
-        detail: { code: decodedText }
+        detail: {
+            code: decodedText,
+            source: 'camera'
+        }
     }));
 
     setTimeout(() => {

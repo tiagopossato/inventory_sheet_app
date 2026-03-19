@@ -63,7 +63,7 @@ import './barcodeScanner.js';
 // ============================================================================
 // CONFIGURAÇÃO DE EVENTOS GLOBAIS
 // ============================================================================
-
+let isProcessing = false; // Variável de controle
 /**
  * Processa códigos escaneados pelo scanner ou inseridos manualmente
  * @event codeScanned
@@ -71,16 +71,19 @@ import './barcodeScanner.js';
  */
 window.addEventListener('codeScanned', async function (e) {
   const codigo = e.detail.code;
-  if (codigo === null || codigo === undefined) return;
+  if (!codigo || isProcessing) return; // Ignora se estiver processando
 
-  /**
-   * @type {string}
-   */
-  const selectedLocation = locationSelector.getSelectedLocation();
-  const bypassCheckLocation = document.querySelector("#bypassCheckLocation");
+  isProcessing = true; // Trava o processo
 
-  await processBarcode(codigo, selectedLocation, bypassCheckLocation.checked);
-  scannerManager.setFocus();
+  try {
+    const selectedLocation = locationSelector.getSelectedLocation();
+    const bypassCheckLocation = document.querySelector("#bypassCheckLocation").checked;
+
+    await processBarcode(codigo, selectedLocation, bypassCheckLocation);
+  } finally {
+    isProcessing = false;
+    scannerManager.setFocus();
+  }
 });
 
 /**
@@ -179,7 +182,7 @@ window.addEventListener('load', async () => {
       return; // Encerra a execução do listener 'load'
     }
 
-     // Mostra o conteúdo principal depois do carregamento
+    // Mostra o conteúdo principal depois do carregamento
     document.querySelector('main').style.display = 'block';
 
     // 2. EXECUTA ESTRATÉGIA DE LIMPEZA (Kill Switch)
