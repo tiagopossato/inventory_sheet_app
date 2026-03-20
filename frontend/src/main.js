@@ -69,8 +69,10 @@ let isProcessing = false; // Variável de controle
  * @event codeScanned
  * @listens window#codeScanned
  */
-window.addEventListener('codeScanned', async function (e) {
+window.addEventListener('codeScanned', async function (e) {  
   const codigo = e.detail.code;
+  const source = e.detail.source;
+
   if (!codigo || isProcessing) return; // Ignora se estiver processando
 
   isProcessing = true; // Trava o processo
@@ -79,7 +81,7 @@ window.addEventListener('codeScanned', async function (e) {
     const selectedLocation = locationSelector.getSelectedLocation();
     const bypassCheckLocation = document.querySelector("#bypassCheckLocation").checked;
 
-    await processBarcode(codigo, selectedLocation, bypassCheckLocation);
+    await processBarcode(codigo, selectedLocation, source, bypassCheckLocation);
   } finally {
     isProcessing = false;
     scannerManager.setFocus();

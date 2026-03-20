@@ -234,7 +234,10 @@ var __spreadValues = (a, b) => {
         btn.disabled = false;
       }, 500);
       window.dispatchEvent(new CustomEvent("codeScanned", {
-        detail: { code: cleanValue }
+        detail: {
+          code: cleanValue,
+          source: "manual_input"
+        }
       }));
       self2.manualBarcodeInput.value = "";
     });
@@ -335,7 +338,10 @@ var __spreadValues = (a, b) => {
       overlay.innerText = "Processando...";
     }
     window.dispatchEvent(new CustomEvent("codeScanned", {
-      detail: { code: decodedText }
+      detail: {
+        code: decodedText,
+        source: "camera"
+      }
     }));
     setTimeout(() => {
       if (overlay) overlay.style.display = "none";
@@ -345,7 +351,7 @@ var __spreadValues = (a, b) => {
     }, 1500);
   };
   const scannerManager = new ScannerManager();
-  const STORAGE_KEY = "BARCODE_APP_DATA_V1";
+  const STORAGE_KEY = "BARCODE_APP_DATA_V1.1";
   const VERSION_KEY = "BARCODE_APP_VERSION";
   const SAVE_DEBOUNCE_MS = 400;
   const AssetStatus = Object.freeze({
@@ -425,7 +431,7 @@ var __spreadValues = (a, b) => {
   AssetRepository.prototype._emit = function(name, detail) {
     window.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
   };
-  AssetRepository.prototype.addItem = async function(rawCode, location, obs = "") {
+  AssetRepository.prototype.addItem = async function(rawCode, location, source, obs = "") {
     if (typeof rawCode === "undefined" || rawCode === null || rawCode === "") {
       console.warn("AssetRepository.addItem: Código do ativo é inválido", rawCode);
       return null;
@@ -455,6 +461,7 @@ var __spreadValues = (a, b) => {
       uid: Date.now().toString(36) + Math.random().toString(36).slice(2),
       code: barcode,
       location: loc,
+      source: source ? String(source).substring(0, 16) : "",
       state: 3,
       ipvu: 8,
       obs: obs ? String(obs).substring(0, 140) : "",
@@ -1471,7 +1478,7 @@ var __spreadValues = (a, b) => {
       });
     }
   };
-  async function processBarcode(rawValue, selectedLocation, bypassCheckLocation = false) {
+  async function processBarcode(rawValue, selectedLocation, source = "", bypassCheckLocation = false) {
     let observations = "";
     try {
       if (!selectedLocation || selectedLocation === locationSelector.NONE_SELECTED) {
@@ -1548,7 +1555,7 @@ Deseja prosseguir mesmo assim?`
           }
         }
       }
-      const newItem = await assetRepository.addItem(rawValue, selectedLocation, observations);
+      const newItem = await assetRepository.addItem(rawValue, selectedLocation, source, observations);
       if (newItem) {
         audioManager.playSuccess();
         barcodeTable.renderTable(selectedLocation);
@@ -1730,7 +1737,10 @@ Deseja prosseguir mesmo assim?`
         );
         if (confirmado) {
           window.dispatchEvent(new CustomEvent("codeScanned", {
-            detail: { code: item[0] }
+            detail: {
+              code: item[0],
+              source: "not_found_list"
+            }
           }));
           tr.remove();
           if (tbody.childElementCount === 0) this.close();
@@ -2296,7 +2306,8 @@ Deseja prosseguir mesmo assim?`
           location: i.location,
           state: i.state,
           ipvu: i.ipvu,
-          obs: i.obs
+          obs: i.obs,
+          source: i.source
         };
       });
       const savedUids = await backendService.saveCodeBatch(payload);
@@ -2330,9 +2341,11 @@ Deseja prosseguir mesmo assim?`
       if (e.key.length > 1 && e.key !== "Enter") return;
       if (e.key === "Enter") {
         if (buffer.length > 2) {
-          /* @__PURE__ */ console.log(" barcodes lido globalmente:", buffer);
           window.dispatchEvent(new CustomEvent("codeScanned", {
-            detail: { code: buffer }
+            detail: {
+              code: buffer,
+              source: "otg"
+            }
           }));
           buffer = "";
         }
@@ -2344,7 +2357,7 @@ Deseja prosseguir mesmo assim?`
   })();
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-CGfXuRK5.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-BJ3X2Rn5.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
@@ -2352,13 +2365,15 @@ Deseja prosseguir mesmo assim?`
   }
   let isProcessing = false;
   window.addEventListener("codeScanned", async function(e) {
+    /* @__PURE__ */ console.log(e.detail);
     const codigo = e.detail.code;
+    const source = e.detail.source;
     if (!codigo || isProcessing) return;
     isProcessing = true;
     try {
       const selectedLocation = locationSelector.getSelectedLocation();
       const bypassCheckLocation = document.querySelector("#bypassCheckLocation").checked;
-      await processBarcode(codigo, selectedLocation, bypassCheckLocation);
+      await processBarcode(codigo, selectedLocation, source, bypassCheckLocation);
     } finally {
       isProcessing = false;
       scannerManager.setFocus();
@@ -2428,8 +2443,8 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.03.17-002";
-      el.title = `Versão do build: ${"2026.03.17-002"}`;
+      el.textContent = "2026.03.19-001";
+      el.title = `Versão do build: ${"2026.03.19-001"}`;
     }
   });
   window.addEventListener("error", function(e) {
@@ -2462,7 +2477,7 @@ Deseja prosseguir mesmo assim?`
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.03.17-002"}`);
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.03.19-001"}`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
       throw new Error(`Falha na inicialização do debug: ${error.message}`);

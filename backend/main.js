@@ -195,6 +195,7 @@ function getUserName() {
  * @param {number} items[].state - Estado do item
  * @param {number} items[].ipvu - Valor IPVU do item
  * @param {string} items[].obs - Observações sobre o item
+ * @param {string} items[].source - Fonte da leitura
  * @return {Array<string>} UIDs efetivamente persistidos
  */
 function saveCodeBatch(items) {
@@ -216,7 +217,7 @@ function saveCodeBatch(items) {
       throw new Error('Aba "leituras" não encontrada.');
     }
 
-    const LAST_COL = 8;
+    const LAST_COL = 9;
     const HEADER_ROWS = 1;
 
     const now = new Date();
@@ -264,7 +265,8 @@ function saveCodeBatch(items) {
         user,
         Number(item.state ?? ''),
         Number(item.ipvu ?? ''),
-        String(item.obs ?? '')
+        String(item.obs ?? ''),
+        String(item.source ?? '')
       ];
 
       const existingRow = uidToRow[item.uid];

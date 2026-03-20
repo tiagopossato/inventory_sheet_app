@@ -58,7 +58,7 @@ import { locationSelector } from './locationSelector.js';
  * 
  * @throws {Error} Em caso de erro não tratado durante o processo
  */
-export async function processBarcode(rawValue, selectedLocation, bypassCheckLocation = false) {
+export async function processBarcode(rawValue, selectedLocation, source = "unknown", bypassCheckLocation = false) {
     let observations = '';
 
     try {
@@ -151,7 +151,7 @@ export async function processBarcode(rawValue, selectedLocation, bypassCheckLoca
         }
 
         // 6. Sucesso: Adiciona ao Storage e atualiza Interface
-        const newItem = await assetRepository.addItem(rawValue, selectedLocation, observations);
+        const newItem = await assetRepository.addItem(rawValue, selectedLocation, source, observations);
 
         if (newItem) {
             audioManager.playSuccess();

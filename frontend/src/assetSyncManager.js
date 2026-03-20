@@ -112,7 +112,8 @@ AssetSyncManager.prototype._processQueue = async function () {
         location: i.location,
         state: i.state,
         ipvu: i.ipvu,
-        obs: i.obs
+        obs: i.obs,
+        source: i.source
       };
     });
 
