@@ -233,7 +233,7 @@ app.get('/api/inventory-data', async (req, res) => {
             ip: req.ip
         });
 
-        const result = await gasSimulation.getInventoryData();
+        const result = await gasSimulation.getInventoryData(true);
         res.json(result);
     } catch (error) {
         logStructured('error', 'Erro ao buscar dados de inventário', {

@@ -10,9 +10,15 @@
  */
 
 /**
+ * @typedef {Object} AssetDetail
+ * @property {number} code - Código do ativo
+ * @property {string} [name] - Especificação do ativo (presente se add_spec=true)
+ */
+
+/**
  * @typedef {Object} InventoryItem
  * @property {string} location - Nome da localização
- * @property {number[]} assets - Array de códigos de ativo
+ * @property {AssetDetail[]} assets - Array de objetos de ativo
  */
 
 /**
@@ -82,15 +88,13 @@ InventoryBaseline.prototype.getLocation = function (asset) {
     const codeToCheck = parseInt(asset, 10);
     if (isNaN(codeToCheck)) return null;
 
-    // Percorre o array de objetos do inventário
     for (let i = 0; i < this.data.length; i++) {
-        const item = this.data[i]; // { location: "Sala 1", assets: [...] }
-        const loc = item.location;
+        const item = this.data[i];
         const codes = item.assets;
 
-        // Verifica se o array de códigos existe e contém o tombamento
-        if (Array.isArray(codes) && codes.indexOf(codeToCheck) !== -1) {
-            return loc;
+        // Agora verificamos sempre a propriedade .code
+        if (Array.isArray(codes) && codes.some(a => a.code === codeToCheck)) {
+            return item.location;
         }
     }
 

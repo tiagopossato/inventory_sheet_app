@@ -351,7 +351,7 @@ var __spreadValues = (a, b) => {
     }, 1500);
   };
   const scannerManager = new ScannerManager();
-  const STORAGE_KEY = "BARCODE_APP_DATA_V1.1";
+  const STORAGE_KEY = "BARCODE_APP_DATA_V1";
   const VERSION_KEY = "BARCODE_APP_VERSION";
   const SAVE_DEBOUNCE_MS = 400;
   const AssetStatus = Object.freeze({
@@ -906,10 +906,9 @@ var __spreadValues = (a, b) => {
     if (isNaN(codeToCheck)) return null;
     for (let i = 0; i < this.data.length; i++) {
       const item = this.data[i];
-      const loc = item.location;
       const codes = item.assets;
-      if (Array.isArray(codes) && codes.indexOf(codeToCheck) !== -1) {
-        return loc;
+      if (Array.isArray(codes) && codes.some((a) => a.code === codeToCheck)) {
+        return item.location;
       }
     }
     return null;
@@ -1478,7 +1477,7 @@ var __spreadValues = (a, b) => {
       });
     }
   };
-  async function processBarcode(rawValue, selectedLocation, source = "", bypassCheckLocation = false) {
+  async function processBarcode(rawValue, selectedLocation, source = "unknown", bypassCheckLocation = false) {
     let observations = "";
     try {
       if (!selectedLocation || selectedLocation === locationSelector.NONE_SELECTED) {
@@ -2357,7 +2356,7 @@ Deseja prosseguir mesmo assim?`
   })();
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-BJ3X2Rn5.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-D1qR5E07.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
@@ -2365,7 +2364,6 @@ Deseja prosseguir mesmo assim?`
   }
   let isProcessing = false;
   window.addEventListener("codeScanned", async function(e) {
-    /* @__PURE__ */ console.log(e.detail);
     const codigo = e.detail.code;
     const source = e.detail.source;
     if (!codigo || isProcessing) return;
@@ -2413,6 +2411,7 @@ Deseja prosseguir mesmo assim?`
         appSettings = settingsRes;
         inventoryData = inventoryRes;
       }
+      /* @__PURE__ */ console.log('inventoryData["inventory"]:', inventoryData["inventory"]);
       /* @__PURE__ */ console.log("⚙️ Configurações carregadas:", appSettings);
       if (appSettings && appSettings.inventory_open === false) {
         console.error("⚠️ Coleta de dados fechada.");
@@ -2443,8 +2442,8 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.03.19-001";
-      el.title = `Versão do build: ${"2026.03.19-001"}`;
+      el.textContent = "2026.03.19-005";
+      el.title = `Versão do build: ${"2026.03.19-005"}`;
     }
   });
   window.addEventListener("error", function(e) {
@@ -2477,7 +2476,7 @@ Deseja prosseguir mesmo assim?`
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.03.19-001"}`);
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.03.19-005"}`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
       throw new Error(`Falha na inicialização do debug: ${error.message}`);

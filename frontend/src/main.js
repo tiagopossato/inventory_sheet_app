@@ -164,6 +164,9 @@ window.addEventListener('load', async () => {
       inventoryData = inventoryRes;
     }
 
+    console.log('inventoryData["inventory"]:', inventoryData["inventory"]);
+
+
     console.log('⚙️ Configurações carregadas:', appSettings);
 
     // --- Estratégia de Manutenção (Kill Switch de Acesso) ---
