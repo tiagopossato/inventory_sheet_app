@@ -58,11 +58,12 @@ import './connectivityManager.js';
 import './statsManager.js';
 import './messageSendModal.js';
 import './assetSyncManager.js';
+import './barcodeScanner.js';
 
 // ============================================================================
 // CONFIGURAÇÃO DE EVENTOS GLOBAIS
 // ============================================================================
-
+let isProcessing = false; // Variável de controle
 /**
  * Processa códigos escaneados pelo scanner ou inseridos manualmente
  * @event codeScanned
@@ -70,14 +71,23 @@ import './assetSyncManager.js';
  */
 window.addEventListener('codeScanned', async function (e) {
   const codigo = e.detail.code;
-  if (codigo === null || codigo === undefined) return;
+  const source = e.detail.source;
 
-  /**
-   * @type {string}
-   */
-  const selectedLocation = locationSelector.getSelectedLocation();
-  await processBarcode(codigo, selectedLocation);
-  scannerManager.setFocus();
+  if (!codigo || isProcessing) return; // Ignora se estiver processando
+
+  isProcessing = true; // Trava o processo
+
+  try {
+    const selectedLocation = locationSelector.getSelectedLocation();
+    const bypassCheckLocation = document.querySelector("#bypassCheckLocation").checked;
+
+    await processBarcode(codigo, selectedLocation, source, bypassCheckLocation);
+  } finally {
+    isProcessing = false;
+    if (source == 'manual_input') {
+      scannerManager.setFocus();
+    }
+  }
 });
 
 /**
@@ -95,7 +105,6 @@ window.addEventListener('locationChanged', function (e) {
     scannerManager.hide();
   } else {
     scannerManager.show();
-    scannerManager.setFocus();
   }
 });
 
@@ -176,7 +185,7 @@ window.addEventListener('load', async () => {
       return; // Encerra a execução do listener 'load'
     }
 
-     // Mostra o conteúdo principal depois do carregamento
+    // Mostra o conteúdo principal depois do carregamento
     document.querySelector('main').style.display = 'block';
 
     // 2. EXECUTA ESTRATÉGIA DE LIMPEZA (Kill Switch)
@@ -188,6 +197,10 @@ window.addEventListener('load', async () => {
     barcodeTable.renderTable();
 
     console.log('✅ Aplicação inicializada com sucesso');
+
+    console.log('📊 Estatísticas iniciais:', assetRepository.getStats());
+
+    console.log('📋 Itens carregados na base:', inventoryBaseline.getStats());
 
   } catch (error) {
     console.error('❌ Erro crítico na inicialização:', error);

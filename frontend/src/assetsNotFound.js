@@ -10,13 +10,14 @@
  * @author Tiago Possato
  */
 
-import { processBarcode } from './processBarcode.js';
+// import { processBarcode } from './processBarcode.js';
 import { locationSelector } from './locationSelector.js'
 import { userWarnings } from './userWarnings.js';
 import { AppModal } from './appModal.js';
 import { loadingModal } from './loadingModal.js'
 import { backendService } from "./backendService.js"
 import { scannerManager } from "./scannerManager.js"
+import {connectivityManager} from './connectivityManager.js';
 
 /**
  * @typedef {Object} NotFoundItem
@@ -133,6 +134,12 @@ AssetsNotFound.prototype.setupEvents = function () {
     const btn = document.getElementById('notFoundBtn');
     if (btn) {
         btn.onclick = function () {
+            
+            if(connectivityManager.getStatus() === false) {
+                userWarnings.printUserWarning("Sem conexão com a internet. Verifique sua conectividade.");
+                return;
+            }   
+
             const local = locationSelector.getSelectedLocation();
             if (local === locationSelector.NONE_SELECTED) {
                 userWarnings.printUserWarning("Selecione uma localização primeiro!");
@@ -224,7 +231,12 @@ AssetsNotFound.prototype.addItensToNotFoundTable = function (itens) {
             );
 
             if (confirmado) {
-                processBarcode(item[0], locationSelector.getSelectedLocation());
+                window.dispatchEvent(new CustomEvent('codeScanned', {
+                    detail: {
+                        code: item[0],
+                        source: 'not_found_list'
+                    }
+                }));
                 tr.remove();
                 if (tbody.childElementCount === 0) this.close();
             }

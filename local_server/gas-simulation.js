@@ -85,37 +85,128 @@ export class GASSimulation {
     return userEmail ? userEmail.split('@')[0] : 'anonimo';
   }
 
-  async getInventoryData() {
+  // async getInventoryDataold() {
+  //   const ss = await this.getActiveSpreadsheet();
+  //   const sheetInventario = await ss.getSheetByName('inventario');
+
+  //   if (!sheetInventario) {
+  //     throw new Error("getInventoryData: Aba 'inventario' não encontrada.");
+  //   }
+
+  //   const lastRowInv = await sheetInventario.getLastRow();
+
+  //   if (lastRowInv < 2) {
+  //     return { locations: [], inventory: [] };
+  //   }
+
+  //   const invData = await (await sheetInventario.getRange(2, 4, lastRowInv - 1, 3)).getValues();
+  //   const inventoryMap = new Map();
+
+  //   for (let i = 0; i < invData.length; i++) {
+  //     const row = invData[i];
+  //     const local = String(row[0]).trim();
+
+  //     if (!local) continue;
+
+  //     const asset = parseInt(row[2], 10);
+  //     if (isNaN(asset)) continue;
+
+  //     if (!inventoryMap.has(local)) {
+  //       inventoryMap.set(local, []);
+  //     }
+  //     inventoryMap.get(local).push(asset);
+  //   }
+
+  //   const locationsOutput = [];
+  //   const inventoryOutput = [];
+
+  //   for (const [key, assetsList] of inventoryMap) {
+  //     inventoryOutput.push({
+  //       location: key,
+  //       assets: assetsList
+  //     });
+
+  //     locationsOutput.push({
+  //       name: key,
+  //       assetsCount: assetsList.length
+  //     });
+  //   }
+
+  //   locationsOutput.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  //   inventoryOutput.sort((a, b) => a.location.localeCompare(b.location, 'pt-BR'));
+
+  //   return {
+  //     locations: locationsOutput,
+  //     inventory: inventoryOutput
+  //   };
+  // }
+
+  async getInventoryData(add_spec = false) {
+
     const ss = await this.getActiveSpreadsheet();
     const sheetInventario = await ss.getSheetByName('inventario');
 
+    // Early return com array vazio se a aba não existir
     if (!sheetInventario) {
       throw new Error("getInventoryData: Aba 'inventario' não encontrada.");
     }
 
     const lastRowInv = await sheetInventario.getLastRow();
 
+    // Early return se não houver dados além do cabeçalho
     if (lastRowInv < 2) {
       return { locations: [], inventory: [] };
     }
 
-    const invData = await (await sheetInventario.getRange(2, 4, lastRowInv - 1, 3)).getValues();
+    /** ===============================
+     * 1. LEITURA E PROCESSAMENTO OTIMIZADO
+     * =============================== */
+
+    // Se add_spec for true, lê até a coluna L (9 colunas a partir da D). 
+    // Se false, lê apenas até a F (3 colunas a partir da D) para economizar memória.
+    const numCols = add_spec ? 9 : 3;
+    const invData = await (await sheetInventario.getRange(2, 4, lastRowInv - 1, numCols)).getValues();
+
     const inventoryMap = new Map();
 
+    // Processamento otimizado com for loop
     for (let i = 0; i < invData.length; i++) {
       const row = invData[i];
-      const local = String(row[0]).trim();
+      const local = String(row[0]).trim(); // Coluna D (Índice 0)
 
+      // Validação rápida: pular linhas sem local
       if (!local) continue;
 
-      const asset = parseInt(row[2], 10);
+      const asset = parseInt(row[2], 10); // Coluna F (Índice 2)
+
+      // Validação numérica mais eficiente
       if (isNaN(asset)) continue;
 
+      // Inicializa o array do local se não existir
       if (!inventoryMap.has(local)) {
         inventoryMap.set(local, []);
       }
-      inventoryMap.get(local).push(asset);
+
+      // Estrutura o dado de acordo com o parâmetro
+      if (add_spec) {
+        // Coluna L é o índice 8 (D=0, E=1, F=2, G=3, H=4, I=5, J=6, K=7, L=8)
+        // Pega a string, remove espaços extras e corta nos primeiros 50 caracteres
+        const specName = String(row[8] || "").trim().substring(0, 50);
+
+        inventoryMap.get(local).push({
+          code: asset,
+          name: specName
+        });
+      } else {
+        inventoryMap.get(local).push({
+          code: asset
+        });
+      }
     }
+
+    /** ===============================
+     * 2. ESTRUTURAÇÃO DE SAÍDA OTIMIZADA
+     * =============================== */
 
     const locationsOutput = [];
     const inventoryOutput = [];
@@ -128,9 +219,14 @@ export class GASSimulation {
 
       locationsOutput.push({
         name: key,
+        // O .length funciona perfeitamente, não importa se é um array de números ou de objetos
         assetsCount: assetsList.length
       });
     }
+
+    /** ===============================
+     * 3. ORDENAÇÃO FINAL
+     * =============================== */
 
     locationsOutput.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
     inventoryOutput.sort((a, b) => a.location.localeCompare(b.location, 'pt-BR'));
@@ -213,7 +309,7 @@ export class GASSimulation {
         throw new Error('Aba "leituras" não encontrada.');
       }
 
-      const LAST_COL = 8;
+      const LAST_COL = 9;
       const HEADER_ROWS = 1;
 
       const now = new Date();
@@ -260,7 +356,8 @@ export class GASSimulation {
           user,
           Number(item.state ?? ''),
           Number(item.ipvu ?? ''),
-          String(item.obs ?? '')
+          String(item.obs ?? ''),
+          String(item.source ?? '')
         ];
 
         const existingRow = uidToRow[item.uid];
@@ -450,7 +547,8 @@ export class GASSimulation {
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       if (String(row[0]).trim() === target) {
-        result.push([row[1], row[2]]);
+      const specName = String(row[2] || "").trim().substring(0, 100);
+      result.push([row[1], specName]);
       }
     }
 
