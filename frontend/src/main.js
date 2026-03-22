@@ -69,7 +69,7 @@ let isProcessing = false; // Variável de controle
  * @event codeScanned
  * @listens window#codeScanned
  */
-window.addEventListener('codeScanned', async function (e) {  
+window.addEventListener('codeScanned', async function (e) {
   const codigo = e.detail.code;
   const source = e.detail.source;
 
@@ -84,7 +84,9 @@ window.addEventListener('codeScanned', async function (e) {
     await processBarcode(codigo, selectedLocation, source, bypassCheckLocation);
   } finally {
     isProcessing = false;
-    scannerManager.setFocus();
+    if (source == 'manual_input') {
+      scannerManager.setFocus();
+    }
   }
 });
 
@@ -103,7 +105,6 @@ window.addEventListener('locationChanged', function (e) {
     scannerManager.hide();
   } else {
     scannerManager.show();
-    scannerManager.setFocus();
   }
 });
 
