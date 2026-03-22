@@ -1135,7 +1135,7 @@ var __spreadValues = (a, b) => {
     const tableArea = document.getElementById("barcode-table-area");
     tableArea.innerHTML = `
         <div class="table-wrapper">
-            <h4 class="table-header-container" id="table-heading">Itens Encontrados por este dispositivo</h4>
+            <h4 class="table-header-container" id="table-heading">Itens encontrados por este dispositivo</h4>
             <table id="barcode-table">
                 <thead>
                     <tr>
@@ -1196,6 +1196,16 @@ var __spreadValues = (a, b) => {
     const loc = item.location.split(" ")[0];
     if (row.cells[3].textContent !== loc) {
       row.cells[3].textContent = loc;
+      row.cells[3].style.cursor = "pointer";
+      row.cells[3].style.color = "#007bff";
+      row.cells[3].style.textDecoration = "underline";
+      row.cells[3].onclick = () => {
+        locationSelector.setSelectedLocation(item.location);
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth"
+        });
+      };
     }
   };
   BarcodeTable.prototype.renderTable = function(currentFilter = null) {
@@ -1230,7 +1240,18 @@ var __spreadValues = (a, b) => {
       tr.appendChild(self2._createCell(item.code, "centered-cell"));
       tr.appendChild(self2._createCell(inventoryBaseline.getAssetName(item.code) || "--", "default-cell"));
       const loc = item.location.split(" ")[0];
-      tr.appendChild(self2._createCell(loc, "default-cell"));
+      const locationCell = self2._createCell(loc, "default-cell");
+      locationCell.style.cursor = "pointer";
+      locationCell.style.color = "#007bff";
+      locationCell.style.textDecoration = "underline";
+      locationCell.onclick = () => {
+        locationSelector.setSelectedLocation(item.location);
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth"
+        });
+      };
+      tr.appendChild(locationCell);
       const actionCell = document.createElement("td");
       actionCell.className = "centered-cell";
       const btn = document.createElement("button");
@@ -2700,7 +2721,7 @@ Deseja prosseguir mesmo assim?`
   })();
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-BnYrwNAD.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-DU2GyuDq.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
@@ -2788,8 +2809,8 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.03.22-011";
-      el.title = `Versão do build: ${"2026.03.22-011"}`;
+      el.textContent = "2026.03.22-012";
+      el.title = `Versão do build: ${"2026.03.22-012"}`;
     }
   });
   window.addEventListener("error", function(e) {
@@ -2822,7 +2843,7 @@ Deseja prosseguir mesmo assim?`
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.03.22-011"}`);
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.03.22-012"}`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
       throw new Error(`Falha na inicialização do debug: ${error.message}`);

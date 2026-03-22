@@ -58,7 +58,7 @@ function BarcodeTable() {
     const tableArea = document.getElementById('barcode-table-area');
     tableArea.innerHTML = `
         <div class="table-wrapper">
-            <h4 class="table-header-container" id="table-heading">Itens Encontrados por este dispositivo</h4>
+            <h4 class="table-header-container" id="table-heading">Itens encontrados por este dispositivo</h4>
             <table id="barcode-table">
                 <thead>
                     <tr>
@@ -141,7 +141,25 @@ BarcodeTable.prototype._updateItemInTable = function (item) {
     const loc = item.location.split(' ')[0];
     if (row.cells[3].textContent !== loc) {
         row.cells[3].textContent = loc;
+
+        // --- 🎨 Deixando o texto com visual "clicável" ---
+        row.cells[3].style.cursor = 'pointer';         // Muda o mouse para a "mãozinha"
+        row.cells[3].style.color = '#007bff';          // Deixa a cor azul (padrão de links)
+        row.cells[3].style.textDecoration = 'underline'; // Adiciona o sublinhado
+        // row.cells[3].style.fontWeight = 'bold';     // (Opcional) Deixa em negrito
+
+        // Adiciona a ação de clique
+        row.cells[3].onclick = () => {
+            // Correção: Passando 'loc' diretamente, já que ele é a string extraída acima
+            locationSelector.setSelectedLocation(item.location);
+            // Rola para o topo de forma suave
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
     }
+
 };
 
 /**
@@ -194,8 +212,29 @@ BarcodeTable.prototype.renderTable = function (currentFilter = null) {
         tr.appendChild(self._createCell(item.code, "centered-cell"));
         tr.appendChild(self._createCell(inventoryBaseline.getAssetName(item.code) || "--", "default-cell"));
 
+        //-------------------------Localização ---------------------------------------//
         const loc = item.location.split(' ')[0];
-        tr.appendChild(self._createCell(loc, "default-cell"));
+        const locationCell = self._createCell(loc, "default-cell");
+
+        // Aplica o estilo visual
+        locationCell.style.cursor = 'pointer';
+        locationCell.style.color = '#007bff';
+        locationCell.style.textDecoration = 'underline';
+
+        // Usamos addEventListener que é mais robusto que o onclick
+        locationCell.onclick = () => {
+            // Definir a localização
+            locationSelector.setSelectedLocation(item.location);
+            // Fazer o scroll
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        };
+        tr.appendChild(locationCell);
+
+        //---------------- FIM Da Localização ---------------------//
+
 
         const actionCell = document.createElement("td");
         actionCell.className = "centered-cell";
