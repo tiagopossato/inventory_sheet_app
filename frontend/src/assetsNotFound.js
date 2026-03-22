@@ -17,6 +17,7 @@ import { AppModal } from './appModal.js';
 import { loadingModal } from './loadingModal.js'
 import { backendService } from "./backendService.js"
 import { scannerManager } from "./scannerManager.js"
+import {connectivityManager} from './connectivityManager.js';
 
 /**
  * @typedef {Object} NotFoundItem
@@ -133,6 +134,12 @@ AssetsNotFound.prototype.setupEvents = function () {
     const btn = document.getElementById('notFoundBtn');
     if (btn) {
         btn.onclick = function () {
+            
+            if(connectivityManager.getStatus() === false) {
+                userWarnings.printUserWarning("Sem conexão com a internet. Verifique sua conectividade.");
+                return;
+            }   
+
             const local = locationSelector.getSelectedLocation();
             if (local === locationSelector.NONE_SELECTED) {
                 userWarnings.printUserWarning("Selecione uma localização primeiro!");

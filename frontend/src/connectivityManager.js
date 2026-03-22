@@ -104,6 +104,15 @@ ConnectivityManager.prototype.updateStatus = function () {
 };
 
 /**
+ * Retorna o status atual da conectividade
+ * @public
+ * @returns {boolean}
+ */
+ConnectivityManager.prototype.getStatus = function () {
+    return this.isOnline;
+};
+
+/**
  * Instância singleton do ConnectivityManager
  * @type {ConnectivityManager}
  */

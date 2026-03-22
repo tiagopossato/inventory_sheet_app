@@ -742,6 +742,94 @@ var __spreadValues = (a, b) => {
     return true;
   };
   const assetRepository = new AssetRepository();
+  function InventoryBaseline() {
+    this.data = null;
+    this.setAssetsDatabase = this.setAssetsDatabase.bind(this);
+    this.getLocation = this.getLocation.bind(this);
+    this.verifyItem = this.verifyItem.bind(this);
+  }
+  InventoryBaseline.prototype.setAssetsDatabase = function(data) {
+    if (!this._isValidSchema(data)) {
+      throw new Error("Invalid data schema. Expected format: Array of {location: string, assets: Array of {code: number, name?: string}}");
+    }
+    this.data = data;
+  };
+  InventoryBaseline.prototype._isValidSchema = function(data) {
+    if (!Array.isArray(data)) return false;
+    return data.every((item) => {
+      if (!item || typeof item !== "object") return false;
+      if (typeof item.location !== "string") return false;
+      if (!Array.isArray(item.assets)) return false;
+      return item.assets.every((asset) => {
+        return typeof asset.code === "number" && (asset.name === void 0 || typeof asset.name === "string");
+      });
+    });
+  };
+  InventoryBaseline.prototype.getLocation = function(asset) {
+    if (!this.data || !Array.isArray(this.data)) return null;
+    const codeToCheck = parseInt(asset, 10);
+    if (isNaN(codeToCheck)) return null;
+    for (let i = 0; i < this.data.length; i++) {
+      const item = this.data[i];
+      const codes = item.assets;
+      if (Array.isArray(codes) && codes.some((a) => a.code === codeToCheck)) {
+        return item.location;
+      }
+    }
+    return null;
+  };
+  InventoryBaseline.prototype.getAssetName = function(asset) {
+    if (!this.data || !Array.isArray(this.data)) return null;
+    const codeToCheck = parseInt(asset, 10);
+    if (isNaN(codeToCheck)) return null;
+    for (let i = 0; i < this.data.length; i++) {
+      const item = this.data[i];
+      const codes = item.assets;
+      if (Array.isArray(codes)) {
+        const asset2 = codes.find((a) => a.code === codeToCheck);
+        if (asset2) {
+          return asset2.name;
+        }
+      }
+    }
+    return null;
+  };
+  InventoryBaseline.prototype.getAssetsFromLocation = function(location) {
+    if (!this.data || !Array.isArray(this.data)) return [];
+    for (let i = 0; i < this.data.length; i++) {
+      const item = this.data[i];
+      if (item.location === location) {
+        return item.assets;
+      }
+    }
+    return [];
+  };
+  InventoryBaseline.prototype.verifyItem = async function(asset, selectedLocation) {
+    if (!this.data) {
+      return { status: false, msg: "Base de dados não carregada." };
+    }
+    const locFound = this.getLocation(asset);
+    if (locFound) {
+      return locFound === selectedLocation ? { status: true } : { status: "check", local: locFound };
+    }
+    return { status: false, msg: "Código " + asset + " não encontrado na base." };
+  };
+  InventoryBaseline.prototype.isLoaded = function() {
+    return this.data !== null && Array.isArray(this.data);
+  };
+  InventoryBaseline.prototype.getStats = function() {
+    if (!this.data || !Array.isArray(this.data)) {
+      return { totalLocations: 0, totalAssets: 0 };
+    }
+    const totalAssets = this.data.reduce((sum, location) => {
+      return sum + (Array.isArray(location.assets) ? location.assets.length : 0);
+    }, 0);
+    return {
+      totalLocations: this.data.length,
+      totalAssets
+    };
+  };
+  const inventoryBaseline = new InventoryBaseline();
   function BarcodeTable() {
     this.currentPage = 1;
     this.renderTable = this.renderTable.bind(this);
@@ -758,6 +846,7 @@ var __spreadValues = (a, b) => {
                     <tr>
                         <th class="col-stat">Stat</th>
                         <th class="col-patrimonio">Patrimônio</th>
+                        <th class="col-name">Descrição curta</th>
                         <th class="col-location">Local</th>
                         <th class="col-action">Ação</th>
                     </tr>
@@ -799,14 +888,19 @@ var __spreadValues = (a, b) => {
   BarcodeTable.prototype._updateItemInTable = function(item) {
     const row = document.getElementById("row-" + item.uid);
     if (!row) return;
+    const itemName = inventoryBaseline.getAssetName(item.code) || "--";
     if (row.cells[0].textContent !== this._statusIcon(item.status)) {
       row.cells[0].textContent = this._statusIcon(item.status);
     }
     if (row.cells[1].textContent !== item.code) {
       row.cells[1].textContent = item.code;
     }
-    if (row.cells[2].textContent !== item.location) {
-      row.cells[2].textContent = item.location;
+    if (row.cells[2].textContent !== itemName) {
+      row.cells[2].textContent = itemName;
+    }
+    const loc = item.location.split(" ")[0];
+    if (row.cells[3].textContent !== loc) {
+      row.cells[3].textContent = loc;
     }
   };
   BarcodeTable.prototype.renderTable = function(currentFilter = null) {
@@ -839,7 +933,9 @@ var __spreadValues = (a, b) => {
       tr.id = "row-" + item.uid;
       tr.appendChild(self2._createCell(self2._statusIcon(item.status), "status-cell centered-cell"));
       tr.appendChild(self2._createCell(item.code, "centered-cell"));
-      tr.appendChild(self2._createCell(item.location, "default-cell"));
+      tr.appendChild(self2._createCell(inventoryBaseline.getAssetName(item.code) || "--", "default-cell"));
+      const loc = item.location.split(" ")[0];
+      tr.appendChild(self2._createCell(loc, "default-cell"));
       const actionCell = document.createElement("td");
       actionCell.className = "centered-cell";
       const btn = document.createElement("button");
@@ -889,66 +985,6 @@ var __spreadValues = (a, b) => {
     });
   };
   const barcodeTable = new BarcodeTable();
-  function InventoryBaseline() {
-    this.data = null;
-    this.setAssetsDatabase = this.setAssetsDatabase.bind(this);
-    this.getLocation = this.getLocation.bind(this);
-    this.verifyItem = this.verifyItem.bind(this);
-  }
-  InventoryBaseline.prototype.setAssetsDatabase = function(data) {
-    if (data && typeof data === "object") {
-      this.data = data;
-    }
-  };
-  InventoryBaseline.prototype.getLocation = function(asset) {
-    if (!this.data || !Array.isArray(this.data)) return null;
-    const codeToCheck = parseInt(asset, 10);
-    if (isNaN(codeToCheck)) return null;
-    for (let i = 0; i < this.data.length; i++) {
-      const item = this.data[i];
-      const codes = item.assets;
-      if (Array.isArray(codes) && codes.some((a) => a.code === codeToCheck)) {
-        return item.location;
-      }
-    }
-    return null;
-  };
-  InventoryBaseline.prototype.getAssetsFromLocation = function(location) {
-    if (!this.data || !Array.isArray(this.data)) return [];
-    for (let i = 0; i < this.data.length; i++) {
-      const item = this.data[i];
-      if (item.location === location) {
-        return item.assets;
-      }
-    }
-    return [];
-  };
-  InventoryBaseline.prototype.verifyItem = async function(asset, selectedLocation) {
-    if (!this.data) {
-      return { status: false, msg: "Base de dados não carregada." };
-    }
-    const locFound = this.getLocation(asset);
-    if (locFound) {
-      return locFound === selectedLocation ? { status: true } : { status: "check", local: locFound };
-    }
-    return { status: false, msg: "Código " + asset + " não encontrado na base." };
-  };
-  InventoryBaseline.prototype.isLoaded = function() {
-    return this.data !== null && Array.isArray(this.data);
-  };
-  InventoryBaseline.prototype.getStats = function() {
-    if (!this.data || !Array.isArray(this.data)) {
-      return { totalLocations: 0, totalAssets: 0 };
-    }
-    const totalAssets = this.data.reduce((sum, location) => {
-      return sum + (Array.isArray(location.assets) ? location.assets.length : 0);
-    }, 0);
-    return {
-      totalLocations: this.data.length,
-      totalAssets
-    };
-  };
-  const inventoryBaseline = new InventoryBaseline();
   function AudioManager() {
     this.audioContext = null;
     this.TYPES = {
@@ -1615,6 +1651,44 @@ Deseja prosseguir mesmo assim?`
     }
   };
   const loadingModal = new LoadingModal();
+  function ConnectivityManager() {
+    this.bannerId = "offlineBanner";
+    this.isOnline = navigator.onLine;
+    this.updateStatus = this.updateStatus.bind(this);
+    this.init = this.init.bind(this);
+    this.init();
+  }
+  ConnectivityManager.prototype.init = function() {
+    window.addEventListener("online", this.updateStatus);
+    window.addEventListener("offline", this.updateStatus);
+    if (document.readyState === "complete") {
+      this.updateStatus();
+    } else {
+      window.addEventListener("load", this.updateStatus);
+    }
+  };
+  ConnectivityManager.prototype.updateStatus = function() {
+    this.isOnline = navigator.onLine;
+    const banner = document.getElementById(this.bannerId);
+    if (banner) {
+      banner.style.display = this.isOnline ? "none" : "block";
+    }
+    if (!this.isOnline) {
+      console.warn("🔌 Dispositivo entrou em modo OFFLINE.");
+      window.dispatchEvent(new CustomEvent("connectivityStatusChanged", {
+        detail: { online: false }
+      }));
+    } else {
+      /* @__PURE__ */ console.log("🌐 Dispositivo está ONLINE.");
+      window.dispatchEvent(new CustomEvent("connectivityStatusChanged", {
+        detail: { online: true }
+      }));
+    }
+  };
+  ConnectivityManager.prototype.getStatus = function() {
+    return this.isOnline;
+  };
+  const connectivityManager = new ConnectivityManager();
   function AssetsNotFound() {
     this.injectHTML();
     this.overlay = document.getElementById("notFoundOverlay");
@@ -1676,6 +1750,10 @@ Deseja prosseguir mesmo assim?`
     const btn = document.getElementById("notFoundBtn");
     if (btn) {
       btn.onclick = function() {
+        if (connectivityManager.getStatus() === false) {
+          userWarnings.printUserWarning("Sem conexão com a internet. Verifique sua conectividade.");
+          return;
+        }
         const local = locationSelector.getSelectedLocation();
         if (local === locationSelector.NONE_SELECTED) {
           userWarnings.printUserWarning("Selecione uma localização primeiro!");
@@ -1792,6 +1870,7 @@ Deseja prosseguir mesmo assim?`
     this.fields = {
       uid: document.getElementById("uidField"),
       code: document.getElementById("tombamentoField"),
+      specification: document.getElementById("specField"),
       location: document.getElementById("locationField"),
       state: document.getElementById("estadoBem"),
       ipvu: document.getElementById("vidaUtil"),
@@ -1821,6 +1900,10 @@ Deseja prosseguir mesmo assim?`
                     <input type="text" id="tombamentoField" class="input-modal-readonly" style="height: 40px;" readonly/>
                 </div>
 
+                <div class="form-group">
+                    <label>Especificação</label>
+                    <textarea id="specField" class="input-modal-readonly" readonly></textarea>
+                </div>
                 <div class="form-group">
                     <label>Localização</label>
                     <textarea id="locationField" class="input-modal-readonly" readonly></textarea>
@@ -1893,6 +1976,7 @@ Deseja prosseguir mesmo assim?`
     }
     this.fields.uid.value = item.uid || "";
     this.fields.code.value = item.code || "";
+    this.fields.specification.value = inventoryBaseline.getAssetName(item.code) || "Sem descrição";
     this.fields.location.value = item.location || "";
     this.fields.state.value = item.state !== void 0 ? String(item.state) : "3";
     this.fields.ipvu.value = item.ipvu !== void 0 ? String(item.ipvu) : "0";
@@ -1920,41 +2004,6 @@ Deseja prosseguir mesmo assim?`
     document.body.style.overflow = "auto";
   };
   new EditAssetModal();
-  function ConnectivityManager() {
-    this.bannerId = "offlineBanner";
-    this.isOnline = navigator.onLine;
-    this.updateStatus = this.updateStatus.bind(this);
-    this.init = this.init.bind(this);
-    this.init();
-  }
-  ConnectivityManager.prototype.init = function() {
-    window.addEventListener("online", this.updateStatus);
-    window.addEventListener("offline", this.updateStatus);
-    if (document.readyState === "complete") {
-      this.updateStatus();
-    } else {
-      window.addEventListener("load", this.updateStatus);
-    }
-  };
-  ConnectivityManager.prototype.updateStatus = function() {
-    this.isOnline = navigator.onLine;
-    const banner = document.getElementById(this.bannerId);
-    if (banner) {
-      banner.style.display = this.isOnline ? "none" : "block";
-    }
-    if (!this.isOnline) {
-      console.warn("🔌 Dispositivo entrou em modo OFFLINE.");
-      window.dispatchEvent(new CustomEvent("connectivityStatusChanged", {
-        detail: { online: false }
-      }));
-    } else {
-      /* @__PURE__ */ console.log("🌐 Dispositivo está ONLINE.");
-      window.dispatchEvent(new CustomEvent("connectivityStatusChanged", {
-        detail: { online: true }
-      }));
-    }
-  };
-  new ConnectivityManager();
   function StatsManager() {
     this.containerId = "stats-area";
     this.elements = {
@@ -2330,10 +2379,10 @@ Deseja prosseguir mesmo assim?`
   };
   new AssetSyncManager(assetRepository);
   (function() {
-    var buffer = "";
-    var lastKeyTime = Date.now();
+    let buffer = "";
+    let lastKeyTime = Date.now();
     window.addEventListener("keydown", function(e) {
-      var currentTime = Date.now();
+      const currentTime = Date.now();
       if (currentTime - lastKeyTime > 50) {
         buffer = "";
       }
@@ -2356,7 +2405,7 @@ Deseja prosseguir mesmo assim?`
   })();
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-D1qR5E07.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-DWEiGJC-.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
@@ -2374,7 +2423,9 @@ Deseja prosseguir mesmo assim?`
       await processBarcode(codigo, selectedLocation, source, bypassCheckLocation);
     } finally {
       isProcessing = false;
-      scannerManager.setFocus();
+      if (source == "manual_input") {
+        scannerManager.setFocus();
+      }
     }
   });
   window.addEventListener("locationChanged", function(e) {
@@ -2384,7 +2435,6 @@ Deseja prosseguir mesmo assim?`
       scannerManager.hide();
     } else {
       scannerManager.show();
-      scannerManager.setFocus();
     }
   });
   window.addEventListener("beforeunload", function(e) {
@@ -2411,7 +2461,6 @@ Deseja prosseguir mesmo assim?`
         appSettings = settingsRes;
         inventoryData = inventoryRes;
       }
-      /* @__PURE__ */ console.log('inventoryData["inventory"]:', inventoryData["inventory"]);
       /* @__PURE__ */ console.log("⚙️ Configurações carregadas:", appSettings);
       if (appSettings && appSettings.inventory_open === false) {
         console.error("⚠️ Coleta de dados fechada.");
@@ -2431,6 +2480,8 @@ Deseja prosseguir mesmo assim?`
       locationSelector.init(inventoryData["locations"]);
       barcodeTable.renderTable();
       /* @__PURE__ */ console.log("✅ Aplicação inicializada com sucesso");
+      /* @__PURE__ */ console.log("📊 Estatísticas iniciais:", assetRepository.getStats());
+      /* @__PURE__ */ console.log("📋 Itens carregados na base:", inventoryBaseline.getStats());
     } catch (error) {
       console.error("❌ Erro crítico na inicialização:", error);
       userWarnings.printUserWarning("Erro ao carregar dados. Recarregue a página.");
@@ -2442,8 +2493,8 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.03.19-005";
-      el.title = `Versão do build: ${"2026.03.19-005"}`;
+      el.textContent = "2026.03.22-003";
+      el.title = `Versão do build: ${"2026.03.22-003"}`;
     }
   });
   window.addEventListener("error", function(e) {
@@ -2476,7 +2527,7 @@ Deseja prosseguir mesmo assim?`
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.03.19-005"}`);
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.03.22-003"}`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
       throw new Error(`Falha na inicialização do debug: ${error.message}`);
@@ -2638,7 +2689,7 @@ Deseja prosseguir mesmo assim?`
   <!-- 
     Script principal da aplicação
     Carregado como módulo ES6 para melhor organização
-  -->
+  -->
 </body>
 
 </html>

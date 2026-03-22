@@ -4,7 +4,7 @@
  * @property {Array<{name: string, assetsCount: number}>} locations - Lista de localidades com contagem de bens
  * @property {Array<{location: string, assets: number[]}>} inventory - Inventário agrupado por localidade
  */
-function getInventoryData(add_spec = false) {
+function getInventoryData(add_spec = true) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheetInventario = ss.getSheetByName('inventario');
 
