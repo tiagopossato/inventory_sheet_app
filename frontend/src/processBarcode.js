@@ -17,7 +17,8 @@ import { audioManager } from './audioManager.js';
 import { inventoryBaseline } from './inventoryBaseline.js';
 import { remoteInventoryRegistry } from './remoteInventoryRegistry.js';
 import { AppModal } from './appModal.js';
-import { scannerManager } from './scannerManager.js';
+// import { scannerManager } from "./scannerManager.js"
+import { inputArea as scannerManager } from "./inputArea.js"
 import { locationSelector } from './locationSelector.js';
 
 /**

@@ -16,7 +16,8 @@ import { userWarnings } from './userWarnings.js';
 import { AppModal } from './appModal.js';
 import { loadingModal } from './loadingModal.js'
 import { backendService } from "./backendService.js"
-import { scannerManager } from "./scannerManager.js"
+// import { scannerManager } from "./scannerManager.js"
+import { inputArea as scannerManager } from "./inputArea.js"
 import {connectivityManager} from './connectivityManager.js';
 
 /**

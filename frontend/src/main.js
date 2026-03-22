@@ -43,7 +43,8 @@ if (__IS_DEV__) {
  * @typedef {Object} MainModules
  */
 import { locationSelector } from './locationSelector.js'
-import { scannerManager } from './scannerManager.js';
+// import { scannerManager } from "./scannerManager.js"
+import { inputArea as scannerManager } from "./inputArea.js"
 import { barcodeTable } from './barcodeTable.js'
 import { assetRepository } from './assetRepository.js';
 import { inventoryBaseline } from './inventoryBaseline.js';

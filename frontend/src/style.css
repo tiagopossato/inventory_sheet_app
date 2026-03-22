@@ -178,6 +178,10 @@ select.w-100 {
   margin-right: auto;
 }
 
+#videoArea {
+  position: relative;
+}
+
 select {
   width: 100%;
   padding: 8px;
@@ -376,6 +380,21 @@ video {
 
 #reader {
   width: 100%;
+  height: 100vh;
+  min-height: 300px;
+  position: relative;
+  background: #000;
+}
+
+#reader canvas,
+#reader video,
+#reader img {
+  width: 100% !important;
+  height: cover !important;
+  object-fit: contain;
+  display: block;
+  top: 0;
+  left: 0;
 }
 
 #cameraPlaceholder {
