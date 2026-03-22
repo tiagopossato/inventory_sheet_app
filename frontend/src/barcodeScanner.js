@@ -1,9 +1,9 @@
 (function () {
-    var buffer = "";
-    var lastKeyTime = Date.now();
+    let buffer = "";
+    let lastKeyTime = Date.now();
 
     window.addEventListener('keydown', function (e) {
-        var currentTime = Date.now();
+        const currentTime = Date.now();
 
         // Se o intervalo entre teclas for maior que 50ms, 
         // provavelmente é um humano digitando, então limpamos o buffer.
