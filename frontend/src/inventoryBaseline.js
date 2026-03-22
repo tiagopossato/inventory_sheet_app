@@ -58,18 +58,48 @@ function InventoryBaseline() {
  * @public
  * 
  * @example
- * // Formato esperado dos dados:
- * // [
- * //   { "location": "Sala 1", "assets": [1001, 1002, 1003] },
- * //   { "location": "Sala 2", "assets": [2001, 2002] }
- * // ]
- * 
- * inventoryBaseline.setAssetsDatabase(inventoryData);
+ *  Formato esperado dos dados:
+ *  [
+ *    { "location": "Sala 1", "assets": 
+ *      [
+ *          { code: 1001, name: "Computador" },
+ *          { code: 1002, name: "Computador" }
+ *      ]
+ *     },
+ *    { 
+ *      "location": "Sala 2", "assets": 
+ *      [
+ *         { code: 2002, name: "Monitor" },
+ *         { code: 2003, name: "Teclado" }
+ *      ]
+ *    }
+ *  ]
  */
 InventoryBaseline.prototype.setAssetsDatabase = function (data) {
-    if (data && typeof data === 'object') {
-        this.data = data;
+    if (!this._isValidSchema(data)) {
+        throw new Error("Invalid data schema. Expected format: Array of {location: string, assets: Array of {code: number, name?: string}}");
     }
+    this.data = data;
+};
+
+/**
+ * Valida o schema dos dados do inventário
+ * @param {*} data - Dados a serem validados
+ * @returns {boolean} true se válido, false caso contrário
+ * @private
+ */
+InventoryBaseline.prototype._isValidSchema = function (data) {
+    if (!Array.isArray(data)) return false;
+
+    return data.every(item => {
+        if (!item || typeof item !== 'object') return false;
+        if (typeof item.location !== 'string') return false;
+        if (!Array.isArray(item.assets)) return false;
+
+        return item.assets.every(asset => {
+            return typeof asset.code === 'number' && (asset.name === undefined || typeof asset.name === 'string');
+        });
+    });
 };
 
 /**
@@ -101,6 +131,30 @@ InventoryBaseline.prototype.getLocation = function (asset) {
     return null;
 };
 
+
+
+InventoryBaseline.prototype.getAssetName = function (asset) {
+    if (!this.data || !Array.isArray(this.data)) return null;
+
+    const codeToCheck = parseInt(asset, 10);
+    if (isNaN(codeToCheck)) return null;
+
+    for (let i = 0; i < this.data.length; i++) {
+        const item = this.data[i];
+        const codes = item.assets;
+
+        // Agora verificamos sempre a propriedade .code
+        if (Array.isArray(codes)) {
+            const asset = codes.find(a => a.code === codeToCheck);
+            if (asset) {
+                return asset.name; // Retorna o nome do ativo se encontrado
+            }
+        }
+    }
+
+    return null;
+};
+
 /**
  * Retorna os códigos de ativo associados a uma localização
  * @param {string} location - Localização para buscar os códigos
@@ -109,7 +163,12 @@ InventoryBaseline.prototype.getLocation = function (asset) {
  * 
  * @example
  * const assets = inventoryBaseline.getAssetsFromLocation("Sala 1");
- * // Retorna: [1001, 1002, 1003]
+ * Retorna: 
+ *  [
+ *      { code: 1001, name: "Computador" },
+ *      { code: 1002, name: "Monitor" },
+ *      { code: 1003, name: "Teclado" }
+ *  ]
  */
 InventoryBaseline.prototype.getAssetsFromLocation = function (location) {
     if (!this.data || !Array.isArray(this.data)) return [];

@@ -547,7 +547,8 @@ export class GASSimulation {
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       if (String(row[0]).trim() === target) {
-        result.push([row[1], row[2]]);
+      const specName = String(row[2] || "").trim().substring(0, 100);
+      result.push([row[1], specName]);
       }
     }
 

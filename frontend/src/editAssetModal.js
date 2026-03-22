@@ -10,11 +10,13 @@
  */
 
 import { assetRepository } from './assetRepository.js';
+import { inventoryBaseline } from './inventoryBaseline.js';
 
 /**
  * @typedef {Object} FormFields
  * @property {HTMLInputElement} uid - Campo oculto para UID do item
  * @property {HTMLInputElement} code - Campo de tombamento (somente leitura)
+ * @property {HTMLTextAreaElement} specification - Campo de especificação (somente leitura)
  * @property {HTMLTextAreaElement} location - Campo de localização (somente leitura)
  * @property {HTMLSelectElement} state - Select de estado do bem
  * @property {HTMLSelectElement} ipvu - Select de vida útil estimada
@@ -25,6 +27,7 @@ import { assetRepository } from './assetRepository.js';
  * @typedef {Object} AssetFormData
  * @property {string} uid - Identificador único do item
  * @property {string} code - Código de tombamento
+ * @property {string} specification - Especificação do ativo
  * @property {string} location - Localização do item
  * @property {number} state - Estado do bem (0-4)
  * @property {number} ipvu - Vida útil estimada em anos
@@ -58,6 +61,7 @@ function EditAssetModal() {
     this.fields = {
         uid: document.getElementById('uidField'),
         code: document.getElementById('tombamentoField'),
+        specification: document.getElementById('specField'),
         location: document.getElementById('locationField'),
         state: document.getElementById('estadoBem'),
         ipvu: document.getElementById('vidaUtil'),
@@ -103,6 +107,10 @@ EditAssetModal.prototype.innerHTML = function () {
                     <input type="text" id="tombamentoField" class="input-modal-readonly" style="height: 40px;" readonly/>
                 </div>
 
+                <div class="form-group">
+                    <label>Especificação</label>
+                    <textarea id="specField" class="input-modal-readonly" readonly></textarea>
+                </div>
                 <div class="form-group">
                     <label>Localização</label>
                     <textarea id="locationField" class="input-modal-readonly" readonly></textarea>
@@ -206,6 +214,7 @@ EditAssetModal.prototype.open = function (uid) {
     // Preenche os campos do formulário
     this.fields.uid.value = item.uid || "";
     this.fields.code.value = item.code || "";
+    this.fields.specification.value = inventoryBaseline.getAssetName(item.code) || "Sem descrição";
     this.fields.location.value = item.location || "";
     this.fields.state.value = item.state !== undefined ? String(item.state) : "3";
     this.fields.ipvu.value = item.ipvu !== undefined ? String(item.ipvu) : "0";

@@ -165,9 +165,6 @@ window.addEventListener('load', async () => {
       inventoryData = inventoryRes;
     }
 
-    console.log('inventoryData["inventory"]:', inventoryData["inventory"]);
-
-
     console.log('⚙️ Configurações carregadas:', appSettings);
 
     // --- Estratégia de Manutenção (Kill Switch de Acesso) ---
@@ -200,6 +197,10 @@ window.addEventListener('load', async () => {
     barcodeTable.renderTable();
 
     console.log('✅ Aplicação inicializada com sucesso');
+
+    console.log('📊 Estatísticas iniciais:', assetRepository.getStats());
+
+    console.log('📋 Itens carregados na base:', inventoryBaseline.getStats());
 
   } catch (error) {
     console.error('❌ Erro crítico na inicialização:', error);

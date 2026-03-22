@@ -11,6 +11,7 @@
 
 import { assetRepository, AssetStatus } from './assetRepository.js';
 import { locationSelector } from './locationSelector.js';
+import { inventoryBaseline } from './inventoryBaseline.js';
 
 /**
  * @typedef {Object} TableConfig
@@ -63,6 +64,7 @@ function BarcodeTable() {
                     <tr>
                         <th class="col-stat">Stat</th>
                         <th class="col-patrimonio">Patrimônio</th>
+                        <th class="col-name">Descrição curta</th>
                         <th class="col-location">Local</th>
                         <th class="col-action">Ação</th>
                     </tr>
@@ -122,6 +124,7 @@ BarcodeTable.prototype._statusIcon = function (status) {
 BarcodeTable.prototype._updateItemInTable = function (item) {
     const row = document.getElementById('row-' + item.uid);
     if (!row) return;
+    const itemName = inventoryBaseline.getAssetName(item.code) || "--";
 
     // Atualiza apenas se necessário (evita reflow desnecessário)
     if (row.cells[0].textContent !== this._statusIcon(item.status)) {
@@ -131,9 +134,13 @@ BarcodeTable.prototype._updateItemInTable = function (item) {
     if (row.cells[1].textContent !== item.code) {
         row.cells[1].textContent = item.code;
     }
+    if (row.cells[2].textContent !== itemName) {
+        row.cells[2].textContent = itemName;
+    }
 
-    if (row.cells[2].textContent !== item.location) {
-        row.cells[2].textContent = item.location;
+    const loc = item.location.split(' ')[0];
+    if (row.cells[3].textContent !== loc) {
+        row.cells[3].textContent = loc;
     }
 };
 
@@ -185,7 +192,10 @@ BarcodeTable.prototype.renderTable = function (currentFilter = null) {
 
         tr.appendChild(self._createCell(self._statusIcon(item.status), 'status-cell centered-cell'));
         tr.appendChild(self._createCell(item.code, "centered-cell"));
-        tr.appendChild(self._createCell(item.location, "default-cell"));
+        tr.appendChild(self._createCell(inventoryBaseline.getAssetName(item.code) || "--", "default-cell"));
+
+        const loc = item.location.split(' ')[0];
+        tr.appendChild(self._createCell(loc, "default-cell"));
 
         const actionCell = document.createElement("td");
         actionCell.className = "centered-cell";
