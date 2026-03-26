@@ -17,8 +17,7 @@ import { audioManager } from './audioManager.js';
 import { inventoryBaseline } from './inventoryBaseline.js';
 import { remoteInventoryRegistry } from './remoteInventoryRegistry.js';
 import { AppModal } from './appModal.js';
-// import { scannerManager } from "./scannerManager.js"
-import { inputArea as scannerManager } from "./inputArea.js"
+import { inputArea } from "./inputArea.js"
 import { locationSelector } from './locationSelector.js';
 
 /**
@@ -101,7 +100,7 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
         if (bypassCheckLocation === false && retorno.status === 'check') {
             audioManager.playWarning();
             // 1. BLOQUEIA O SCANNER
-            scannerManager.lock();
+            inputArea.lock();
             try {
                 const userConfirmed = await AppModal.confirm(
                     `⚠️ ATENÇÃO: LOCALIZAÇÃO DIVERGENTE`,
@@ -116,7 +115,7 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
             } finally {
                 // 2. DESBLOQUEIA O SCANNER APÓS A DECISÃO (ou erro)
                 // eslint-disable-next-line no-unused-vars
-                try { scannerManager.unlock(); } catch (e) { /* ignore */ }
+                try { inputArea.unlock(); } catch (e) { /* ignore */ }
             }
         }
         if (bypassCheckLocation === true && retorno.status === 'check') {
@@ -130,7 +129,7 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
         if (foundLocation && foundLocation !== selectedLocation) {
             audioManager.playWarning();
             // 1. BLOQUEIA O SCANNER
-            scannerManager.lock();
+            inputArea.lock();
             try {
                 const userConfirmed = await AppModal.confirm(
                     `⚠️ CONFLITO DE LOCALIZAÇÃO`,
@@ -147,7 +146,7 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
             } finally {
                 // 2. DESBLOQUEIA O SCANNER APÓS A DECISÃO (ou erro)
                 // eslint-disable-next-line no-unused-vars
-                try { scannerManager.unlock(); } catch (e) { /* ignore */ }
+                try { inputArea.unlock(); } catch (e) { /* ignore */ }
             }
         }
 
@@ -176,7 +175,7 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
         try { userWarnings.printUserWarning('Erro ao processar código de barras. Tente novamente.'); } catch (e) { /* ignore */ }
         // tenta desbloquear scanner caso tenha ficado travado
         // eslint-disable-next-line no-unused-vars
-        try { scannerManager.unlock(); } catch (e) { /* ignore */ }
+        try { inputArea.unlock(); } catch (e) { /* ignore */ }
         return false;
     }
 }

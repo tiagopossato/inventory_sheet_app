@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="description" content="Sistema de inventário patrimonial com leitor de código de barras">
   <meta name="author" content="IFC">
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.12.1/dist/quagga.min.js"></script>
+  <!-- <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script> -->
+  <!-- <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.12.1/dist/quagga.min.js"></script> -->
   <script type="module" crossorigin>var __defProp = Object.defineProperty;
 var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
@@ -154,326 +154,55 @@ var __spreadValues = (a, b) => {
     return false;
   };
   const locationSelector = new LocationSelector();
-  function UserWarnings() {
-    this.warningArea = document.getElementById("warning-area");
-    this.timerId = null;
-  }
-  UserWarnings.prototype.printUserWarning = function(message) {
-    /* @__PURE__ */ console.log(message);
-    if (!this.warningArea) return;
-    this.warningArea.textContent = message;
-    this.warningArea.classList.add("warning-active");
-    if (this.timerId) {
-      clearTimeout(this.timerId);
-    }
-    this.timerId = setTimeout(() => {
-      this.clearUserWarning();
-    }, 15e3);
-  };
-  UserWarnings.prototype.clearUserWarning = function() {
-    if (!this.warningArea) return;
-    this.warningArea.textContent = "";
-    this.warningArea.classList.remove("warning-active");
-    if (this.timerId) {
-      clearTimeout(this.timerId);
-    }
-  };
-  const userWarnings = new UserWarnings();
-  function InputFromHtml5Qrcode() {
-    this.html5QrCode = null;
-    this.isCameraOn = false;
-    this.canScan = true;
-    this.onScanCallback = null;
-  }
-  InputFromHtml5Qrcode.prototype.init = function(onScanSuccess) {
-    this.onScanCallback = onScanSuccess;
-  };
-  InputFromHtml5Qrcode.prototype.startCamera = async function() {
-    this.html5QrCode = new Html5Qrcode("reader");
-    await this.html5QrCode.start(
-      { facingMode: "environment" },
-      {
-        fps: 10,
-        qrbox: { width: 300, height: 100 },
-        aspectRatio: 1,
-        videoConstraints: {
-          facingMode: "environment",
-          width: { min: 1280, ideal: 1920 },
-          height: { min: 720, ideal: 1080 },
-          advanced: [{ focusMode: "continuous" }]
-        }
-      },
-      (txt) => this._onScanSuccess(txt)
-    );
-    this.isCameraOn = true;
-    this.canScan = true;
-  };
-  InputFromHtml5Qrcode.prototype.stopCamera = async function() {
-    if (this.html5QrCode) {
-      try {
-        await this.html5QrCode.stop();
-        this.html5QrCode = null;
-      } catch (err) {
-        console.warn(err);
-      }
-    }
-    this.isCameraOn = false;
-  };
-  InputFromHtml5Qrcode.prototype._onScanSuccess = function(decodedText) {
-    if (!this.canScan) return;
-    this.canScan = false;
-    if (this.onScanCallback) {
-      this.onScanCallback(decodedText);
-    }
-    setTimeout(() => {
-      this.canScan = true;
-    }, 1500);
-  };
-  InputFromHtml5Qrcode.prototype.getIsCameraOn = function() {
-    return this.isCameraOn;
-  };
-  InputFromHtml5Qrcode.prototype.unlock = function() {
-    this.canScan = true;
-  };
-  InputFromHtml5Qrcode.prototype.lock = function() {
-    this.canScan = false;
-  };
-  function InputFromQuagga2() {
-    this.isCameraOn = false;
-    this.canScan = true;
-    this._isInitializing = false;
-    this._quaggaInitialized = false;
-    this.onScanCallback = null;
-    this._onDetectedBound = this._onDetected.bind(this);
-  }
-  InputFromQuagga2.prototype.init = function(onScanSuccess) {
-    this.onScanCallback = onScanSuccess;
-  };
-  InputFromQuagga2.prototype._getQuagga = function() {
-    if (typeof window !== "undefined" && window.Quagga) return window.Quagga;
-    console.error("Quagga2 não está disponível no escopo global.");
-    return null;
-  };
-  InputFromQuagga2.prototype._checkCameraAccess = async function() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }
-      });
-      stream.getTracks().forEach((track) => track.stop());
-      return true;
-    } catch (err) {
-      console.error("Erro ao acessar câmera:", err);
-      throw err;
-    }
-  };
-  InputFromQuagga2.prototype.startCamera = async function() {
-    if (this._isInitializing) {
-      /* @__PURE__ */ console.log("[Quagga] Já está inicializando...");
-      return;
-    }
-    const quagga = this._getQuagga();
-    if (!quagga) throw new Error("Biblioteca Quagga2 não carregada!");
-    const readerEl = document.querySelector("#reader");
-    if (!readerEl) throw new Error("Elemento de visualização não encontrado.");
-    this._isInitializing = true;
-    readerEl.innerHTML = "";
-    try {
-      await this._checkCameraAccess();
-      await new Promise((resolve, reject) => {
-        const initConfig = {
-          inputStream: {
-            name: "Live",
-            type: "LiveStream",
-            target: readerEl,
-            constraints: {
-              facingMode: "environment",
-              width: { min: 1280, ideal: 1920 },
-              height: { min: 720, ideal: 1080 },
-              advanced: [{ focusMode: "continuous" }]
-            }
-          },
-          frequency: 20,
-          locate: true,
-          locator: { patchSize: "medium", halfSample: true },
-          numOfWorkers: navigator.hardwareConcurrency || 4,
-          decoder: { readers: ["code_39_reader"] }
-        };
-        quagga.init(initConfig, (err) => {
-          if (err) {
-            console.error("[Quagga] Erro no init:", err);
-            reject(err);
-            return;
-          }
-          resolve();
-        });
-      });
-      quagga.start();
-      quagga.onDetected(this._onDetectedBound);
-      await new Promise((resolve) => {
-        let attempts = 0;
-        const checkStream = setInterval(() => {
-          const video = document.querySelector("#reader video");
-          if (video && video.readyState >= 2) {
-            clearInterval(checkStream);
-            resolve();
-          }
-          attempts++;
-          if (attempts > 50) {
-            clearInterval(checkStream);
-            resolve();
-          }
-        }, 100);
-      });
-      this._quaggaInitialized = true;
-      this.isCameraOn = true;
-      this.canScan = true;
-    } catch (err) {
-      console.error("Erro ao iniciar câmera com Quagga:", err);
-      throw err;
-    } finally {
-      this._isInitializing = false;
-    }
-  };
-  InputFromQuagga2.prototype.stopCamera = async function() {
-    const quagga = this._getQuagga();
-    if (this._quaggaInitialized && quagga) {
-      try {
-        quagga.offDetected(this._onDetectedBound);
-        quagga.stop();
-        this._quaggaInitialized = false;
-      } catch (err) {
-        console.error("Erro ao parar Quagga:", err);
-      }
-    }
-    this._isInitializing = false;
-    this.isCameraOn = false;
-  };
-  InputFromQuagga2.prototype._onDetected = function(result) {
-    if (!this.canScan) return;
-    const decodedText = result && result.codeResult ? result.codeResult.code : null;
-    if (!decodedText || typeof decodedText !== "string" || decodedText.trim() === "") return;
-    const cleanCode = decodedText.trim();
-    this.canScan = false;
-    if (this.onScanCallback) {
-      this.onScanCallback(cleanCode);
-    }
-    setTimeout(() => {
-      this.canScan = true;
-    }, 1500);
-  };
-  InputFromQuagga2.prototype.getIsCameraOn = function() {
-    return this.isCameraOn;
-  };
-  InputFromQuagga2.prototype.unlock = function() {
-    this.canScan = true;
-  };
-  InputFromQuagga2.prototype.lock = function() {
-    this.canScan = false;
-  };
-  InputFromQuagga2.prototype.diagnose = function() {
-    /* @__PURE__ */ console.log("=== Diagnóstico InputFromQuagga2 ===");
-    /* @__PURE__ */ console.log("isCameraOn:", this.isCameraOn);
-    /* @__PURE__ */ console.log("canScan:", this.canScan);
-    /* @__PURE__ */ console.log("_isInitializing:", this._isInitializing);
-    /* @__PURE__ */ console.log("_quaggaInitialized:", this._quaggaInitialized);
-    /* @__PURE__ */ console.log("Quagga disponível:", !!window.Quagga);
-    /* @__PURE__ */ console.log("Elemento #reader:", document.querySelector("#reader"));
-    const video = document.querySelector("#reader video");
-    /* @__PURE__ */ console.log("Vídeo:", video);
-    if (video) {
-      /* @__PURE__ */ console.log("  - readyState:", video.readyState);
-      /* @__PURE__ */ console.log("  - paused:", video.paused);
-      /* @__PURE__ */ console.log("  - srcObject:", video.srcObject ? "presente" : "ausente");
-    }
-    /* @__PURE__ */ console.log("=========================================");
-  };
-  const ScannerType = {
-    HTML5QRCODE: "html5qrcode",
-    QUAGGA2: "quagga2"
-  };
   function InputArea() {
-    this.currentScanner = null;
-    this.currentScannerType = ScannerType.HTML5QRCODE;
     this.isLockedExternal = false;
     this.manualBarcodeInput = null;
     this.init();
   }
   InputArea.prototype.init = function() {
     const container = document.querySelector("#scanner-area");
-    if (!container) return;
+    if (!container) {
+      console.warn("[InputArea] Contêiner #scanner-area não encontrado no DOM.");
+      return;
+    }
     container.innerHTML = `
-        <div id="videoArea">
-            <div id="reader"></div>
-            <div id="cameraPlaceholder">Câmera Desligada</div>
-            <div id="scanDelayOverlay">Processado!</div>
-        </div>
-
         <div class="control-row">
-            <button id="toggleFlash" class="btn btn-gray">⚡ Flash</button>
-            <button id="toggleCamera" class="btn btn-primary">📷 Ligar Câmera</button>
-            <button id="switchScanner" class="btn btn-gray">🔄 Alternar Scanner</button>
-        </div>
-
-        <div class="control-row">
-            <input type="number" id="manualBarcode" placeholder="Código (13 dig)" inputmode="numeric">
-            <button id="submitManualBarcode" class="btn btn-gray">Enviar</button>
+            <input type="text" id="manualBarcode" placeholder="Código (10 dig)" inputmode="numeric">
+            <button id="clearManualBarcode" class="btn btn-danger">Limpar</button>
         </div>
         <div class="control-row">
             <input type="checkbox" id="bypassCheckLocation" name="bypassCheckLocation" value="bypassCheckLocation">
             <label for="bypassCheckLocation"> Ignorar verificação de localização?</label><br>
         </div>
     `;
-    document.getElementById("toggleCamera").addEventListener("click", () => this.handleCameraAction());
-    document.getElementById("toggleFlash").addEventListener("click", () => this.toggleFlash());
-    document.getElementById("switchScanner").addEventListener("click", () => this.switchScanner());
     this.manualBarcodeInput = document.getElementById("manualBarcode");
     this._setupManualInput();
     this.hide();
-    this._initializeCurrentScanner();
-  };
-  InputArea.prototype._initializeCurrentScanner = function() {
-    if (this.currentScannerType === ScannerType.HTML5QRCODE) {
-      this.currentScanner = new InputFromHtml5Qrcode();
-    } else {
-      this.currentScanner = new InputFromQuagga2();
-    }
-    this.currentScanner.init((code) => this._onScanSuccess(code));
-  };
-  InputArea.prototype.switchScanner = async function() {
-    if (this.currentScanner && this.currentScanner.getIsCameraOn()) {
-      await this.stopScanner();
-    }
-    this.currentScannerType = this.currentScannerType === ScannerType.HTML5QRCODE ? ScannerType.QUAGGA2 : ScannerType.HTML5QRCODE;
-    this._initializeCurrentScanner();
-    const placeholder = document.getElementById("cameraPlaceholder");
-    if (placeholder) {
-      placeholder.innerText = `Scanner: ${this.currentScannerType === ScannerType.HTML5QRCODE ? "Html5Qrcode" : "Quagga2"}`;
-    }
-    setTimeout(() => {
-      this.startCamera();
-    }, 500);
-    /* @__PURE__ */ console.log(`[InputArea] Scanner alternado para: ${this.currentScannerType}`);
   };
   InputArea.prototype._setupManualInput = function() {
-    const btn = document.getElementById("submitManualBarcode");
-    btn.addEventListener("click", () => {
-      const cleanValue = (this.manualBarcodeInput.value || "").trim();
-      if (cleanValue === "") {
-        this.setFocus();
-        return;
+    const clearBtn = document.getElementById("clearManualBarcode");
+    const self2 = this;
+    this.manualBarcodeInput.addEventListener("input", function(e) {
+      if (self2.isLockedExternal) return;
+      const currentValue = e.target.value.trim();
+      if (currentValue.length >= 10) {
+        self2.manualBarcodeInput.value = "";
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("codeScanned", {
+            detail: {
+              code: currentValue,
+              source: "manual_input"
+            }
+          }));
+        }, 0);
       }
-      btn.disabled = true;
-      setTimeout(() => {
-        btn.disabled = false;
-      }, 500);
-      window.dispatchEvent(new CustomEvent("codeScanned", {
-        detail: {
-          code: cleanValue,
-          source: "manual_input"
-        }
-      }));
-      this.manualBarcodeInput.value = "";
     });
+    if (clearBtn) {
+      clearBtn.addEventListener("click", function() {
+        self2.manualBarcodeInput.value = "";
+        self2.setFocus();
+      });
+    }
   };
   InputArea.prototype.setFocus = function() {
     if (this.manualBarcodeInput) {
@@ -485,8 +214,6 @@ var __spreadValues = (a, b) => {
   InputArea.prototype.show = function() {
     const el = document.querySelector("#scanner-area");
     if (el) el.style.display = "block";
-    this.isCameraOn = false;
-    this.handleCameraAction();
   };
   InputArea.prototype.hide = function() {
     const el = document.querySelector("#scanner-area");
@@ -494,158 +221,18 @@ var __spreadValues = (a, b) => {
   };
   InputArea.prototype.lock = function() {
     this.isLockedExternal = true;
-    if (this.currentScanner) {
-      this.currentScanner.lock();
+    if (this.manualBarcodeInput) {
+      this.manualBarcodeInput.disabled = true;
     }
-    const overlay = document.getElementById("scanDelayOverlay");
-    if (overlay) overlay.style.display = "none";
   };
   InputArea.prototype.unlock = function() {
     this.isLockedExternal = false;
-    if (this.currentScanner) {
-      this.currentScanner.unlock();
+    if (this.manualBarcodeInput) {
+      this.manualBarcodeInput.disabled = false;
+      this.setFocus();
     }
-  };
-  InputArea.prototype.handleCameraAction = async function() {
-    if (!this.currentScanner.getIsCameraOn()) {
-      this.startCamera();
-    } else {
-      await this.stopScanner();
-    }
-  };
-  InputArea.prototype.startCamera = async function() {
-    const btn = document.getElementById("toggleCamera");
-    const placeholder = document.getElementById("cameraPlaceholder");
-    if (locationSelector.getSelectedLocation() === locationSelector.NONE_SELECTED) {
-      userWarnings.printUserWarning("Selecione uma localização antes de iniciar as leituras!");
-      return;
-    }
-    try {
-      await this.currentScanner.startCamera();
-      if (placeholder) placeholder.style.display = "none";
-      if (btn) {
-        btn.innerText = "🚫 Desligar Câmera";
-        btn.classList.replace("btn-primary", "btn-danger");
-      }
-      setTimeout(() => {
-        this._checkFlashSupport();
-      }, 500);
-    } catch (err) {
-      console.error("Erro ao iniciar câmera:", err);
-      let errorMsg = "Erro ao iniciar câmera";
-      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        errorMsg = "Permissão de câmera negada. Permita o acesso à câmera nas configurações do navegador.";
-      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-        errorMsg = "Nenhuma câmera encontrada no dispositivo.";
-      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
-        errorMsg = "Câmera já está em uso. Feche outros aplicativos que estejam usando a câmera.";
-      } else if (err.message) {
-        errorMsg += ": " + err.message;
-      }
-      userWarnings.printUserWarning(errorMsg);
-      if (placeholder) {
-        placeholder.style.display = "block";
-        placeholder.innerText = "Erro ao iniciar câmera";
-      }
-      if (btn) {
-        btn.disabled = false;
-        btn.innerText = "📷 Ligar Câmera";
-        btn.classList.replace("btn-danger", "btn-primary");
-      }
-    }
-  };
-  InputArea.prototype._checkFlashSupport = function() {
-    const flashBtn = document.getElementById("toggleFlash");
-    if (!flashBtn) return;
-    try {
-      const video = document.querySelector("#reader video");
-      if (!video || !video.srcObject) {
-        flashBtn.style.display = "none";
-        return;
-      }
-      const track = video.srcObject.getVideoTracks()[0];
-      if (!track || !track.getCapabilities) {
-        flashBtn.style.display = "none";
-        return;
-      }
-      const caps = track.getCapabilities();
-      if (caps.torch || caps.flash) {
-        flashBtn.style.display = "block";
-      } else {
-        flashBtn.style.display = "none";
-      }
-    } catch (err) {
-      console.warn("Erro ao verificar suporte a flash:", err);
-      if (flashBtn) flashBtn.style.display = "none";
-    }
-  };
-  InputArea.prototype.stopScanner = async function() {
-    const btn = document.getElementById("toggleCamera");
-    const placeholder = document.getElementById("cameraPlaceholder");
-    const flashBtn = document.getElementById("toggleFlash");
-    if (this.currentScanner) {
-      await this.currentScanner.stopCamera();
-    }
-    if (placeholder) {
-      placeholder.style.display = "block";
-      placeholder.innerText = "Câmera Desligada";
-    }
-    if (flashBtn) flashBtn.style.display = "none";
-    if (btn) {
-      btn.innerText = "📷 Ligar Câmera";
-      btn.classList.replace("btn-danger", "btn-primary");
-    }
-  };
-  InputArea.prototype.toggleFlash = async function() {
-    if (!this.currentScanner || !this.currentScanner.getIsCameraOn()) return;
-    try {
-      const video = document.querySelector("#reader video");
-      if (!video || !video.srcObject) return;
-      const track = video.srcObject.getVideoTracks()[0];
-      if (!track) return;
-      const settings = track.getSettings();
-      const isFlashNow = !!(settings.torch || settings.flash);
-      await track.applyConstraints({
-        advanced: [{ torch: !isFlashNow }]
-      });
-    } catch (err) {
-      console.warn("Erro ao alternar flash:", err);
-      userWarnings.printUserWarning("Flash não suportado neste dispositivo");
-    }
-  };
-  InputArea.prototype._onScanSuccess = function(decodedText) {
-    if (this.isLockedExternal) return;
-    const overlay = document.getElementById("scanDelayOverlay");
-    if (overlay) {
-      overlay.style.display = "flex";
-      overlay.innerText = "Processando...";
-    }
-    window.dispatchEvent(new CustomEvent("codeScanned", {
-      detail: { code: decodedText, source: "camera" }
-    }));
-    setTimeout(() => {
-      if (overlay) overlay.style.display = "none";
-    }, 1500);
-  };
-  InputArea.prototype.getCurrentScannerType = function() {
-    return this.currentScannerType;
-  };
-  InputArea.prototype.getIsCameraOn = function() {
-    return this.currentScanner ? this.currentScanner.getIsCameraOn() : false;
-  };
-  InputArea.prototype.diagnose = function() {
-    /* @__PURE__ */ console.log("=== Diagnóstico InputArea ===");
-    /* @__PURE__ */ console.log("Scanner atual:", this.currentScannerType);
-    /* @__PURE__ */ console.log("isLockedExternal:", this.isLockedExternal);
-    if (this.currentScanner && typeof this.currentScanner.diagnose === "function") {
-      this.currentScanner.diagnose();
-    }
-    /* @__PURE__ */ console.log("=========================================");
   };
   const inputArea = new InputArea();
-  if (typeof window !== "undefined") {
-    window.inputArea = inputArea;
-  }
   const STORAGE_KEY = "BARCODE_APP_DATA_V1";
   const VERSION_KEY = "BARCODE_APP_VERSION";
   const SAVE_DEBOUNCE_MS = 400;
@@ -1301,6 +888,31 @@ var __spreadValues = (a, b) => {
     });
   };
   const barcodeTable = new BarcodeTable();
+  function UserWarnings() {
+    this.warningArea = document.getElementById("warning-area");
+    this.timerId = null;
+  }
+  UserWarnings.prototype.printUserWarning = function(message) {
+    /* @__PURE__ */ console.log(message);
+    if (!this.warningArea) return;
+    this.warningArea.textContent = message;
+    this.warningArea.classList.add("warning-active");
+    if (this.timerId) {
+      clearTimeout(this.timerId);
+    }
+    this.timerId = setTimeout(() => {
+      this.clearUserWarning();
+    }, 15e3);
+  };
+  UserWarnings.prototype.clearUserWarning = function() {
+    if (!this.warningArea) return;
+    this.warningArea.textContent = "";
+    this.warningArea.classList.remove("warning-active");
+    if (this.timerId) {
+      clearTimeout(this.timerId);
+    }
+  };
+  const userWarnings = new UserWarnings();
   function AudioManager() {
     this.audioContext = null;
     this.TYPES = {
@@ -2694,34 +2306,9 @@ Deseja prosseguir mesmo assim?`
     }
   };
   new AssetSyncManager(assetRepository);
-  (function() {
-    let buffer = "";
-    let lastKeyTime = Date.now();
-    window.addEventListener("keydown", function(e) {
-      const currentTime = Date.now();
-      if (currentTime - lastKeyTime > 50) {
-        buffer = "";
-      }
-      if (e.key.length > 1 && e.key !== "Enter") return;
-      if (e.key === "Enter") {
-        if (buffer.length > 2) {
-          window.dispatchEvent(new CustomEvent("codeScanned", {
-            detail: {
-              code: buffer,
-              source: "otg"
-            }
-          }));
-          buffer = "";
-        }
-      } else {
-        buffer += e.key;
-      }
-      lastKeyTime = currentTime;
-    });
-  })();
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-DU2GyuDq.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-CZf5xzUn.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
@@ -2809,8 +2396,8 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.03.22-012";
-      el.title = `Versão do build: ${"2026.03.22-012"}`;
+      el.textContent = "2026.03.26-001";
+      el.title = `Versão do build: ${"2026.03.26-001"}`;
     }
   });
   window.addEventListener("error", function(e) {
@@ -2843,7 +2430,7 @@ Deseja prosseguir mesmo assim?`
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.03.22-012"}`);
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.03.26-001"}`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
       throw new Error(`Falha na inicialização do debug: ${error.message}`);

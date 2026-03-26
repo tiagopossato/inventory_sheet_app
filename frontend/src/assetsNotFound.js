@@ -16,8 +16,7 @@ import { userWarnings } from './userWarnings.js';
 import { AppModal } from './appModal.js';
 import { loadingModal } from './loadingModal.js'
 import { backendService } from "./backendService.js"
-// import { scannerManager } from "./scannerManager.js"
-import { inputArea as scannerManager } from "./inputArea.js"
+import { inputArea } from "./inputArea.js"
 import {connectivityManager} from './connectivityManager.js';
 
 /**
@@ -147,7 +146,7 @@ AssetsNotFound.prototype.setupEvents = function () {
                 return;
             }
             // 1. BLOQUEIA O SCANNER
-            scannerManager.lock();
+            inputArea.lock();
             self.getNotFoundItensOnLocation(local);
         };
     }
@@ -191,7 +190,7 @@ AssetsNotFound.prototype.close = function () {
     this.modal.style.display = 'none';
     document.body.style.overflow = 'auto'; // Destrava o scroll
     // 2. DESBLOQUEIA O SCANNER 
-    scannerManager.unlock();
+    inputArea.unlock();
 };
 
 /**
@@ -266,7 +265,7 @@ AssetsNotFound.prototype.getNotFoundItensOnLocation = function (location) {
             isFinished = true;
             loadingModal.toggle(false);
             // 2. DESBLOQUEIA O SCANNER 
-            scannerManager.unlock();
+            inputArea.unlock();
             userWarnings.printUserWarning('Tempo esgotado. Verifique sua conexão com a planilha.');
         }
     }, TIMEOUT);
@@ -283,7 +282,7 @@ AssetsNotFound.prototype.getNotFoundItensOnLocation = function (location) {
 
             if (!data || data.length === 0) {
                 // 2. DESBLOQUEIA O SCANNER 
-                scannerManager.unlock();
+                inputArea.unlock();
                 userWarnings.printUserWarning(`Nenhum item pendente para ${location}! Caso não apareça na sua tabela, foi encontrado por outro usuário.`);
                 return;
             }
@@ -295,7 +294,7 @@ AssetsNotFound.prototype.getNotFoundItensOnLocation = function (location) {
             clearTimeout(timeoutAlert);
             loadingModal.toggle(false);
             // 2. DESBLOQUEIA O SCANNER 
-            scannerManager.unlock();
+            inputArea.unlock();
             console.error('Erro ao buscar itens não encontrados:', error);
             userWarnings.printUserWarning('Erro ao consultar servidor.');
         });
