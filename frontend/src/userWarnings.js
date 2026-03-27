@@ -27,6 +27,7 @@ function UserWarnings() {
      * @private
      */
     this.warningArea = document.getElementById('warning-area');
+    this.warningArea.style.display = 'none';
 
     /**
      * ID do timer para limpeza automática
@@ -56,6 +57,8 @@ UserWarnings.prototype.printUserWarning = function (message) {
     if (!this.warningArea) return;
 
     // Define o conteúdo e ativa a classe CSS
+    this.warningArea.style.display = 'block';
+
     this.warningArea.textContent = message;
     this.warningArea.classList.add('warning-active');
 
@@ -66,7 +69,7 @@ UserWarnings.prototype.printUserWarning = function (message) {
 
     this.timerId = setTimeout(() => {
         this.clearUserWarning();
-    }, 15000);
+    }, 12500);
 }
 
 /**
@@ -83,6 +86,8 @@ UserWarnings.prototype.clearUserWarning = function () {
     this.warningArea.textContent = '';
     this.warningArea.classList.remove('warning-active');
 
+    this.warningArea.style.display = 'none';
+
     if (this.timerId) {
         clearTimeout(this.timerId);
     }
@@ -93,3 +98,6 @@ UserWarnings.prototype.clearUserWarning = function () {
  * @type {UserWarnings}
  */
 export const userWarnings = new UserWarnings();
+
+// expoe a instancia no window para testes
+window.userWarnings = userWarnings;

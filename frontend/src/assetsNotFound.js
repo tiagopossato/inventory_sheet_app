@@ -17,7 +17,7 @@ import { AppModal } from './appModal.js';
 import { loadingModal } from './loadingModal.js'
 import { backendService } from "./backendService.js"
 import { inputArea } from "./inputArea.js"
-import {connectivityManager} from './connectivityManager.js';
+import { connectivityManager } from './connectivityManager.js';
 
 /**
  * @typedef {Object} NotFoundItem
@@ -55,8 +55,11 @@ function AssetsNotFound() {
     this.addItensToNotFoundTable = this.addItensToNotFoundTable.bind(this);
     this.getNotFoundItensOnLocation = this.getNotFoundItensOnLocation.bind(this);
 
-    this.setupEvents();
-    this.hideButton(); // Começa oculto até selecionar um local
+    setTimeout(() => {
+        this.setupEvents();
+        this.hideButton(); // Começa oculto até selecionar um local
+    }, 100); // Pequeno delay para garantir que tudo esteja carregado
+
 }
 
 /**
@@ -64,14 +67,14 @@ function AssetsNotFound() {
  * @private
  */
 AssetsNotFound.prototype.injectHTML = function () {
-    const container = document.getElementById('not-found-area');
+    const container = document.getElementById('btn-area');
     if (!container) return;
 
     // 1. Botão de busca (Usa as classes .btn e .location-btn da seção 3)
     if (!document.getElementById('notFoundBtn')) {
         container.innerHTML += `
             <button id="notFoundBtn" class="btn location-btn">
-                Buscar itens não encontrados
+                Não encontrados
             </button>
         `;
     }
@@ -134,11 +137,11 @@ AssetsNotFound.prototype.setupEvents = function () {
     const btn = document.getElementById('notFoundBtn');
     if (btn) {
         btn.onclick = function () {
-            
-            if(connectivityManager.getStatus() === false) {
+
+            if (connectivityManager.getStatus() === false) {
                 userWarnings.printUserWarning("Sem conexão com a internet. Verifique sua conectividade.");
                 return;
-            }   
+            }
 
             const local = locationSelector.getSelectedLocation();
             if (local === locationSelector.NONE_SELECTED) {

@@ -191,7 +191,7 @@ export class GASSimulation {
       if (add_spec) {
         // Coluna L é o índice 8 (D=0, E=1, F=2, G=3, H=4, I=5, J=6, K=7, L=8)
         // Pega a string, remove espaços extras e corta nos primeiros 50 caracteres
-        const specName = String(row[8] || "").trim().substring(0, 50);
+        const specName = String(row[8] || "").trim().substring(0, 140);
 
         inventoryMap.get(local).push({
           code: asset,
@@ -547,7 +547,7 @@ export class GASSimulation {
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       if (String(row[0]).trim() === target) {
-      const specName = String(row[2] || "").trim().substring(0, 100);
+      const specName = String(row[2] || "").trim().substring(0, 140);
       result.push([row[1], specName]);
       }
     }

@@ -163,8 +163,18 @@ textarea {
   border: 1px solid #999;
   border-radius: 4px;
   text-align: center;
-  margin: 15px 0;
+  margin: 10px 0;
 }
+
+.btn-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 0px 0;
+  margin-bottom: 0px;
+  width: 100%;
+}
+
 
 /* Container de uniformidade */
 /* [GEMINI: Mistura de responsabilidades] Mistura layout de containers (.stats-container) com elementos de formulário (select.w-100). */
@@ -466,11 +476,11 @@ video {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px;
+  padding: 5px;
   background-color: #f8f9fa;
   border: 1px solid var(--color-border);
   border-radius: 8px 8px 0 0;
-  margin-top: 10px;
+  margin-top: 0px;
   margin-bottom: 0;
 }
 
@@ -486,12 +496,12 @@ video {
 
 #barcode-table th {
   background-color: var(--color-gray-light);
-  padding: 8px;
+  padding: 5px;
   border: 1px solid var(--color-border);
 }
 
 #barcode-table td {
-  padding: 8px;
+  padding: 5px;
   border: 1px solid var(--color-gray);
   vertical-align: middle;
 }
@@ -926,8 +936,10 @@ video {
   font-weight: bold;
 }
 
-#notFoundTable .btn-edit {
-  padding: 4px 8px;
+.btn-edit {
+  padding: 4px 4px;
+  /* aumenta altura do botão */
+  height: 40px;
   cursor: pointer;
   background: var(--color-primary);
   color: white;

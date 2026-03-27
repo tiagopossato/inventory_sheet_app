@@ -62,13 +62,13 @@ function SendMessage() {
  * @private
  */
 SendMessage.prototype.injectHTML = function () {
-    const container = document.getElementById('message-area');
+    const container = document.getElementById('btn-area');
     if (!container) return;
 
     // Botão para abrir o modal (inicialmente oculto)
     if (!document.getElementById('openMessageModalBtn')) {
         container.innerHTML += (
-            '<button id="openMessageModalBtn" class="btn btn-gray location-btn" style="display:none;">' +
+            '<button id="openMessageModalBtn" class="btn location-btn" style="display:none;">' +
             'Enviar observação' +
             '</button>'
         );
