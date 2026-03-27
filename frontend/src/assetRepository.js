@@ -222,7 +222,7 @@ AssetRepository.prototype.addItem = async function (rawCode, location, source, o
     uid: Date.now().toString(36) + Math.random().toString(36).slice(2),
     code: barcode,
     location: loc,
-    source: source ? String(source).substring(0, 16) : '',
+    source: source ? String(source).substring(0, 24) : '',
     state: 3,
     ipvu: 8,
     obs: obs ? String(obs).substring(0, 140) : '',

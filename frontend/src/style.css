@@ -708,7 +708,7 @@ video {
 
 /* Elementos de Formulário dentro de Modais */
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .form-group label {
@@ -729,6 +729,8 @@ video {
   color: #777;
   font-size: 1rem;
   pointer-events: none;
+  white-space: pre-wrap; /* ✨ Faz a div respeitar quebras de linha */
+  word-break: break-word; /* Garante que palavras muito grandes não quebrem o layout */
 }
 
 .input-modal-edit {

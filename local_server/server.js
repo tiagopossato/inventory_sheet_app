@@ -358,7 +358,7 @@ const saveBatchSchema = Joi.object({
         state: Joi.number().integer().required(),
         ipvu: Joi.number().integer().required(),
         obs: Joi.string().optional().min(0).max(1000),
-        source: Joi.string().required().min(1).max(16)
+        source: Joi.string().required().min(1).max(24)
     })).min(1).required()
 });
 

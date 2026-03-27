@@ -59,7 +59,6 @@ import { locationSelector } from './locationSelector.js';
  * @throws {Error} Em caso de erro não tratado durante o processo
  */
 export async function processBarcode(rawValue, selectedLocation, source = "unknown", bypassCheckLocation = false) {
-    let observations = '';
 
     try {
         // 1. Validação de Local Selecionado
@@ -120,7 +119,7 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
         }
         if (bypassCheckLocation === true && retorno.status === 'check') {
             userWarnings.printUserWarning(`AVISO: ${rawValue} inserido automaticamente. Deveria estar em ${retorno.local}.`);
-            observations = `Verificação de localização ignorada`;
+            source += "+bypassCheckLocation"; // Marca a origem para indicar que passou pelo bypass de localização divergente
         }
 
         // 5. Verifica se o item já foi encontrado em outra localidade
@@ -151,7 +150,7 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
         }
 
         // 6. Sucesso: Adiciona ao Storage e atualiza Interface
-        const newItem = await assetRepository.addItem(rawValue, selectedLocation, source, observations);
+        const newItem = await assetRepository.addItem(rawValue, selectedLocation, source);
 
         if (newItem) {
             audioManager.playSuccess();

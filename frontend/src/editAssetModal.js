@@ -107,13 +107,13 @@ EditAssetModal.prototype.innerHTML = function () {
                     <input type="text" id="tombamentoField" class="input-modal-readonly" style="height: 40px;" readonly/>
                 </div>
 
-                <div class="form-group">
+               <div class="form-group">
                     <label>Especificação</label>
-                    <textarea id="specField" class="input-modal-readonly" readonly></textarea>
+                    <div id="specField" class="input-modal-readonly"></div>
                 </div>
                 <div class="form-group">
                     <label>Localização</label>
-                    <textarea id="locationField" class="input-modal-readonly" readonly></textarea>
+                    <div id="locationField" class="input-modal-readonly"></div>
                 </div>
 
                 <div class="form-group">
@@ -214,8 +214,8 @@ EditAssetModal.prototype.open = function (uid) {
     // Preenche os campos do formulário
     this.fields.uid.value = item.uid || "";
     this.fields.code.value = item.code || "";
-    this.fields.specification.value = inventoryBaseline.getAssetName(item.code) || "Sem descrição";
-    this.fields.location.value = item.location || "";
+    this.fields.specification.textContent = inventoryBaseline.getAssetName(item.code) || "Sem descrição";
+    this.fields.location.textContent = item.location || "";
     this.fields.state.value = item.state !== undefined ? String(item.state) : "3";
     this.fields.ipvu.value = item.ipvu !== undefined ? String(item.ipvu) : "0";
     this.fields.obs.value = item.obs || "";

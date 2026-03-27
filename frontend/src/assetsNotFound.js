@@ -10,7 +10,6 @@
  * @author Tiago Possato
  */
 
-// import { processBarcode } from './processBarcode.js';
 import { locationSelector } from './locationSelector.js'
 import { userWarnings } from './userWarnings.js';
 import { AppModal } from './appModal.js';
