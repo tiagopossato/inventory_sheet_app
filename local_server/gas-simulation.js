@@ -239,56 +239,126 @@ export class GASSimulation {
 
   async getInventorySummary(targetLocation = null) {
     const ss = await this.getActiveSpreadsheet();
+
+    // --- 1. PROCESSAMENTO DA ABA 'leituras' ---
+    const sheetDados = await ss.getSheetByName("leituras");
+    if (!sheetDados) throw new Error("getInventorySummary: Aba 'leituras' não encontrada.");
+
+    // 🔥 O SEGREDO 1: Chama o getLastRow UMA ÚNICA VEZ e guarda na variável!
+    const lastRowDados = await sheetDados.getLastRow();
     const groups = {};
 
-    const sheetDados = await ss.getSheetByName("leituras");
-    if (!sheetDados) {
-      throw new Error("getInventorySummary: Aba 'leituras' não encontrada.");
-    }
+    if (lastRowDados >= 2) {
+      // Pega todos os dados numa tacada só
+      const range = await sheetDados.getRange(2, 2, lastRowDados - 1, 3);
+      const data = await range.getValues();
 
-    if (await sheetDados.getLastRow() >= 2) {
-      const data = await (await sheetDados.getRange(2, 2, await sheetDados.getLastRow() - 1, 3)).getValues();
-
-      for (let i = 0; i < data.length; i++) {
-        const code = parseInt(data[i][1], 10);
+      // Loop moderno (for...of) muito mais rápido que o for(let i=0)
+      for (const row of data) {
+        // row[1] é a coluna C, row[2] é a coluna D
+        const code = parseInt(row[1], 10);
         if (isNaN(code)) continue;
 
-        const location = String(data[i][2]).trim();
+        const location = String(row[2]).trim();
         if (!location) continue;
 
-        groups[location] = groups[location] || [];
+        // Cria o array se não existir e já empurra o código
+        if (!groups[location]) groups[location] = [];
         groups[location].push(code);
       }
     }
 
+    // --- 2. PROCESSAMENTO DA ABA 'localidades' ---
     const sheetLoc = await ss.getSheetByName("localidades");
-    if (!sheetLoc) {
-      throw new Error("getInventorySummary: Aba 'localidades' não encontrada.");
-    }
+    if (!sheetLoc) throw new Error("getInventorySummary: Aba 'localidades' não encontrada.");
 
+    // 🔥 O SEGREDO 2: Chama o getLastRow UMA ÚNICA VEZ!
+    const lastRowLoc = await sheetLoc.getLastRow();
     let locations = [];
 
-    if (await sheetLoc.getLastRow() >= 2) {
-      const locData = await this.sheetsService.getRangeData('localidades!A2:D' + (await sheetLoc.getLastRow()));
+    if (lastRowLoc >= 2) {
+      // Pega todos os dados da localidade numa tacada só
+      const locData = await this.sheetsService.getRangeData(`localidades!A2:D${lastRowLoc}`);
       const target = targetLocation ? String(targetLocation).trim() : null;
 
-      locations = locData
-        .filter(row => row[0] && (!target || String(row[0]).trim() === target))
-        .map(row => ({
-          name: String(row[0]).trim(),
+      // Loop otimizado
+      for (const row of locData) {
+        const locName = row[0] ? String(row[0]).trim() : '';
+
+        // Pula se estiver vazio ou se não for o target procurado
+        if (!locName || (target && locName !== target)) continue;
+
+        locations.push({
+          name: locName,
           totalAssets: Number(row[1]) || 0,
           assetsFindedCount: Number(row[2]) || 0,
           missingAssets: Number(row[3]) || 0
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }));
+        });
+      }
+
+      locations.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }));
     }
 
+    // --- 3. PREPARAÇÃO DO RETORNO ---
     const assetsFinded = Object.keys(groups)
       .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
       .map(loc => ({ location: loc, assets: groups[loc] }));
 
     return { locations, assetsFinded };
   }
+
+  // async getInventorySummary(targetLocation = null) {
+  //   const ss = await this.getActiveSpreadsheet();
+  //   const groups = {};
+
+  //   const sheetDados = await ss.getSheetByName("leituras");
+  //   if (!sheetDados) {
+  //     throw new Error("getInventorySummary: Aba 'leituras' não encontrada.");
+  //   }
+
+  //   if (await sheetDados.getLastRow() >= 2) {
+  //     const data = await (await sheetDados.getRange(2, 2, await sheetDados.getLastRow() - 1, 3)).getValues();
+
+  //     for (let i = 0; i < data.length; i++) {
+  //       const code = parseInt(data[i][1], 10);
+  //       if (isNaN(code)) continue;
+
+  //       const location = String(data[i][2]).trim();
+  //       if (!location) continue;
+
+  //       groups[location] = groups[location] || [];
+  //       groups[location].push(code);
+  //     }
+  //   }
+
+  //   const sheetLoc = await ss.getSheetByName("localidades");
+  //   if (!sheetLoc) {
+  //     throw new Error("getInventorySummary: Aba 'localidades' não encontrada.");
+  //   }
+
+  //   let locations = [];
+
+  //   if (await sheetLoc.getLastRow() >= 2) {
+  //     const locData = await this.sheetsService.getRangeData('localidades!A2:D' + (await sheetLoc.getLastRow()));
+  //     const target = targetLocation ? String(targetLocation).trim() : null;
+
+  //     locations = locData
+  //       .filter(row => row[0] && (!target || String(row[0]).trim() === target))
+  //       .map(row => ({
+  //         name: String(row[0]).trim(),
+  //         totalAssets: Number(row[1]) || 0,
+  //         assetsFindedCount: Number(row[2]) || 0,
+  //         missingAssets: Number(row[3]) || 0
+  //       }))
+  //       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }));
+  //   }
+
+  //   const assetsFinded = Object.keys(groups)
+  //     .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
+  //     .map(loc => ({ location: loc, assets: groups[loc] }));
+
+  //   return { locations, assetsFinded };
+  // }
 
   async saveCodeBatch(items) {
     if (!Array.isArray(items) || items.length === 0) {
