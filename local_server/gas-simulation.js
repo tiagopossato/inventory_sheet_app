@@ -540,15 +540,15 @@ export class GASSimulation {
     const lastRow = await sheet.getLastRow();
     if (lastRow < 3) return [];
 
-    const data = await (await sheet.getRange(3, 1, lastRow - 2, 3)).getValues();
+    const data = await (await sheet.getRange(3, 1, lastRow - 2, 2)).getValues();
     const target = String(targetLocation).trim();
     const result = [];
 
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      if (String(row[0]).trim() === target) {
-      const specName = String(row[2] || "").trim().substring(0, 140);
-      result.push([row[1], specName]);
+    // Usando for...of com desestruturação é mais rápido e legível
+    for (const [colA, colB] of data) {
+      // Checagem rápida para pular nulos/vazios antes de gastar processamento com String() e trim()
+      if (colA != null && String(colA).trim() === target) {
+        result.push([colB]);
       }
     }
 

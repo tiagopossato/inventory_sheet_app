@@ -53,13 +53,13 @@ function getInventoryData(add_spec = true) {
       // Coluna L é o índice 8 (D=0, E=1, F=2, G=3, H=4, I=5, J=6, K=7, L=8)
       // Pega a string, remove espaços extras e corta nos primeiros 50 caracteres
       const specName = String(row[8] || "").trim().substring(0, 50);
-      
-      inventoryMap.get(local).push({ 
-        code: asset, 
-        name: specName 
+
+      inventoryMap.get(local).push({
+        code: asset,
+        name: specName
       });
     } else {
-      inventoryMap.get(local).push({ 
+      inventoryMap.get(local).push({
         code: asset
       });
     }
@@ -81,7 +81,7 @@ function getInventoryData(add_spec = true) {
     locationsOutput.push({
       name: key,
       // O .length funciona perfeitamente, não importa se é um array de números ou de objetos
-      assetsCount: assetsList.length 
+      assetsCount: assetsList.length
     });
   }
 
@@ -493,16 +493,11 @@ function getNotFoundItens(targetLocation) {
   const target = String(targetLocation).trim();
   const result = [];
 
-  // 4. Otimização de Processamento (Single Pass Loop)
-  // Usar for tradicional é mais rápido que filter/map no Apps Script
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i];
-
-    // Compara Localidade (Coluna A -> índice 0)
-    if (String(row[0]).trim() === target) {
-      // Adiciona direto [Tombamento, Descrição] (Colunas B e C -> índices 1 e 2)
-      const specName = String(row[2] || "").trim().substring(0, 100);
-      result.push([row[1], specName]);
+  // Usando for...of com desestruturação é mais rápido e legível
+  for (const [colA, colB] of data) {
+    // Checagem rápida para pular nulos/vazios antes de gastar processamento com String() e trim()
+    if (colA != null && String(colA).trim() === target) {
+      result.push([colB]);
     }
   }
 

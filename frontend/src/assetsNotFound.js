@@ -17,6 +17,7 @@ import { loadingModal } from './loadingModal.js'
 import { backendService } from "./backendService.js"
 import { inputArea } from "./inputArea.js"
 import { connectivityManager } from './connectivityManager.js';
+import { inventoryBaseline } from './inventoryBaseline.js';
 
 /**
  * @typedef {Object} NotFoundItem
@@ -218,7 +219,7 @@ AssetsNotFound.prototype.addItensToNotFoundTable = function (itens) {
         tr.innerHTML = `
             <td>${index + 1}</td>
             <td>${item[0]}</td>
-            <td>${item[1]}</td>
+            <td>${inventoryBaseline.getAssetName(item[0])}</td>
             <td></td>
         `;
 
