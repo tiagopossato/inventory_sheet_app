@@ -47,7 +47,20 @@ InputArea.prototype.init = function () {
 
     container.innerHTML = `
         <div class="control-row">
-            <input type="text" id="manualBarcode" placeholder="Código (10 dig)" inputmode="numeric">
+            <input 
+                type="text" 
+                id="manualBarcode" 
+                name="barcode_no_fill"
+                placeholder="Código (10 dig)" 
+                inputmode="numeric" 
+                pattern="[0-9]*" 
+                autocomplete="nope" 
+                autocorrect="off" 
+                autocapitalize="off"
+                spellcheck="false" 
+                data-lpignore="true" 
+                data-form-type="other"
+            >
             <button id="clearManualBarcode" class="btn btn-danger">Limpar</button>
         </div>
         <div class="control-row">
