@@ -423,6 +423,21 @@ function saveMessage(payload) {
       throw new Error("saveMessage: Aba 'observacoes' não encontrada.");
     }
 
+    const uuid = payload.uid;
+
+    // --- VERIFICAÇÃO DE DUPLICIDADE ---
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 0) {
+      // Pega todos os valores da Coluna A (onde ficam os UIDs) e transforma em um array simples (.flat)
+      const uidsExistentes = sheet.getRange(1, 1, lastRow, 1).getValues().flat();
+
+      // Se o UID já estiver na planilha, não adiciona uma nova linha e apenas retorna o UID
+      if (uidsExistentes.includes(uuid)) {
+        return uuid;
+      }
+    }
+    // ----------------------------------
+
     const now = new Date();
     const formattedDate = Utilities.formatDate(
       now,
@@ -431,9 +446,7 @@ function saveMessage(payload) {
     );
     const aferidor = getUserName();
 
-
     // Preparação dos dados
-    const uuid = payload.uid;
     const localidade = payload.location;
     const mensagem = payload.message;
 
