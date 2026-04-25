@@ -41,7 +41,8 @@ function AssetRepository() {
   // mas que não foram confirmados como sincronizados
   let saveNeeded = false;
   this.items.forEach(function (item) {
-    if (item.status === AssetStatus.IN_FLIGHT) {
+    // IN_FLIGHT: sessão anterior encerrou durante o envio; FAILED: erros anteriores devem ser retentados na nova sessão
+    if (item.status === AssetStatus.IN_FLIGHT || item.status === AssetStatus.FAILED) {
       item.status = AssetStatus.PENDING;
       saveNeeded = true;
     }
