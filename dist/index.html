@@ -198,27 +198,29 @@ var __spreadValues = (a, b) => {
   InputArea.prototype._setupManualInput = function() {
     const clearBtn = document.getElementById("clearManualBarcode");
     const self2 = this;
-    this.manualBarcodeInput.addEventListener("input", function(e) {
+    this.manualBarcodeInput.addEventListener("keydown", function(e) {
       if (self2.isLockedExternal) return;
-      const currentValue = e.target.value.trim();
-      if (currentValue.length >= 10) {
-        self2.manualBarcodeInput.value = "";
-        var now = Date.now();
-        var lastTime = self2._recentCodes[currentValue];
-        if (lastTime && now - lastTime < self2._debounceWindow) {
+      if (e.key === "Enter") {
+        var currentValue = e.target.value.trim();
+        if (currentValue.length > 0) {
+          self2.manualBarcodeInput.value = "";
+          var now = Date.now();
+          var lastTime = self2._recentCodes[currentValue];
+          if (lastTime && now - lastTime < self2._debounceWindow) {
+            self2._cleanupRecentCodes();
+            return;
+          }
+          self2._recentCodes[currentValue] = now;
           self2._cleanupRecentCodes();
-          return;
+          setTimeout(function() {
+            window.dispatchEvent(new CustomEvent("codeScanned", {
+              detail: {
+                code: currentValue,
+                source: "manual_input"
+              }
+            }));
+          }, 0);
         }
-        self2._recentCodes[currentValue] = now;
-        self2._cleanupRecentCodes();
-        setTimeout(function() {
-          window.dispatchEvent(new CustomEvent("codeScanned", {
-            detail: {
-              code: currentValue,
-              source: "manual_input"
-            }
-          }));
-        }, 0);
       }
     });
     if (clearBtn) {
@@ -1633,6 +1635,58 @@ Deseja prosseguir mesmo assim?`
     }
   };
   const loadingModal = new LoadingModal();
+  function BarcodeScanner() {
+    this.buffer = "";
+    this.lastKeyTime = Date.now();
+    this.isListening = false;
+    this._handleKeyDown = this._handleKeyDown.bind(this);
+  }
+  BarcodeScanner.prototype.start = function() {
+    if (!this.isListening) {
+      window.addEventListener("keydown", this._handleKeyDown);
+      this.isListening = true;
+    }
+  };
+  BarcodeScanner.prototype.stop = function() {
+    if (this.isListening) {
+      window.removeEventListener("keydown", this._handleKeyDown);
+      this.isListening = false;
+    }
+  };
+  BarcodeScanner.prototype._handleKeyDown = function(e) {
+    var currentTime = Date.now();
+    if (currentTime - this.lastKeyTime > 50) {
+      this.buffer = "";
+    }
+    this.lastKeyTime = currentTime;
+    if (e.key === "Enter") {
+      while (this.buffer.length > 0 && isNaN(this.buffer[this.buffer.length - 1])) {
+        this.buffer = this.buffer.slice(0, -1);
+      }
+      if (this.buffer.length >= 5) {
+        e.preventDefault();
+        e.stopPropagation();
+        var manualInput = document.getElementById("manualBarcode");
+        if (manualInput) {
+          manualInput.value = "";
+        }
+        window.dispatchEvent(new CustomEvent("codeScanned", {
+          detail: {
+            code: this.buffer,
+            source: "otg"
+          }
+        }));
+      }
+      this.buffer = "";
+      return;
+    }
+    if (e.key.length > 1) return;
+    if (this.buffer.length > 0) {
+      e.preventDefault();
+    }
+    this.buffer += e.key;
+  };
+  const barcodeScanner = new BarcodeScanner();
   function ConnectivityManager() {
     this.bannerId = "offlineBanner";
     this.isOnline = navigator.onLine;
@@ -2403,7 +2457,7 @@ Deseja prosseguir mesmo assim?`
   new AssetSyncManager(assetRepository);
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-5FER8iK8.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-Dyy5gabO.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
@@ -2431,8 +2485,10 @@ Deseja prosseguir mesmo assim?`
     if (novoLocal === null || novoLocal === void 0) return;
     if (novoLocal === locationSelector.NONE_SELECTED) {
       inputArea.hide();
+      barcodeScanner.stop();
     } else {
       inputArea.show();
+      barcodeScanner.start();
     }
   });
   window.addEventListener("beforeunload", function(e) {
@@ -2498,8 +2554,8 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.07.22-004";
-      el.title = `Versão do build: ${"2026.07.22-004"}`;
+      el.textContent = "2026.07.22-005";
+      el.title = `Versão do build: ${"2026.07.22-005"}`;
     }
   });
   window.addEventListener("error", function(e) {
@@ -2532,7 +2588,7 @@ Deseja prosseguir mesmo assim?`
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.07.22-004"}`);
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.07.22-005"}`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
       throw new Error(`Falha na inicialização do debug: ${error.message}`);

@@ -66,38 +66,58 @@ BarcodeScanner.prototype.stop = function () {
  * @private
  */
 BarcodeScanner.prototype._handleKeyDown = function (e) {
-    const currentTime = Date.now();
+    var currentTime = Date.now();
 
-    // Se o intervalo entre teclas for maior que 50ms, 
+    // Se o intervalo entre teclas for maior que 50ms,
     // provavelmente é um humano digitando, então limpamos o buffer.
-    if (currentTime - this.lastKeyTime > 5000) {
+    if (currentTime - this.lastKeyTime > 50) {
         this.buffer = "";
-        this.lastKeyTime = currentTime;
-    }
-
-    // Ignora teclas de controle (Shift, Alt, CapsLock, etc)
-    if (e.key.length > 1 && e.key !== 'Enter') return;
-
-    this.buffer += e.key;
-    console.log(`Key: ${e.key}, Time since last key: ${currentTime - this.lastKeyTime}ms, Buffer: "${this.buffer}"`);
-
-    if (this.buffer.length >= 10) { // Evita disparar com um Enter acidental              
-        //limpa os caracteres finais do buffer até encontrar um número, para evitar que o Enter seja parte do código
-        while (this.buffer.length > 0 && isNaN(this.buffer[this.buffer.length - 1])) {
-            this.buffer = this.buffer.slice(0, -1);
-        }
-        // Dispara o evento personalizado para o resto do sistema
-        window.dispatchEvent(new CustomEvent('codeScanned', {
-            detail: {
-                code: this.buffer,
-                source: 'otg'
-            }
-        }));
-
-        this.buffer = ""; // Limpa para a próxima leitura
     }
 
     this.lastKeyTime = currentTime;
+
+    // Enter: finaliza a leitura e dispara o evento
+    if (e.key === 'Enter') {
+        // Remove caracteres não numéricos do final (ex: caracteres de controle)
+        while (this.buffer.length > 0 && isNaN(this.buffer[this.buffer.length - 1])) {
+            this.buffer = this.buffer.slice(0, -1);
+        }
+
+        // Mínimo de 5 caracteres para considerar um scan válido
+        // Evita falsos positivos de digitação humana + Enter acidental
+        if (this.buffer.length >= 5) {
+            // Bloqueia o Enter de chegar ao campo de texto manual
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Limpa o campo de texto manual (remove o 1º caractere que escapou)
+            var manualInput = document.getElementById('manualBarcode');
+            if (manualInput) {
+                manualInput.value = '';
+            }
+
+            window.dispatchEvent(new CustomEvent('codeScanned', {
+                detail: {
+                    code: this.buffer,
+                    source: 'otg'
+                }
+            }));
+        }
+
+        this.buffer = "";
+        return;
+    }
+
+    // Ignora teclas de controle (Shift, Alt, CapsLock, etc)
+    if (e.key.length > 1) return;
+
+    // Se o buffer já tem conteúdo, o caractere anterior chegou há < 50ms
+    // → estamos num burst de scanner → bloqueia o caractere do input focado
+    if (this.buffer.length > 0) {
+        e.preventDefault();
+    }
+
+    this.buffer += e.key;
 };
 
 /**

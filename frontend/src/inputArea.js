@@ -96,41 +96,40 @@ InputArea.prototype._setupManualInput = function () {
     const clearBtn = document.getElementById('clearManualBarcode');
     const self = this;
 
-    // Adiciona o observador (listener) que "ouve" a digitação
-    this.manualBarcodeInput.addEventListener('input', function (e) {
-        if (self.isLockedExternal) return; // Não permite ler se estiver bloqueado
+    // Listener keydown: submete o código manualmente ao pressionar Enter
+    this.manualBarcodeInput.addEventListener('keydown', function (e) {
+        if (self.isLockedExternal) return;
 
-        const currentValue = e.target.value.trim();
+        // Enter: dispara o envio do código digitado manualmente
+        if (e.key === 'Enter') {
+            var currentValue = e.target.value.trim();
 
-        // Se chegar a 10 caracteres, dispara o envio automático!
-        if (currentValue.length >= 10) {
-            // CORREÇÃO: Limpa o campo ANTES de disparar o evento.
-            // Assim, se o evento der erro em outro arquivo, o campo já estará limpo.
-            self.manualBarcodeInput.value = "";
+            if (currentValue.length > 0) {
+                // Limpa o campo antes de disparar o evento
+                self.manualBarcodeInput.value = "";
 
-            // Debounce: rejeita o mesmo código se despachado dentro da janela de 3s
-            // Previne double-fire de scanners e digitação acidental repetida
-            var now = Date.now();
-            var lastTime = self._recentCodes[currentValue];
-            if (lastTime && (now - lastTime) < self._debounceWindow) {
-                // Código já foi despachado recentemente — ignora
+                // Debounce: rejeita o mesmo código se despachado dentro da janela de 3s
+                var now = Date.now();
+                var lastTime = self._recentCodes[currentValue];
+                if (lastTime && (now - lastTime) < self._debounceWindow) {
+                    self._cleanupRecentCodes();
+                    return;
+                }
+
+                // Registra o código como despachado
+                self._recentCodes[currentValue] = now;
                 self._cleanupRecentCodes();
-                return;
+
+                // Dispara o evento de forma assíncrona para não travar a UI
+                setTimeout(function () {
+                    window.dispatchEvent(new CustomEvent('codeScanned', {
+                        detail: {
+                            code: currentValue,
+                            source: 'manual_input'
+                        }
+                    }));
+                }, 0);
             }
-
-            // Registra o código como despachado
-            self._recentCodes[currentValue] = now;
-            self._cleanupRecentCodes();
-
-            // Dispara o evento de forma assíncrona para não travar a UI
-            setTimeout(function () {
-                window.dispatchEvent(new CustomEvent('codeScanned', {
-                    detail: {
-                        code: currentValue,
-                        source: 'manual_input'
-                    }
-                }));
-            }, 0);
         }
     });
 
