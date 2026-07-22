@@ -17,7 +17,7 @@ LoadingModal.prototype.injectHTML = function () {
     if (document.getElementById('consultingAlert')) return;
 
     const html = `
-        <div id="loadingOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:9998; cursor:wait;"></div>
+        <div id="loadingOverlay"></div>
         <div id="consultingAlert">
             <p>⏳ Consultando planilha ...</p>
         </div>

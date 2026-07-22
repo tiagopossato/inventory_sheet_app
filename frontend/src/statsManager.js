@@ -91,7 +91,7 @@ StatsManager.prototype._innerHtml = function (parentId) {
         <div class="stats-container">
 
             <div id="${this.elements.contextCard}" class="stat-card full-width">
-                <div class="flex-align-center" style="margin-bottom: 8px;">
+                <div class="flex-align-center">
                     <span id="syncStatusIcon" class="is-fetching" aria-label="Sincronizando" role="status">🔁</span>
                     <span class="stat-label">Resumo Geral do processo de Inventário:</span>
                 </div>
