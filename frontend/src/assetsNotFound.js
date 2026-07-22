@@ -10,14 +10,14 @@
  * @author Tiago Possato
  */
 
-// import { processBarcode } from './processBarcode.js';
 import { locationSelector } from './locationSelector.js'
 import { userWarnings } from './userWarnings.js';
 import { AppModal } from './appModal.js';
 import { loadingModal } from './loadingModal.js'
 import { backendService } from "./backendService.js"
-import { scannerManager } from "./scannerManager.js"
-import {connectivityManager} from './connectivityManager.js';
+import { inputArea } from "./inputArea.js"
+import { connectivityManager } from './connectivityManager.js';
+import { inventoryBaseline } from './inventoryBaseline.js';
 
 /**
  * @typedef {Object} NotFoundItem
@@ -55,8 +55,11 @@ function AssetsNotFound() {
     this.addItensToNotFoundTable = this.addItensToNotFoundTable.bind(this);
     this.getNotFoundItensOnLocation = this.getNotFoundItensOnLocation.bind(this);
 
-    this.setupEvents();
-    this.hideButton(); // Começa oculto até selecionar um local
+    setTimeout(() => {
+        this.setupEvents();
+        this.hideButton(); // Começa oculto até selecionar um local
+    }, 100); // Pequeno delay para garantir que tudo esteja carregado
+
 }
 
 /**
@@ -64,14 +67,14 @@ function AssetsNotFound() {
  * @private
  */
 AssetsNotFound.prototype.injectHTML = function () {
-    const container = document.getElementById('not-found-area');
+    const container = document.getElementById('btn-area');
     if (!container) return;
 
     // 1. Botão de busca (Usa as classes .btn e .location-btn da seção 3)
     if (!document.getElementById('notFoundBtn')) {
         container.innerHTML += `
             <button id="notFoundBtn" class="btn location-btn">
-                Buscar itens não encontrados
+                Não encontrados
             </button>
         `;
     }
@@ -92,10 +95,10 @@ AssetsNotFound.prototype.injectHTML = function () {
                 <table id="notFoundTable">
                     <thead>
                         <tr>
-                            <th style="width: 40px;">#</th>
-                            <th style="width: 100px;">Tombo</th>
+                            <th class="col-narrow">#</th>
+                            <th class="col-medium">Tombo</th>
                             <th>Descrição</th>
-                            <th style="width: 90px;">Ação</th>
+                            <th class="col-action">Ação</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -134,11 +137,11 @@ AssetsNotFound.prototype.setupEvents = function () {
     const btn = document.getElementById('notFoundBtn');
     if (btn) {
         btn.onclick = function () {
-            
-            if(connectivityManager.getStatus() === false) {
+
+            if (connectivityManager.getStatus() === false) {
                 userWarnings.printUserWarning("Sem conexão com a internet. Verifique sua conectividade.");
                 return;
-            }   
+            }
 
             const local = locationSelector.getSelectedLocation();
             if (local === locationSelector.NONE_SELECTED) {
@@ -146,7 +149,7 @@ AssetsNotFound.prototype.setupEvents = function () {
                 return;
             }
             // 1. BLOQUEIA O SCANNER
-            scannerManager.lock();
+            inputArea.lock();
             self.getNotFoundItensOnLocation(local);
         };
     }
@@ -190,7 +193,7 @@ AssetsNotFound.prototype.close = function () {
     this.modal.style.display = 'none';
     document.body.style.overflow = 'auto'; // Destrava o scroll
     // 2. DESBLOQUEIA O SCANNER 
-    scannerManager.unlock();
+    inputArea.unlock();
 };
 
 /**
@@ -216,7 +219,7 @@ AssetsNotFound.prototype.addItensToNotFoundTable = function (itens) {
         tr.innerHTML = `
             <td>${index + 1}</td>
             <td>${item[0]}</td>
-            <td>${item[1]}</td>
+            <td>${inventoryBaseline.getAssetName(item[0])}</td>
             <td></td>
         `;
 
@@ -265,7 +268,7 @@ AssetsNotFound.prototype.getNotFoundItensOnLocation = function (location) {
             isFinished = true;
             loadingModal.toggle(false);
             // 2. DESBLOQUEIA O SCANNER 
-            scannerManager.unlock();
+            inputArea.unlock();
             userWarnings.printUserWarning('Tempo esgotado. Verifique sua conexão com a planilha.');
         }
     }, TIMEOUT);
@@ -282,7 +285,7 @@ AssetsNotFound.prototype.getNotFoundItensOnLocation = function (location) {
 
             if (!data || data.length === 0) {
                 // 2. DESBLOQUEIA O SCANNER 
-                scannerManager.unlock();
+                inputArea.unlock();
                 userWarnings.printUserWarning(`Nenhum item pendente para ${location}! Caso não apareça na sua tabela, foi encontrado por outro usuário.`);
                 return;
             }
@@ -294,7 +297,7 @@ AssetsNotFound.prototype.getNotFoundItensOnLocation = function (location) {
             clearTimeout(timeoutAlert);
             loadingModal.toggle(false);
             // 2. DESBLOQUEIA O SCANNER 
-            scannerManager.unlock();
+            inputArea.unlock();
             console.error('Erro ao buscar itens não encontrados:', error);
             userWarnings.printUserWarning('Erro ao consultar servidor.');
         });

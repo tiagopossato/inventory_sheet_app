@@ -53,13 +53,13 @@ function getInventoryData(add_spec = true) {
       // Coluna L é o índice 8 (D=0, E=1, F=2, G=3, H=4, I=5, J=6, K=7, L=8)
       // Pega a string, remove espaços extras e corta nos primeiros 50 caracteres
       const specName = String(row[8] || "").trim().substring(0, 50);
-      
-      inventoryMap.get(local).push({ 
-        code: asset, 
-        name: specName 
+
+      inventoryMap.get(local).push({
+        code: asset,
+        name: specName
       });
     } else {
-      inventoryMap.get(local).push({ 
+      inventoryMap.get(local).push({
         code: asset
       });
     }
@@ -81,7 +81,7 @@ function getInventoryData(add_spec = true) {
     locationsOutput.push({
       name: key,
       // O .length funciona perfeitamente, não importa se é um array de números ou de objetos
-      assetsCount: assetsList.length 
+      assetsCount: assetsList.length
     });
   }
 
@@ -97,86 +97,6 @@ function getInventoryData(add_spec = true) {
     inventory: inventoryOutput
   };
 }
-// function getInventoryData() {
-//   const ss = SpreadsheetApp.getActiveSpreadsheet();
-//   const sheetInventario = ss.getSheetByName('inventario');
-
-//   // Early return com array vazio se a aba não existir
-//   if (!sheetInventario) {
-//     throw new Error("getInventoryData: Aba 'inventario' não encontrada.");
-//   }
-
-//   const lastRowInv = sheetInventario.getLastRow();
-
-//   // Early return se não houver dados além do cabeçalho
-//   if (lastRowInv < 2) {
-//     return { locations: [], inventory: [] };
-//   }
-
-//   /** ===============================
-//    * 1. LEITURA E PROCESSAMENTO OTIMIZADO
-//    * =============================== */
-
-//   // Ler as colunas necessárias: D (local) e F (tombamento)
-//   const invData = sheetInventario.getRange(2, 4, lastRowInv - 1, 3).getValues();
-//   const inventoryMap = new Map(); // Usar Map para melhor performance
-
-//   // Processamento otimizado com for loop
-//   for (let i = 0; i < invData.length; i++) {
-//     const row = invData[i];
-//     const local = String(row[0]).trim();
-
-//     // Validação rápida: pular linhas sem local
-//     if (!local) continue;
-
-//     const asset = parseInt(row[2], 10);
-
-//     // Validação numérica mais eficiente
-//     if (isNaN(asset)) continue;
-
-//     // Usar Map para agrupamento (mais eficiente que Object)
-//     if (!inventoryMap.has(local)) {
-//       inventoryMap.set(local, []);
-//     }
-//     inventoryMap.get(local).push(asset);
-//   }
-
-//   /** ===============================
-//    * 2. ESTRUTURAÇÃO DE SAÍDA OTIMIZADA
-//    * =============================== */
-
-//   // Converter Map para arrays de saída em uma única operação
-//   const locationsOutput = [];
-//   const inventoryOutput = [];
-
-//   // Single-pass conversion: processar o Map apenas uma vez
-//   for (const [key, assetsList] of inventoryMap) {
-//     // Ambas as saídas usam os mesmos dados
-//     inventoryOutput.push({
-//       location: key,
-//       assets: assetsList
-//     });
-
-//     locationsOutput.push({
-//       name: key,
-//       assetsCount: assetsList.length
-//     });
-//   }
-
-//   /** ===============================
-//    * 3. ORDENAÇÃO FINAL
-//    * =============================== */
-
-//   // Ordenar apenas uma vez, por referência
-//   locationsOutput.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-//   // Manter inventoryOutput na mesma ordem para consistência
-//   inventoryOutput.sort((a, b) => a.location.localeCompare(b.location, 'pt-BR'));
-
-//   return {
-//     locations: locationsOutput,
-//     inventory: inventoryOutput
-//   };
-// }
 
 /**
  * @typedef {Object} LocationSummary
@@ -208,60 +128,67 @@ function getInventorySummary(targetLocation = null) {
   const groups = {};
 
   /** ===============================
-   * 1. PROCESSAMENTO DA ABA "leituras" (Otimizado)
+   * 1. PROCESSAMENTO DA ABA "leituras" (Otimizado V8)
    * =============================== */
   const sheetDados = ss.getSheetByName("leituras");
-
-  // Early return com array vazio se a aba não existir
   if (!sheetDados) {
     throw new Error("getInventorySummary: Aba 'leituras' não encontrada.");
   }
+
   const sheetDadosLastRow = sheetDados.getLastRow();
   if (sheetDadosLastRow >= 2) {
     const data = sheetDados.getRange(2, 2, sheetDadosLastRow - 1, 3).getValues();
 
-    // Loop otimizado
-    for (let i = 0; i < data.length; i++) {
-      const code = parseInt(data[i][1], 10);
+    // Loop for...of: É mais rápido no motor V8 e o código fica mais limpo sem os [i]
+    for (const row of data) {
+      const code = parseInt(row[1], 10);
       if (isNaN(code)) continue;
 
-      const location = String(data[i][2]).trim();
+      const location = String(row[2]).trim();
       if (!location) continue;
 
-      groups[location] = groups[location] || [];
+      if (!groups[location]) groups[location] = [];
       groups[location].push(code);
     }
   }
 
   /** ===============================
-   * 2. PROCESSAMENTO DA ABA "localidades" (Otimizado)
+   * 2. PROCESSAMENTO DA ABA "localidades" (Otimizado V8)
    * =============================== */
   const sheetLoc = ss.getSheetByName("localidades");
-
-  // Early return com array vazio se a aba não existir
   if (!sheetLoc) {
     throw new Error("getInventorySummary: Aba 'localidades' não encontrada.");
   }
 
   let locations = [];
   const sheetLocGetLastRow = sheetLoc.getLastRow();
+
   if (sheetLocGetLastRow >= 2) {
     const locData = sheetLoc.getRange('A2:D' + sheetLocGetLastRow).getValues();
     const target = targetLocation ? String(targetLocation).trim() : null;
 
-    locations = locData
-      .filter(row => row[0] && (!target || String(row[0]).trim() === target))
-      .map(row => ({
-        name: String(row[0]).trim(),
+    // Loop Fusion: Fazemos o papel do filter() e do map() numa única passada
+    for (const row of locData) {
+      const locName = row[0] ? String(row[0]).trim() : '';
+
+      // Funciona como o .filter()
+      if (!locName || (target && locName !== target)) continue;
+
+      // Funciona como o .map()
+      locations.push({
+        name: locName,
         totalAssets: Number(row[1]) || 0,
         assetsFindedCount: Number(row[2]) || 0,
         missingAssets: Number(row[3]) || 0
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }));
+      });
+    }
+
+    // O sort fica de fora, ordenando apenas o array final já filtrado e montado
+    locations.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }));
   }
 
   /** ===============================
-   * 3. ESTRUTURAÇÃO FINAL (Otimizada)
+   * 3. ESTRUTURAÇÃO FINAL
    * =============================== */
   const assetsFinded = Object.keys(groups)
     .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
@@ -269,6 +196,73 @@ function getInventorySummary(targetLocation = null) {
 
   return { locations, assetsFinded };
 }
+
+// function getInventorySummary(targetLocation = null) {
+//   const ss = SpreadsheetApp.getActiveSpreadsheet();
+//   const groups = {};
+
+//   /** ===============================
+//    * 1. PROCESSAMENTO DA ABA "leituras" (Otimizado)
+//    * =============================== */
+//   const sheetDados = ss.getSheetByName("leituras");
+
+//   // Early return com array vazio se a aba não existir
+//   if (!sheetDados) {
+//     throw new Error("getInventorySummary: Aba 'leituras' não encontrada.");
+//   }
+//   const sheetDadosLastRow = sheetDados.getLastRow();
+//   if (sheetDadosLastRow >= 2) {
+//     const data = sheetDados.getRange(2, 2, sheetDadosLastRow - 1, 3).getValues();
+
+//     // Loop otimizado
+//     for (let i = 0; i < data.length; i++) {
+//       const code = parseInt(data[i][1], 10);
+//       if (isNaN(code)) continue;
+
+//       const location = String(data[i][2]).trim();
+//       if (!location) continue;
+
+//       groups[location] = groups[location] || [];
+//       groups[location].push(code);
+//     }
+//   }
+
+//   /** ===============================
+//    * 2. PROCESSAMENTO DA ABA "localidades" (Otimizado)
+//    * =============================== */
+//   const sheetLoc = ss.getSheetByName("localidades");
+
+//   // Early return com array vazio se a aba não existir
+//   if (!sheetLoc) {
+//     throw new Error("getInventorySummary: Aba 'localidades' não encontrada.");
+//   }
+
+//   let locations = [];
+//   const sheetLocGetLastRow = sheetLoc.getLastRow();
+//   if (sheetLocGetLastRow >= 2) {
+//     const locData = sheetLoc.getRange('A2:D' + sheetLocGetLastRow).getValues();
+//     const target = targetLocation ? String(targetLocation).trim() : null;
+
+//     locations = locData
+//       .filter(row => row[0] && (!target || String(row[0]).trim() === target))
+//       .map(row => ({
+//         name: String(row[0]).trim(),
+//         totalAssets: Number(row[1]) || 0,
+//         assetsFindedCount: Number(row[2]) || 0,
+//         missingAssets: Number(row[3]) || 0
+//       }))
+//       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }));
+//   }
+
+//   /** ===============================
+//    * 3. ESTRUTURAÇÃO FINAL (Otimizada)
+//    * =============================== */
+//   const assetsFinded = Object.keys(groups)
+//     .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
+//     .map(loc => ({ location: loc, assets: groups[loc] }));
+
+//   return { locations, assetsFinded };
+// }
 
 /**
  * Obtém o nome do usuário atual baseado no email
@@ -429,6 +423,21 @@ function saveMessage(payload) {
       throw new Error("saveMessage: Aba 'observacoes' não encontrada.");
     }
 
+    const uuid = payload.uid;
+
+    // --- VERIFICAÇÃO DE DUPLICIDADE ---
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 0) {
+      // Pega todos os valores da Coluna A (onde ficam os UIDs) e transforma em um array simples (.flat)
+      const uidsExistentes = sheet.getRange(1, 1, lastRow, 1).getValues().flat();
+
+      // Se o UID já estiver na planilha, não adiciona uma nova linha e apenas retorna o UID
+      if (uidsExistentes.includes(uuid)) {
+        return uuid;
+      }
+    }
+    // ----------------------------------
+
     const now = new Date();
     const formattedDate = Utilities.formatDate(
       now,
@@ -437,9 +446,7 @@ function saveMessage(payload) {
     );
     const aferidor = getUserName();
 
-
     // Preparação dos dados
-    const uuid = payload.uid;
     const localidade = payload.location;
     const mensagem = payload.message;
 
@@ -493,16 +500,11 @@ function getNotFoundItens(targetLocation) {
   const target = String(targetLocation).trim();
   const result = [];
 
-  // 4. Otimização de Processamento (Single Pass Loop)
-  // Usar for tradicional é mais rápido que filter/map no Apps Script
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i];
-
-    // Compara Localidade (Coluna A -> índice 0)
-    if (String(row[0]).trim() === target) {
-      // Adiciona direto [Tombamento, Descrição] (Colunas B e C -> índices 1 e 2)
-      const specName = String(row[2] || "").trim().substring(0, 100);
-      result.push([row[1], specName]);
+  // Usando for...of com desestruturação é mais rápido e legível
+  for (const [colA, colB] of data) {
+    // Checagem rápida para pular nulos/vazios antes de gastar processamento com String() e trim()
+    if (colA != null && String(colA).trim() === target) {
+      result.push([colB]);
     }
   }
 

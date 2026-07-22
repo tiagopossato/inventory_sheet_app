@@ -12,6 +12,8 @@ import { assetRepository } from "./assetRepository.js";
 const BATCH_SIZE = 10;
 const SYNC_INTERVAL_MS = 2000;
 const MAX_RETRIES = 5;
+// A cada quantos ciclos itens FAILED são reenfileirados (evita que erros de rede temporários fiquem presos para sempre)
+const FAILED_RETRY_CYCLES = 15; // ~30 s com SYNC_INTERVAL_MS = 2000
 
 /**
  * Construtor do AssetSyncManager
@@ -22,6 +24,7 @@ function AssetSyncManager(repository) {
   this.repo = repository;
   this.timer = null;
   this.isSyncing = false;
+  this.cycleCount = 0;
 
   this._setupListeners();
   // Tenta iniciar caso já tenha dados ao carregar a página
@@ -63,6 +66,9 @@ AssetSyncManager.prototype._startSyncLoop = function () {
   // Dispara evento global de inicio (para UI)
   window.dispatchEvent(new CustomEvent('syncStarted'));
 
+  // Tenta enviar imediatamente sem esperar o primeiro tick do interval
+  self._processQueue();
+
   this.timer = setInterval(function () {
     self._processQueue();
   }, SYNC_INTERVAL_MS);
@@ -86,6 +92,24 @@ AssetSyncManager.prototype._stopSyncLoop = function () {
 AssetSyncManager.prototype._processQueue = async function () {
   // 1. Guardrails
   if (this.isSyncing || !navigator.onLine) return;
+
+  // 1b. Health check: verifica conectividade real (Wi-Fi sem internet = navigator.onLine mente)
+  try {
+    await backendService.getAppSettings();
+  } catch (e) {
+    // Backend inacessível — não tenta sync, não pune itens como FAILED
+    return;
+  }
+
+  // Recuperação periódica: itens FAILED podem ter falhado por instabilidade de rede
+  // passageira enquanto navigator.onLine permanecia true (ex.: Wi-Fi sem acesso à internet).
+  // Reenfileirá-los a cada FAILED_RETRY_CYCLES ciclos garante que nenhuma leitura fique
+  // presa indefinidamente dentro da mesma sessão.
+  this.cycleCount++;
+  if (this.cycleCount >= FAILED_RETRY_CYCLES) {
+    this.cycleCount = 0;
+    this.repo.retryFailed();
+  }
 
   // 2. Obter lote
   const batch = this.repo.getPendingBatch(BATCH_SIZE);

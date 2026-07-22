@@ -41,7 +41,8 @@ function AssetRepository() {
   // mas que não foram confirmados como sincronizados
   let saveNeeded = false;
   this.items.forEach(function (item) {
-    if (item.status === AssetStatus.IN_FLIGHT) {
+    // IN_FLIGHT: sessão anterior encerrou durante o envio; FAILED: erros anteriores devem ser retentados na nova sessão
+    if (item.status === AssetStatus.IN_FLIGHT || item.status === AssetStatus.FAILED) {
       item.status = AssetStatus.PENDING;
       saveNeeded = true;
     }
@@ -110,9 +111,25 @@ AssetRepository.prototype._handleStorageFull = function () {
    * Ordena os itens por data de criação (mais recentes primeiro) e mantém apenas os 100 mais recentes
    * @type {Array<Object>}
    */
-  this.items = this.items
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, 100);
+  // Prioriza manter PENDING/FAILED sobre SYNCED (que já estão na planilha)
+  var beforeCount = this.items.length;
+  var pendingBefore = this.items.filter(function (i) {
+    return i.status === AssetStatus.PENDING || i.status === AssetStatus.FAILED;
+  }).length;
+
+  this.items.sort(function (a, b) {
+    if (a.status === AssetStatus.SYNCED && b.status !== AssetStatus.SYNCED) return 1;
+    if (a.status !== AssetStatus.SYNCED && b.status === AssetStatus.SYNCED) return -1;
+    return b.createdAt - a.createdAt;
+  });
+
+  var removedCount = beforeCount - Math.min(beforeCount, 100);
+  this.items = this.items.slice(0, 100);
+
+  var pendingAfter = this.items.filter(function (i) {
+    return i.status === AssetStatus.PENDING || i.status === AssetStatus.FAILED;
+  }).length;
+  var pendingLost = pendingBefore - pendingAfter;
 
   try {
     /**
@@ -120,7 +137,12 @@ AssetRepository.prototype._handleStorageFull = function () {
      * @throws {Error} Possível erro se mesmo os dados reduzidos excederem a quota
      */
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.items));
-    console.info('AssetRepository: Limpeza conservadora aplicada com sucesso');
+    console.info('AssetRepository: Limpeza aplicada. ' + removedCount + ' itens removidos.');
+    if (pendingLost > 0) {
+      window.dispatchEvent(new CustomEvent('storageEmergency', {
+        detail: { removedCount: removedCount, pendingLost: pendingLost }
+      }));
+    }
   } catch (e) {
     /**
      * Erro crítico - mesmo os dados reduzidos não cabem no storage
@@ -185,7 +207,7 @@ AssetRepository.prototype._emit = function (name, detail) {
  * @param {string} location - Localização do ativo
  * @returns {Promise<Object|null>} Item criado ou null se já existir
  */
-AssetRepository.prototype.addItem = async function (rawCode, location, source, obs = '') {
+AssetRepository.prototype.addItem = function (rawCode, location, source, obs) {
   // Validações rigorosas
   if (typeof rawCode === 'undefined' || rawCode === null || rawCode === '') {
     console.warn('AssetRepository.addItem: Código do ativo é inválido', rawCode);
@@ -222,7 +244,7 @@ AssetRepository.prototype.addItem = async function (rawCode, location, source, o
     uid: Date.now().toString(36) + Math.random().toString(36).slice(2),
     code: barcode,
     location: loc,
-    source: source ? String(source).substring(0, 16) : '',
+    source: source ? String(source).substring(0, 24) : '',
     state: 3,
     ipvu: 8,
     obs: obs ? String(obs).substring(0, 140) : '',
@@ -297,7 +319,7 @@ AssetRepository.prototype.updateItem = function (uid, state, ipvu, obs) {
  * @param {string} location - Localização do ativo
  * @returns {Promise<boolean>} True se o item existe, false caso contrário
  */
-AssetRepository.prototype.hasItem = async function (barcode, location) {
+AssetRepository.prototype.hasItem = function (barcode, location) {
   // Validações rigorosas
   if (typeof barcode === 'undefined' || barcode === null || barcode === '') {
     console.warn('AssetRepository.hasItem: Código do ativo é inválido', barcode);

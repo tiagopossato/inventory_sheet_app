@@ -3,10 +3,11 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Sistema de inventário patrimonial com leitor de código de barras">
   <meta name="author" content="IFC">
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <!-- <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script> -->
+  <!-- <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.12.1/dist/quagga.min.js"></script> -->
 </head>
 
 <body>
@@ -21,7 +22,7 @@
          CONTEÚDO PRINCIPAL DA APLICAÇÃO
     ============================================================================ -->
 
-    <h1>Leitor de Patrimônio</h1>
+    <!-- <h1>Leitor de Patrimônio</h1> -->
 
     <!-- Banner de status offline -->
     <div id="offlineBanner" role="status" aria-live="polite" aria-atomic="true" style="display:none;"
@@ -46,27 +47,35 @@
 
     <!-- Área de itens não encontrados -->
     <section aria-labelledby="not-found-heading">
-      <div id="not-found-area" role="region"></div>
+      <div id="btn-area" class="btn-container"></div>
     </section>
 
     <!-- Área de mensagens e observações -->
-    <section aria-labelledby="messages-heading">
+    <!-- <section aria-labelledby="messages-heading">
       <div id="message-area" role="region"></div>
-    </section>
+    </section> -->
 
     <!-- Tabela de códigos de barras lidos -->
     <section aria-labelledby="table-heading">
       <div id="barcode-table-area" role="region" aria-live="polite"></div>
     </section>
 
-
-
     <!-- Dashboard de estatísticas -->
     <section aria-labelledby="stats-heading">
       <div id="stats-area" role="region" aria-live="polite"></div>
     </section>
 
-
+    <!-- Adiciona um botão para desconectar da conta do google -->
+    <!-- <button id="disconnect-btn" class="btn btn-secondary">Desconectar da conta do Google</button> -->
+    <!-- script para manipular o botão de desconexão -->
+    <!-- <script>
+      document.getElementById('disconnect-btn').addEventListener('click', function () {
+        // Limpa os dados de autenticação do Google (ajuste conforme necessário)
+        localStorage.removeItem('googleAuthToken'); // Exemplo de chave onde o token pode estar armazenado
+        alert('Desconectado da conta do Google. Por favor, recarregue a página.');
+        location.reload(); // Recarrega a página para refletir a mudança
+      });
+    </script> -->
 
     <!-- ============================================================================
          FALLBACK PARA JAVASCRIPT DESATIVADO

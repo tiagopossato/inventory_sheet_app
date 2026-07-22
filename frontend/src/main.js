@@ -43,7 +43,7 @@ if (__IS_DEV__) {
  * @typedef {Object} MainModules
  */
 import { locationSelector } from './locationSelector.js'
-import { scannerManager } from './scannerManager.js';
+import { inputArea } from "./inputArea.js"
 import { barcodeTable } from './barcodeTable.js'
 import { assetRepository } from './assetRepository.js';
 import { inventoryBaseline } from './inventoryBaseline.js';
@@ -51,6 +51,7 @@ import { processBarcode } from './processBarcode.js';
 import { userWarnings } from './userWarnings.js'
 import { backendService } from './backendService.js'
 import { loadingModal } from './loadingModal.js'
+//import { barcodeScanner } from './barcodeScanner.js';
 import './assetsNotFound.js';
 import './audioManager.js'
 import './editAssetModal.js';
@@ -58,7 +59,7 @@ import './connectivityManager.js';
 import './statsManager.js';
 import './messageSendModal.js';
 import './assetSyncManager.js';
-import './barcodeScanner.js';
+
 
 // ============================================================================
 // CONFIGURAÇÃO DE EVENTOS GLOBAIS
@@ -85,7 +86,7 @@ window.addEventListener('codeScanned', async function (e) {
   } finally {
     isProcessing = false;
     if (source == 'manual_input') {
-      scannerManager.setFocus();
+      inputArea.setFocus();
     }
   }
 });
@@ -102,9 +103,11 @@ window.addEventListener('locationChanged', function (e) {
   if (novoLocal === null || novoLocal === undefined) return;
 
   if (novoLocal === locationSelector.NONE_SELECTED) {
-    scannerManager.hide();
+    inputArea.hide();
+    //barcodeScanner.stop(); // Para a escuta do scanner quando nenhum local é selecionado
   } else {
-    scannerManager.show();
+    inputArea.show();
+    //barcodeScanner.start(); // Inicia a escuta do scanner quando um local é selecionado
   }
 });
 
@@ -114,13 +117,25 @@ window.addEventListener('locationChanged', function (e) {
  * @listens window#beforeunload
  */
 window.addEventListener('beforeunload', function (e) {
-  e.preventDefault();
-  e.returnValue = '';
-
-  const stats = assetRepository.getStats();
+  var stats = assetRepository.getStats();
   if (stats.pending > 0) {
-    userWarnings.printUserWarning('Você tem dados não enviados. Aguarde a sincronização antes de sair.');
+    e.preventDefault();
+    e.returnValue = '';
   }
+});
+
+/**
+ * Alerta o operador quando o armazenamento local atinge a quota e itens são perdidos
+ * @event storageEmergency
+ * @listens window#storageEmergency
+ */
+window.addEventListener('storageEmergency', function (e) {
+  var detail = e.detail;
+  var msg = 'ATENÇÃO: Armazenamento cheio. ' + detail.removedCount + ' itens removidos.';
+  if (detail.pendingLost > 0) {
+    msg += ' ' + detail.pendingLost + ' leituras NÃO SALVAS foram perdidas!';
+  }
+  userWarnings.printUserWarning(msg);
 });
 
 // ============================================================================

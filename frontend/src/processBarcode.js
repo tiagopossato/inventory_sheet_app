@@ -17,7 +17,7 @@ import { audioManager } from './audioManager.js';
 import { inventoryBaseline } from './inventoryBaseline.js';
 import { remoteInventoryRegistry } from './remoteInventoryRegistry.js';
 import { AppModal } from './appModal.js';
-import { scannerManager } from './scannerManager.js';
+import { inputArea } from "./inputArea.js"
 import { locationSelector } from './locationSelector.js';
 
 /**
@@ -59,7 +59,6 @@ import { locationSelector } from './locationSelector.js';
  * @throws {Error} Em caso de erro não tratado durante o processo
  */
 export async function processBarcode(rawValue, selectedLocation, source = "unknown", bypassCheckLocation = false) {
-    let observations = '';
 
     try {
         // 1. Validação de Local Selecionado
@@ -78,7 +77,7 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
         }
 
         // 3. Validação de Duplicidade no Storage Local (Offline)
-        if (await assetRepository.hasItem(rawValue, selectedLocation)) {
+        if (assetRepository.hasItem(rawValue, selectedLocation)) {
             audioManager.playWarning();
             userWarnings.printUserWarning(`${rawValue} já adicionado na lista local`);
             return false;
@@ -100,7 +99,7 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
         if (bypassCheckLocation === false && retorno.status === 'check') {
             audioManager.playWarning();
             // 1. BLOQUEIA O SCANNER
-            scannerManager.lock();
+            inputArea.lock();
             try {
                 const userConfirmed = await AppModal.confirm(
                     `⚠️ ATENÇÃO: LOCALIZAÇÃO DIVERGENTE`,
@@ -115,21 +114,26 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
             } finally {
                 // 2. DESBLOQUEIA O SCANNER APÓS A DECISÃO (ou erro)
                 // eslint-disable-next-line no-unused-vars
-                try { scannerManager.unlock(); } catch (e) { /* ignore */ }
+                try { inputArea.unlock(); } catch (e) { /* ignore */ }
             }
         }
         if (bypassCheckLocation === true && retorno.status === 'check') {
             userWarnings.printUserWarning(`AVISO: ${rawValue} inserido automaticamente. Deveria estar em ${retorno.local}.`);
-            observations = `Verificação de localização ignorada`;
+            source += "+bypassCheckLocation"; // Marca a origem para indicar que passou pelo bypass de localização divergente
         }
 
         // 5. Verifica se o item já foi encontrado em outra localidade
         const foundLocation = await remoteInventoryRegistry.checkAssetLocation(rawValue);
 
+        // Se o registry remoto não está pronto (offline/sem conexão), avisa o operador
+        if (!remoteInventoryRegistry.ready) {
+            userWarnings.printUserWarning('Verificação remota indisponível. Item salvo localmente.');
+        }
+
         if (foundLocation && foundLocation !== selectedLocation) {
             audioManager.playWarning();
             // 1. BLOQUEIA O SCANNER
-            scannerManager.lock();
+            inputArea.lock();
             try {
                 const userConfirmed = await AppModal.confirm(
                     `⚠️ CONFLITO DE LOCALIZAÇÃO`,
@@ -146,12 +150,12 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
             } finally {
                 // 2. DESBLOQUEIA O SCANNER APÓS A DECISÃO (ou erro)
                 // eslint-disable-next-line no-unused-vars
-                try { scannerManager.unlock(); } catch (e) { /* ignore */ }
+                try { inputArea.unlock(); } catch (e) { /* ignore */ }
             }
         }
 
         // 6. Sucesso: Adiciona ao Storage e atualiza Interface
-        const newItem = await assetRepository.addItem(rawValue, selectedLocation, source, observations);
+        const newItem = assetRepository.addItem(rawValue, selectedLocation, source);
 
         if (newItem) {
             audioManager.playSuccess();
@@ -175,7 +179,7 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
         try { userWarnings.printUserWarning('Erro ao processar código de barras. Tente novamente.'); } catch (e) { /* ignore */ }
         // tenta desbloquear scanner caso tenha ficado travado
         // eslint-disable-next-line no-unused-vars
-        try { scannerManager.unlock(); } catch (e) { /* ignore */ }
+        try { inputArea.unlock(); } catch (e) { /* ignore */ }
         return false;
     }
 }
