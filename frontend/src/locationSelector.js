@@ -148,6 +148,8 @@ LocationSelector.prototype.setupEvents = function () {
     const handleChange = function () {
         const newValue = select.value;
 
+        console.log('[locationSelector] Localização selecionada: ' + newValue);
+
         /**
          * Evento global disparado quando a localização é alterada
          * @event locationChanged

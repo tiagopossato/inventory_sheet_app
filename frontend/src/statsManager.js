@@ -225,8 +225,20 @@ StatsManager.prototype._setupEvents = function () {
     }
 
     // 2. Eventos de atualização de dados locais (Sincronização de saída)
-    ['syncCompleted', 'syncStarted', 'assetDataChanged', 'assetAdded'].forEach(evt => {
-        window.addEventListener(evt, () => self._updateStats());
+    ['syncCompleted', 'syncStarted', 'assetDataChanged', 'assetAdded'].forEach(function (evt) {
+        window.addEventListener(evt, function () { self._updateStats(); });
+    });
+
+    // Atualiza o ícone de sync quando o ciclo de sincronização termina
+    window.addEventListener('syncCompleted', function () {
+        var icon = document.getElementById('syncStatusIcon');
+        if (!icon) return;
+        var stats = assetRepository.getStats();
+        if (stats.total === 0 && stats.pending === 0) {
+            icon.textContent = '⏸️';
+            icon.setAttribute('aria-label', 'Ocioso');
+            icon.classList.remove('is-fetching');
+        }
     });
 
     // 3. Evento de atualização do Registro Remoto (Sincronização de entrada)

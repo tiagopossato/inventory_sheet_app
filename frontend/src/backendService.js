@@ -362,7 +362,7 @@ BackendService.prototype.resetStats = function () {
 BackendService.prototype.checkConnectivity = async function () {
     try {
         // Chamada simples para testar conectividade
-        await this._callBackend('getInventoryDataJSON', {});
+        await this._callBackend('getAppSettings', {});
         return true;
     } catch (error) {
         return false;

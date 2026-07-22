@@ -77,7 +77,7 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
         }
 
         // 3. Validação de Duplicidade no Storage Local (Offline)
-        if (await assetRepository.hasItem(rawValue, selectedLocation)) {
+        if (assetRepository.hasItem(rawValue, selectedLocation)) {
             audioManager.playWarning();
             userWarnings.printUserWarning(`${rawValue} já adicionado na lista local`);
             return false;
@@ -125,6 +125,11 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
         // 5. Verifica se o item já foi encontrado em outra localidade
         const foundLocation = await remoteInventoryRegistry.checkAssetLocation(rawValue);
 
+        // Se o registry remoto não está pronto (offline/sem conexão), avisa o operador
+        if (!remoteInventoryRegistry.ready) {
+            userWarnings.printUserWarning('Verificação remota indisponível. Item salvo localmente.');
+        }
+
         if (foundLocation && foundLocation !== selectedLocation) {
             audioManager.playWarning();
             // 1. BLOQUEIA O SCANNER
@@ -150,7 +155,7 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
         }
 
         // 6. Sucesso: Adiciona ao Storage e atualiza Interface
-        const newItem = await assetRepository.addItem(rawValue, selectedLocation, source);
+        const newItem = assetRepository.addItem(rawValue, selectedLocation, source);
 
         if (newItem) {
             audioManager.playSuccess();

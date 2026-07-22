@@ -117,13 +117,25 @@ window.addEventListener('locationChanged', function (e) {
  * @listens window#beforeunload
  */
 window.addEventListener('beforeunload', function (e) {
-  e.preventDefault();
-  e.returnValue = '';
-
-  const stats = assetRepository.getStats();
+  var stats = assetRepository.getStats();
   if (stats.pending > 0) {
-    userWarnings.printUserWarning('Você tem dados não enviados. Aguarde a sincronização antes de sair.');
+    e.preventDefault();
+    e.returnValue = '';
   }
+});
+
+/**
+ * Alerta o operador quando o armazenamento local atinge a quota e itens são perdidos
+ * @event storageEmergency
+ * @listens window#storageEmergency
+ */
+window.addEventListener('storageEmergency', function (e) {
+  var detail = e.detail;
+  var msg = 'ATENÇÃO: Armazenamento cheio. ' + detail.removedCount + ' itens removidos.';
+  if (detail.pendingLost > 0) {
+    msg += ' ' + detail.pendingLost + ' leituras NÃO SALVAS foram perdidas!';
+  }
+  userWarnings.printUserWarning(msg);
 });
 
 // ============================================================================
