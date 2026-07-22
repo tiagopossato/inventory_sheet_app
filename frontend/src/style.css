@@ -1,27 +1,98 @@
 /* =========================================================
-   1. CORE: VARIÁVEIS, RESET E BASE
-========================================================= */
+   1. DESIGN TOKENS
+   ========================================================= */
 :root {
-  /* Cores */
+  /* === Cores Primárias === */
   --color-primary: #007bff;
+  --color-primary-hover: #0056b3;
+  --color-primary-light: rgba(0, 123, 255, 0.1);
   --color-success: #198754;
+  --color-success-dark: #188038;
+  --color-success-light: #e8f5e9;
   --color-danger: #dc3545;
-  --color-warning: #ffc107;
-  --color-gray-light: #eee;
-  --color-gray: #ddd;
-  --color-border: #ccc;
-  --color-text: #333;
+  --color-danger-dark: #d93025;
+  --color-danger-light: #fff5f5;
+  --color-warning-text: #c26400;
+  --color-warning-bg: #ffc107;
+  --color-warning-light: #fffaf5;
+  --color-warning-border: #ffeeba;
+  --color-warning-dark-text: #856404;
+
+  /* === Neutros === */
+  --color-white: #ffffff;
+  --color-gray-50: #f8f9fa;
+  --color-gray-100: #f5f5f5;
+  --color-gray-200: #eeeeee;
+  --color-gray-300: #dddddd;
+  --color-gray-400: #cccccc;
+  --color-gray-500: #999999;
+  --color-gray-600: #777777;
+  --color-gray-700: #666666;
+  --color-gray-800: #333333;
+  --color-black: #000000;
+
+  /* === Fundo / Overlay === */
   --color-bg: #f4f4f4;
+  --color-overlay: rgba(0, 0, 0, 0.6);
+  --color-overlay-light: rgba(0, 0, 0, 0.4);
+  --color-scan-delay: rgba(0, 255, 0, 0.2);
 
-  /* UI */
-  --radius-sm: 5px;
+  /* === Cabeçalho de Modal === */
+  --color-modal-header: #88b6c2;
+
+  /* === Debug Console === */
+  --color-debug-bg: #1e1e1e;
+  --color-debug-text: #00ff00;
+
+  /* === Escala de Espaçamento (base 4px) === */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+
+  /* === Tipografia === */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+
+  /* === Bordas === */
+  --radius-sm: 4px;
   --radius-md: 8px;
+  --radius-lg: 12px;
 
-  /* Alturas padrão */
-  --control-height-sm: 34px;
-  --control-height-lg: 45px;
+  /* === Controles (mínimo 44px para toque mobile) === */
+  --control-height: 44px;
+  --control-height-sm: 36px;
+
+  /* === Sombras === */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 15px rgba(0, 0, 0, 0.3);
+
+  /* === Z-Index (escala) === */
+  --z-banner: 9000;
+  --z-overlay: 1900;
+  --z-modal: 2000;
+  --z-toast: 9999;
+
+  /* === Transições === */
+  --transition-fast: 0.1s ease;
+  --transition-normal: 0.2s ease;
+  --transition-slow: 0.3s ease;
 }
 
+/* =========================================================
+   2. RESET & BASE
+   ========================================================= */
 *,
 *::before,
 *::after {
@@ -36,148 +107,232 @@ body {
 }
 
 body {
-  font-family: sans-serif;
-  padding: 8px;
+  font-family: var(--font-family);
+  padding: var(--space-sm);
   background-color: var(--color-bg);
-  color: var(--color-text);
+  color: var(--color-gray-800);
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  -webkit-text-size-adjust: 100%;
 }
 
 main {
   flex: 1 0 auto;
+  width: 100%;
 }
 
 /* =========================================================
-   2. TIPOGRAFIA E UTILITÁRIOS
-========================================================= */
+   3. TYPOGRAPHY & UTILITIES
+   ========================================================= */
 h1 {
-  font-size: 1.4rem;
+  font-size: var(--text-xl);
   text-align: center;
-  margin: 5px 0 10px;
+  margin: var(--space-xs) 0 var(--space-sm);
 }
 
-.text-center {
-  text-align: center;
+h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+  color: var(--color-gray-800);
 }
 
+h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--color-gray-800);
+}
+
+h4 {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+.text-center { text-align: center; }
 .text-small {
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   color: var(--color-primary);
   font-weight: bold;
 }
+.text-bold { font-weight: bold; }
+.no-margin { margin: 0; }
 
-.text-bold {
-  font-weight: bold;
-}
+/* Status Colors */
+.text-success  { color: var(--color-success); }
+.text-warning  { color: var(--color-warning-text); }
+.text-danger   { color: var(--color-danger); }
 
-.no-margin {
-  margin: 0;
-}
-
-/* Status Colors & Highlights */
-.text-success {
-  color: var(--color-success);
-}
-
-.text-warning {
-  color: #fd7e14;
-}
-
-.text-danger {
-  color: var(--color-danger);
-}
-
+/* Clickable utility */
 .clickable {
   cursor: pointer;
-  transition: transform 0.1s;
+  transition: transform var(--transition-fast);
 }
-
 .clickable:active {
   transform: scale(0.97);
 }
 
-/* =========================================================
-   3. CONTROLES BÁSICOS (INPUTS, BOTÕES, SELECTS)
-========================================================= */
-/* [GEMINI: Inconsistência] Select e Input definidos separadamente, mas inputs dentro de modais tem classes próprias (.input-modal-edit). */
-input[type="text"],
-input[type="number"],
-textarea {
-  font-size: 0.95rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background-color: #fff;
-  padding: 0 8px;
-  height: auto;
+/* Flex utility (used by statsManager.js innerHTML) */
+.flex-align-center {
+  display: flex;
+  align-items: center;
 }
 
-/* [GEMINI: Duplicação/Conflito] A classe .control-row .btn (definida mais abaixo no módulo scanner) sobrepõe paddings definidos aqui. */
+/* =========================================================
+   4. CONTROLS — BUTTONS, INPUTS, SELECTS
+   ========================================================= */
+
+/* --- Base Button --- */
 .btn {
   cursor: pointer;
   font-weight: bold;
-  height: var(--control-height-sm);
-  display: flex;
+  min-height: var(--control-height);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   text-transform: uppercase;
-  font-size: 0.8rem;
-  border: 1px solid #999;
+  font-size: var(--text-xs);
+  border: 1px solid var(--color-gray-500);
   border-radius: var(--radius-sm);
-  padding: 0 10px;
+  padding: 0 var(--space-md);
   user-select: none;
+  background: var(--color-white);
+  color: var(--color-gray-800);
+  text-decoration: none;
+  transition: filter var(--transition-fast), transform var(--transition-fast);
 }
 
+.btn:hover {
+  filter: brightness(0.95);
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: none;
+  transform: none;
+}
+
+/* Button Variants */
 .btn-primary {
   background-color: var(--color-primary);
-  color: #fff;
+  color: var(--color-white);
+  border-color: var(--color-primary);
 }
 
 .btn-red {
   background-color: var(--color-danger);
-  color: #fff;
+  color: var(--color-white);
+  border-color: var(--color-danger);
 }
 
 .btn-green {
   background-color: var(--color-success);
-  color: #fff;
+  color: var(--color-white);
+  border-color: var(--color-success);
 }
 
 .btn-danger-full {
   width: 100%;
   background: var(--color-danger);
-  color: #fff;
+  color: var(--color-white);
   font-weight: bold;
-  height: calc(var(--control-height-sm) * 1.5);
-  margin: 15px 0;
+  min-height: calc(var(--control-height) * 1.3);
+  margin: var(--space-lg) 0;
   border-radius: var(--radius-sm);
+  border: none;
 }
 
-/* [GEMINI: Redundância] Esta classe recria estilos de botão (.btn) manualmente (padding, border-radius) em vez de compor classes. */
+/* --- Location Button (composes with .btn) --- */
 .location-btn {
   display: block;
   width: 100%;
-  box-sizing: border-box;
-  padding: 10px;
-  border: 1px solid #999;
-  border-radius: 4px;
-  text-align: center;
-  margin: 10px 0;
+  margin: var(--space-sm) 0;
 }
 
+/* --- Button Container (2-column grid) --- */
 .btn-container {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  padding: 0px 0;
-  margin-bottom: 0px;
+  gap: var(--space-sm);
   width: 100%;
 }
 
+/* --- Edit Button (table actions) --- */
+.btn-edit {
+  padding: 0 var(--space-sm);
+  min-height: var(--control-height);
+  cursor: pointer;
+  background: var(--color-primary);
+  color: var(--color-white);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: bold;
+  font-size: var(--text-xs);
+  transition: filter var(--transition-fast), transform var(--transition-fast);
+}
 
-/* Container de uniformidade */
-/* [GEMINI: Mistura de responsabilidades] Mistura layout de containers (.stats-container) com elementos de formulário (select.w-100). */
+.btn-edit:hover {
+  filter: brightness(0.9);
+}
+
+.btn-edit:active {
+  transform: scale(0.97);
+}
+
+.btn-edit:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* --- Form Inputs --- */
+input[type="text"],
+input[type="number"],
+textarea {
+  font-size: var(--text-base);          /* 16px = evita zoom automático no iOS */
+  border: 1px solid var(--color-gray-400);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-white);
+  padding: 0 var(--space-sm);
+  min-height: var(--control-height);
+}
+
+input[type="text"]:focus-visible,
+input[type="number"]:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* --- Select --- */
+select {
+  width: 100%;
+  padding: var(--space-sm);
+  font-size: var(--text-base);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-white);
+  border: 1px solid var(--color-gray-400);
+  min-height: var(--control-height);
+  line-height: 1.4;
+  white-space: normal;
+  display: block;
+}
+
+select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* --- Uniform Width Containers --- */
 .control-row,
 #videoArea,
 .stats-container,
@@ -188,33 +343,33 @@ select.w-100 {
   margin-right: auto;
 }
 
-#videoArea {
-  position: relative;
+.control-row {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
 }
 
-select {
-  width: 100%;
-  padding: 8px;
-  font-size: 0.95rem;
-  border-radius: var(--radius-sm);
-  background-color: #fff;
-  /* [GEMINI: Code Smell] Uso de !important para sobrescrever especificidade desconhecida. */
-  height: auto !important;
-  min-height: var(--control-height-sm);
-  line-height: 1.4;
-  white-space: normal;
-  display: block;
+.control-row .btn,
+.control-row button {
+  flex: 1;
+  padding: var(--space-sm);
+}
+
+#manualBarcode {
+  flex: 1;
+  padding: var(--space-sm);
+  min-height: var(--control-height);
 }
 
 /* =========================================================
-   4. DASHBOARD & ESTATÍSTICAS
-========================================================= */
+   5. DASHBOARD & STATS
+   ========================================================= */
 .stats-container {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  padding: 10px 0;
-  margin-bottom: 15px;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  margin-bottom: var(--space-lg);
   width: 100%;
 }
 
@@ -225,158 +380,168 @@ select {
 }
 
 .stat-card {
-  background: white;
-  padding: 12px;
+  background: var(--color-white);
+  padding: var(--space-md);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  border: none;
   text-align: center;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   min-height: 70px;
+  transition: box-shadow var(--transition-normal);
 }
 
 .stat-card.full-width {
   grid-column: 1 / -1;
   min-height: 100px;
-  margin-top: 5px;
+  margin-top: var(--space-xs);
   text-align: left;
 }
 
+.stats-section-label {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  padding: var(--space-sm) 0;
+  margin: 0;
+}
+
+.stats-section-label .stat-label {
+  margin-bottom: 0;
+}
+
 .stat-label {
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   text-transform: uppercase;
-  color: #666;
-  margin-bottom: 4px;
+  color: var(--color-gray-700);
+  margin-bottom: var(--space-xs);
   font-weight: bold;
 }
 
 .stat-value {
-  font-size: 1.4rem;
+  font-size: var(--text-2xl);
   font-weight: 800;
   line-height: 1.2;
+  font-variant-numeric: proportional-nums;
 }
 
 .stat-card.highlight-warning {
-  border-color: #fd7e14;
-  background-color: #fffaf5;
-  border-width: 2px;
+  box-shadow: 0 0 0 2px var(--color-warning-text);
+  background-color: var(--color-warning-light);
 }
 
 .stat-card.highlight-danger {
-  border-color: var(--color-danger);
-  background-color: #fff5f5;
-  border-width: 2px;
+  box-shadow: 0 0 0 2px var(--color-danger);
+  background-color: var(--color-danger-light);
 }
 
-/* 1. DEFINIÇÃO ÚNICA DE ANIMAÇÃO 
-   Usamos um nome mais específico para evitar conflitos com bibliotecas externas 
-*/
+/* Stats table metrics (replaces inline styles in statsManager.js) */
+.stat-cell {
+  padding: var(--space-sm) 6px;
+}
+
+.stat-location-name {
+  margin-bottom: var(--space-xs);
+}
+
+.stat-metrics {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  gap: 6px;
+}
+
+.stat-found {
+  color: var(--color-success-dark);
+}
+
+.stat-missing {
+  color: var(--color-danger-dark);
+}
+
+/* Focus Mode */
+.focus-mode {
+  text-align: center;
+  width: 100%;
+  padding: var(--space-xs) 0;
+}
+
+.focus-location {
+  font-size: var(--text-base);
+  font-weight: bold;
+  color: var(--color-primary);
+  margin: var(--space-xs) 0;
+}
+
+.focus-count {
+  font-size: var(--text-3xl);
+  font-weight: 900;
+  color: var(--color-gray-800);
+}
+
+.focus-count small {
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+  font-weight: 400;
+}
+
+/* --- Sync Status Icon --- */
 @keyframes app-icon-spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
-/* 2. CLASSES DE ESTADO (Lógica) */
-
-/* Estado: Carregando/Buscando
-   Aplicamos a animação e o bloqueio de cliques
-*/
 .is-fetching {
-  animation: app-icon-spin 1s linear infinite !important;
-  color: var(--primary-color, #2c5aa0) !important;
+  animation: app-icon-spin 1s linear infinite;
+  color: var(--color-primary);
   pointer-events: none;
-  /* Previne cliques duplos durante o processo */
   cursor: wait;
 }
 
-/* 3. COMPONENTE DE ÍCONE DE STATUS 
-   Refinado para garantir que o ícone rotacione sobre o próprio eixo
-*/
 #syncStatusIcon {
   display: inline-flex;
-  /* Melhor que inline-block para alinhar ícones */
   align-items: center;
   justify-content: center;
-  margin-right: 0px;
-  font-size: 0.9rem;
-  transition: color 0.3s ease, transform 0.3s ease;
+  font-size: var(--text-sm);
+  transition: color var(--transition-slow), transform var(--transition-slow);
   vertical-align: middle;
-  /* Alinha com o texto ao lado */
 }
 
-/* Classe para itens de localização clicáveis */
+/* --- Clickable Location --- */
 .clickable-location {
-  color: var(--primary-color, #2c5aa0);
-  /* Cor de destaque */
+  color: var(--color-primary);
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.2s ease;
-  padding: 2px 4px;
-  border-radius: 4px;
+  transition: all var(--transition-normal);
+  padding: 2px var(--space-xs);
+  border-radius: var(--radius-sm);
   display: inline-block;
 }
 
-/* Efeito ao passar o mouse */
 .clickable-location:hover {
-  background-color: rgba(44, 90, 160, 0.1);
-  /* Fundo leve da cor primária */
+  background-color: var(--color-primary-light);
   text-decoration: underline;
   transform: translateX(4px);
-  /* Pequeno deslocamento para a direita */
 }
 
-/* Efeito de clique (feedback tátil) */
 .clickable-location:active {
   transform: scale(0.98);
 }
 
-/* 4. CLASSES DE CORES (Opcional, para simplificar o JS) */
-/* Modo Foco */
-.focus-mode {
-  text-align: center;
-  width: 100%;
-  padding: 5px 0;
-}
-
-.focus-location {
-  font-size: 1rem;
-  font-weight: bold;
-  color: var(--color-primary);
-  margin: 4px 0;
-}
-
-.focus-count {
-  font-size: 1.8rem;
-  font-weight: 900;
-  color: var(--color-text);
-}
-
-.focus-count small {
-  font-size: 0.85rem;
-  color: #888;
-  font-weight: 400;
-}
-
 /* =========================================================
-   5. MÓDULO SCANNER & CÂMERA
-========================================================= */
-/* [GEMINI: Definição Fragmentada] #videoArea já recebeu estilos em "CONTROLES BÁSICOS" (width/margin). Aqui recebe o resto. */
+   6. SCANNER & CAMERA
+   ========================================================= */
 #videoArea {
   position: relative;
-  background: #000;
+  background: var(--color-black);
   border-radius: var(--radius-sm);
   overflow: hidden;
   height: 180px;
   min-height: 125px;
-  margin-top: 5px;
-  margin-bottom: 5px;
+  margin-top: var(--space-xs);
+  margin-bottom: var(--space-xs);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -393,14 +558,14 @@ video {
   height: 100vh;
   min-height: 300px;
   position: relative;
-  background: #000;
+  background: var(--color-black);
 }
 
 #reader canvas,
 #reader video,
 #reader img {
   width: 100% !important;
-  height: cover !important;
+  height: auto !important;
   object-fit: contain;
   display: block;
   top: 0;
@@ -408,7 +573,7 @@ video {
 }
 
 #cameraPlaceholder {
-  color: #666;
+  color: var(--color-gray-700);
   position: absolute;
 }
 
@@ -419,504 +584,112 @@ video {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 255, 0, 0.2);
+  background: var(--color-scan-delay);
   pointer-events: none;
   z-index: 10;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--color-white);
   font-weight: bold;
-  font-size: 1.2rem;
-}
-
-.control-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.control-row .btn,
-.control-row button {
-  flex: 1;
-  padding: 10px;
-}
-
-#manualBarcode {
-  flex: 1;
-  padding: 8px;
+  font-size: var(--text-lg);
 }
 
 /* =========================================================
-   6. TABELAS E PAGINAÇÃO
-========================================================= */
-/* Tabela Resumo */
+   7. TABLES & PAGINATION
+   ========================================================= */
+
+/* --- Base Data Table --- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  background: var(--color-white);
+}
+
+.data-table th {
+  padding: var(--space-sm);
+  border: 1px solid var(--color-gray-400);
+  font-weight: bold;
+  text-align: left;
+}
+
+.data-table td {
+  padding: var(--space-sm);
+  border: 1px solid var(--color-gray-300);
+  vertical-align: middle;
+}
+
+/* --- Compact Table (stats location context) --- */
 .compact-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 8px;
-  font-size: 0.85rem;
+  margin-top: var(--space-sm);
+  font-size: var(--text-sm);
 }
 
 .compact-table th {
   text-align: center;
-  border-bottom: 1px solid var(--color-gray);
-  padding-bottom: 4px;
-  color: #777;
-  font-size: 0.75rem;
+  border-bottom: 1px solid var(--color-gray-300);
+  padding-bottom: var(--space-xs);
+  color: var(--color-gray-600);
+  font-size: var(--text-xs);
   text-transform: uppercase;
 }
 
 .compact-table td {
   padding: 6px 0;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--color-gray-100);
 }
 
-/* Tabela Principal de Leitura */
+/* --- Barcode Table --- */
 .table-header-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 5px;
-  background-color: #f8f9fa;
-  border: 1px solid var(--color-border);
-  border-radius: 8px 8px 0 0;
-  margin-top: 0px;
-  margin-bottom: 0;
+  padding: var(--space-xs);
+  background-color: var(--color-gray-50);
+  border: 1px solid var(--color-gray-400);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  margin: 0;
 }
 
 #barcode-table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
-  font-size: 0.85rem;
-  border: 1px solid var(--color-border);
+  background: var(--color-white);
+  font-size: var(--text-sm);
+  border: 1px solid var(--color-gray-400);
   border-top: none;
   margin-top: 0;
 }
 
 #barcode-table th {
-  background-color: var(--color-gray-light);
-  padding: 5px;
-  border: 1px solid var(--color-border);
+  background-color: var(--color-gray-200);
+  padding: var(--space-xs);
+  border: 1px solid var(--color-gray-400);
 }
 
 #barcode-table td {
-  padding: 5px;
-  border: 1px solid var(--color-gray);
+  padding: var(--space-xs);
+  border: 1px solid var(--color-gray-300);
   vertical-align: middle;
 }
 
-/* Paginação */
-.pagination-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  background: var(--color-gray-light);
-  border: 1px solid var(--color-border);
-  border-top: none;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.pagination-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.pagination-info {
-  font-size: 0.85rem;
-  color: var(--color-text);
-  font-weight: bold;
-}
-
-.pagination-btn {
-  padding: 6px 12px;
-  white-space: nowrap;
-  border: 1px solid var(--color-border);
-  background: white;
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-/* =========================================================
-   7. MODAIS E POPUPS (AGRUPADOS)
-========================================================= */
-
-/* --- Modal Edição Full Screen --- */
-.modal-full {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: white;
-  z-index: 2000;
-  overflow-y: auto;
-  box-sizing: border-box;
-  animation: fadeIn 0.2s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.modal-header {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #88b6c2;
-}
-
-.modal-header h2 {
-  margin: 0;
-  color: var(--color-text);
-  font-size: 1.4rem;
-
-  /* color: #777; */
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-/* --- Modal Genérico (AppModal) --- */
-/* [GEMINI: Inconsistência de UI] Temos .app-modal-overlay (escuro, flex center) e .modal-full (branco, full screen). UI mista. */
-.app-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s;
-  visibility: hidden;
-}
-
-.app-modal-overlay.active {
-  opacity: 1;
-  visibility: visible;
-}
-
-.app-modal-box {
-  position: fixed;
-  top: 20px;
-  /* Distância do topo */
-  transform: translateX(-50%) scale(0.9);
-  /* Ajusta a centralização */
-  background: #fff;
-  width: 90%;
-  max-width: 400px;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s;
-  font-family: sans-serif;
-}
-
-.app-modal-overlay.active .app-modal-box {
-  transform: scale(1);
-}
-
-.app-modal-title {
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin-bottom: 10px;
-  color: #d9534f;
-}
-
-.app-modal-body {
-  font-size: 1rem;
-  color: #333;
-  margin-bottom: 20px;
-  white-space: pre-line;
-  line-height: 1.5;
-}
-
-.app-modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.app-btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.app-btn-cancel {
-  background: #f0f0f0;
-  color: #333;
-}
-
-.app-btn-confirm {
-  background: #2196F3;
-  color: white;
-}
-
-.app-btn:hover {
-  opacity: 0.9;
-}
-
-/* --- Modal de Observação --- */
-
-/* Contador de caracteres discreto */
-.char-count {
-  font-size: 0.75rem;
-  text-align: right;
-  color: #888;
-  margin-bottom: 5px;
-}
-
-.popup-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.popup-title {
-  margin: 0;
-  font-size: 1.1rem;
-  color: var(--color-text);
-}
-
-.table-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Elementos de Formulário dentro de Modais */
-.form-group {
-  margin-bottom: 10px;
-}
-
-.form-group label {
-  display: block;
-  font-weight: bold;
-  font-size: 0.85rem;
-  color: #666;
-  margin-bottom: 5px;
-}
-
-.input-modal-readonly {
-  width: 100%;
-  padding: 12px;
-  height: auto;
-  background: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  color: #777;
-  font-size: 1rem;
-  pointer-events: none;
-  white-space: pre-wrap; /* ✨ Faz a div respeitar quebras de linha */
-  word-break: break-word; /* Garante que palavras muito grandes não quebrem o layout */
-}
-
-.input-modal-edit {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
-  min-height: 48px;
-}
-
-.modal-footer-btns {
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
-  margin-bottom: 30px;
-}
-
-.btn-modal {
-  flex: 1;
-  padding: 10px;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 1rem;
-  cursor: pointer;
-  border: none;
-}
-
-.btn-modal-cancel {
-  background: #f0f0f0;
-  color: #333;
-  border: 1px solid #ccc;
-}
-
-.btn-modal-save {
-  background: var(--color-success);
-  color: white;
-}
-
-/* =========================================================
-   8. FOOTER, ALERTS E BANNERS
-========================================================= */
-.app-footer {
-  padding: 15px;
-  background: var(--color-gray-light);
-  border-top: 1px solid var(--color-border);
-  color: #666;
-  font-size: 0.75rem;
-  text-align: center;
-  width: 100%;
-}
-
-#offlineBanner {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  background: var(--color-danger);
-  color: white;
-  padding: 10px;
-  text-align: center;
-  z-index: 9999;
-  font-weight: bold;
-}
-
-#warning-area {
-  text-align: center;
-  font-size: 0.9rem;
-  margin: 5px 0;
-  min-height: 1.2em;
-  transition: all 0.2s ease;
-  border-radius: 4px;
-}
-
-#warning-area.warning-active {
-  background-color: #ffff00;
-  color: #856404;
-  padding: 8px;
-  border: 1px solid #ffeeba;
-}
-
-/* =========================================================
-   9. RESPONSIVIDADE
-========================================================= */
-@media (min-width: 768px) {
-  #videoArea {
-    height: 400px;
-  }
-
-  input[type="text"],
-  select,
-  .btn {
-    height: var(--control-height-lg);
-  }
-}
-
-/* Ajuste para evitar que o conteúdo fique por baixo da navegação do celular */
-@media (max-width: 768px) {
-  #assetNotFoundModal .table-scroll {
-    /* Adiciona um respiro generoso no final da lista */
-    padding-bottom: 40px;
-  }
-
-  #notFoundTable {
-    /* Garante que a tabela não "cole" nas bordas laterais */
-    margin-bottom: 20px;
-  }
-}
-
-/* Garante que o modal ocupe a altura visual real, 
-   mesmo com a barra de endereços do navegador mudando */
-#assetNotFoundModal.full-screen {
-  height: 100svh;
-  height: -webkit-fill-available;
-  /* Suporte para Safari iOS */
-}
-
-/* =========================================================
-   10. MÓDULO: ASSETS NOT FOUND (ITENS NÃO ENCONTRADOS)
-========================================================= */
-/* Overlay exclusivo para este módulo */
-#notFoundOverlay,
-#messageModalOverlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 1900;
-  backdrop-filter: blur(2px);
-}
-
-/* --- Modal Itens Não Encontrados --- */
-/* [GEMINI: Duplicação Exata] #assetNotFoundModal.full-screen duplica 90% das regras de .modal-full. */
-#assetNotFoundModal.full-screen {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  /* Usa svh para respeitar os botões do sistema e barras do browser */
-  height: 100vh;
-  height: 100svh;
-  background-color: #ffffff;
-  z-index: 2000;
-  display: none;
-  flex-direction: column;
-  /* Garante que nada escape para baixo */
-  overflow: hidden;
-}
-
-#assetNotFoundModal .popup-header {
-  background: #f8f9fa;
-  padding: 15px;
-  border-bottom: 1px solid #ddd;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-#assetNotFoundModal .table-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px;
-  -webkit-overflow-scrolling: touch;
-  /* Adiciona uma margem de segurança no final da rolagem */
-  padding-bottom: env(safe-area-inset-bottom, 30px);
-}
-
-/* [GEMINI: Triplicação de Tabela] #notFoundTable é a terceira definição de tabela no arquivo. */
+/* --- NotFound Table --- */
 #notFoundTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
 
 #notFoundTable thead tr {
-  background: #eee;
+  background: var(--color-gray-200);
 }
 
 #notFoundTable th,
 #notFoundTable td {
-  border: 1px solid var(--color-border);
-  padding: 10px;
+  border: 1px solid var(--color-gray-400);
+  padding: var(--space-sm);
   text-align: left;
 }
 
@@ -924,7 +697,7 @@ video {
   top: 0;
   text-align: left;
   font-weight: bold;
-  background: #eee;
+  background: var(--color-gray-200);
   z-index: 10;
 }
 
@@ -938,36 +711,496 @@ video {
   font-weight: bold;
 }
 
-.btn-edit {
-  padding: 4px 4px;
-  /* aumenta altura do botão */
-  height: 40px;
+/* Column width helpers (replaces inline styles in assetsNotFound.js) */
+.col-narrow  { width: 40px; }
+.col-medium  { width: 100px; }
+.col-action  { width: 90px; }
+
+/* --- Clickable Cell (replaces inline styles in barcodeTable.js) --- */
+.cell-link {
   cursor: pointer;
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: 4px;
+  color: var(--color-primary);
+  text-decoration: underline;
 }
 
-/* Alerta de "Consultando Planilha" */
+.cell-link:hover {
+  color: var(--color-primary-hover);
+}
+
+/* --- Pagination --- */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm);
+  background: var(--color-gray-200);
+  border: 1px solid var(--color-gray-400);
+  border-top: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.pagination-info {
+  font-size: var(--text-sm);
+  color: var(--color-gray-800);
+  font-weight: bold;
+}
+
+.pagination-btn {
+  padding: 6px var(--space-md);
+  white-space: nowrap;
+  border: 1px solid var(--color-gray-400);
+  background: var(--color-white);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  min-height: var(--control-height);
+  min-width: var(--control-height);
+  font-weight: bold;
+  transition: filter var(--transition-fast), transform var(--transition-fast);
+}
+
+.pagination-btn:hover {
+  filter: brightness(0.95);
+}
+
+.pagination-btn:active {
+  transform: scale(0.97);
+}
+
+.pagination-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Centered cells (table alignment helpers) */
+.centered-cell {
+  text-align: center;
+}
+
+/* =========================================================
+   8. MODALS
+   ========================================================= */
+
+/* --- 8a. Full-Screen Modal (base para edição, obs, notFound) --- */
+.modal-full,
+.modal-fullscreen,
+.full-screen {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100svh;
+  background: var(--color-white);
+  z-index: var(--z-modal);
+  overflow: hidden;
+  flex-direction: column;
+  box-sizing: border-box;
+  animation: fadeIn var(--transition-normal);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#assetNotFoundModal.full-screen {
+  height: 100vh;
+  height: 100svh;
+}
+
+.modal-header {
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--color-gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-modal-header);
+  flex-shrink: 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.modal-body {
+  padding: var(--space-xl);
+  overflow-y: auto;
+}
+
+/* --- 8b. Overlay Modal (AppModal confirm/alert) --- */
+.app-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--color-overlay);
+  z-index: var(--z-toast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+  visibility: hidden;
+}
+
+.app-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.app-modal-box {
+  position: fixed;
+  top: var(--space-xl);
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  background: var(--color-white);
+  width: 90%;
+  max-width: 400px;
+  padding: var(--space-xl);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  transition: transform var(--transition-normal);
+  font-family: var(--font-family);
+}
+
+.app-modal-overlay.active .app-modal-box {
+  transform: translateX(-50%) scale(1);
+}
+
+.app-modal-title {
+  font-size: var(--text-lg);
+  font-weight: bold;
+  margin-bottom: var(--space-sm);
+  color: var(--color-danger);
+}
+
+.app-modal-body {
+  font-size: var(--text-base);
+  color: var(--color-gray-800);
+  margin-bottom: var(--space-xl);
+  white-space: pre-line;
+  line-height: 1.5;
+}
+
+.app-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.app-btn {
+  padding: var(--space-sm) var(--space-xl);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: bold;
+  min-height: var(--control-height);
+  transition: opacity var(--transition-fast);
+}
+
+.app-btn-cancel {
+  background: var(--color-gray-100);
+  color: var(--color-gray-800);
+}
+
+.app-btn-confirm {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.app-btn:hover {
+  opacity: 0.9;
+}
+
+.app-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* --- Modal Overlays (Not Found + Message) --- */
+#notFoundOverlay,
+#messageModalOverlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--color-overlay-light);
+  z-index: var(--z-overlay);
+}
+
+/* --- Popup Header (inside modals) --- */
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-gray-50);
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--color-gray-300);
+  flex-shrink: 0;
+}
+
+.popup-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--color-gray-800);
+}
+
+/* --- Scrollable Table Area (inside modals) --- */
+.table-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-sm);
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: env(safe-area-inset-bottom, 30px);
+}
+
+/* --- Form Elements inside Modals --- */
+.form-group {
+  margin-bottom: var(--space-sm);
+}
+
+.form-group label {
+  display: block;
+  font-weight: bold;
+  font-size: var(--text-sm);
+  color: var(--color-gray-700);
+  margin-bottom: var(--space-xs);
+}
+
+.input-modal-readonly {
+  width: 100%;
+  padding: var(--space-md);
+  min-height: var(--control-height);
+  background: var(--color-gray-100);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  color: var(--color-gray-600);
+  font-size: var(--text-base);
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: flex;
+  align-items: center;
+}
+
+.input-modal-edit {
+  width: 100%;
+  padding: var(--space-md);
+  border: 1px solid var(--color-gray-400);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-base);
+  min-height: 48px;
+}
+
+.input-modal-edit:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.char-count {
+  font-size: var(--text-xs);
+  text-align: right;
+  color: var(--color-gray-600);
+  margin-bottom: var(--space-xs);
+}
+
+/* --- Modal Footer Buttons --- */
+.modal-footer-btns {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-xl);
+  margin-bottom: var(--space-3xl);
+}
+
+.btn-modal {
+  flex: 1;
+  padding: var(--space-sm);
+  border-radius: var(--radius-md);
+  font-weight: bold;
+  font-size: var(--text-base);
+  cursor: pointer;
+  border: none;
+  min-height: var(--control-height);
+  transition: filter var(--transition-fast);
+}
+
+.btn-modal-cancel {
+  background: var(--color-gray-100);
+  color: var(--color-gray-800);
+  border: 1px solid var(--color-gray-400);
+}
+
+.btn-modal-save {
+  background: var(--color-success);
+  color: var(--color-white);
+}
+
+.btn-modal:hover {
+  filter: brightness(0.95);
+}
+
+.btn-modal:active {
+  transform: scale(0.98);
+}
+
+.btn-modal:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   9. FOOTER, BANNERS & ALERTS
+   ========================================================= */
+.app-footer {
+  padding: var(--space-lg);
+  background: var(--color-gray-200);
+  border-top: 1px solid var(--color-gray-400);
+  color: var(--color-gray-700);
+  font-size: var(--text-xs);
+  text-align: center;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+/* Offline Banner */
+#offlineBanner {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: var(--color-danger);
+  color: var(--color-white);
+  padding: var(--space-sm);
+  text-align: center;
+  z-index: var(--z-banner);
+  font-weight: bold;
+}
+
+/* Warning Area */
+#warning-area {
+  text-align: center;
+  font-size: var(--text-sm);
+  margin: var(--space-xs) 0;
+  min-height: 1.2em;
+  transition: all var(--transition-normal);
+  border-radius: var(--radius-sm);
+}
+
+#warning-area.warning-active {
+  background-color: #fff8e1;
+  color: var(--color-warning-dark-text);
+  padding: var(--space-sm);
+  border-left: 3px solid var(--color-warning-text);
+}
+
+/* Consulting Alert (Loading) */
 #consultingAlert {
   display: none;
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 9999;
-  background: white;
-  padding: 25px;
-  border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: var(--z-toast);
+  background: var(--color-white);
+  padding: var(--space-2xl);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
   text-align: center;
   min-width: 250px;
-  border: 2px solid #ddd;
+  border: 2px solid var(--color-gray-300);
 }
 
 #consultingAlert p {
   margin: 0;
   font-weight: bold;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
+}
+
+/* =========================================================
+   10. RESPONSIVE BREAKPOINTS
+   ========================================================= */
+@media (min-width: 768px) {
+  #videoArea {
+    height: 400px;
+  }
+
+  input[type="text"],
+  select {
+    min-height: var(--control-height);
+  }
+}
+
+@media (max-width: 768px) {
+  #assetNotFoundModal .table-scroll {
+    padding-bottom: 40px;
+  }
+
+  #notFoundTable {
+    margin-bottom: var(--space-xl);
+  }
+}
+
+/* =========================================================
+   11. ACCESSIBILITY & PREFERENCES
+   ========================================================= */
+
+/* Remove animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus visible for keyboard navigation (only shows when using keyboard) */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   12. LOADING OVERLAY
+   ========================================================= */
+#loadingOverlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--color-overlay-light);
+  z-index: var(--z-toast);
+  cursor: wait;
 }

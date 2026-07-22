@@ -92,30 +92,29 @@ StatsManager.prototype._innerHtml = function (parentId) {
 
             <div id="${this.elements.contextCard}" class="stat-card full-width">
                 <div class="flex-align-center" style="margin-bottom: 8px;">
-                    <span id="syncStatusIcon" class="is-fetching">🔁</span>
+                    <span id="syncStatusIcon" class="is-fetching" aria-label="Sincronizando" role="status">🔁</span>
                     <span class="stat-label">Resumo Geral do processo de Inventário:</span>
                 </div>
                 <div id="${this.elements.contextContent}"></div>
             </div>
-        </div>
 
-        <div class="flex-align-center">
-            <span class="stat-label">Sincronização com a planilha</span>
-        </div>
-        <div class="stats-container"> 
+            <div class="stats-section-label">
+                <span class="stat-label">Sincronização com a planilha</span>
+            </div>
+
             <div class="stat-card">
                 <span class="stat-label">Lidos (Dispositivo)</span>
-                <span id="${this.elements.total}" class="stat-value">0</span>
+                <span id="${this.elements.total}" class="stat-value" aria-live="polite">0</span>
             </div>
             <div class="stat-card">
                 <span class="stat-label">Sincronizados</span>
-                <span id="${this.elements.synced}" class="stat-value text-success">0</span>
+                <span id="${this.elements.synced}" class="stat-value text-success" aria-live="polite">0</span>
             </div>
             <div class="stat-card" id="card-pending">
                 <span class="stat-label">Pendentes</span>
-                <span id="${this.elements.pending}" class="stat-value text-warning">0</span>
+                <span id="${this.elements.pending}" class="stat-value text-warning" aria-live="polite">0</span>
             </div>
-            <div class="stat-card clickable" id="card-failed">
+            <div class="stat-card clickable" id="card-failed" role="button" tabindex="0">
                 <span class="stat-label">Falhas 🔄</span>
                 <span id="${this.elements.failed}" class="stat-value text-danger">0</span>
             </div>
@@ -146,42 +145,45 @@ StatsManager.prototype.renderLocationContext = function () {
         locations.forEach(loc => {
             const tr = document.createElement('tr');
             const td = document.createElement('td');
-            td.style.padding = '8px 6px';
+            td.className = 'stat-cell';
 
             /* ---------- Localidade ---------- */
             const nameDiv = document.createElement('div');
             nameDiv.className = 'clickable-location'; // Aplica todo o estilo visual
+            nameDiv.setAttribute('role', 'button');
+            nameDiv.setAttribute('tabindex', '0');
+            nameDiv.setAttribute('aria-label', 'Selecionar local: ' + loc.name);
             nameDiv.innerHTML = `🔍 <span>${loc.name}</span>`;
-            nameDiv.style.marginBottom = '4px';
+            nameDiv.classList.add('stat-location-name');
 
-            // Adiciona a ação de clique
-            nameDiv.onclick = () => {
-                // Chamando o set com o nome da localização
+            // Ação de selecionar localização
+            const selectLocation = () => {
                 locationSelector.setSelectedLocation(loc.name);
-                // 2. Rola para o topo de forma suave
-                window.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
-                });
-            }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            nameDiv.onclick = selectLocation;
+            nameDiv.onkeydown = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    selectLocation();
+                }
+            };
 
             /* ---------- Métricas ---------- */
             const metrics = document.createElement('div');
-            metrics.style.display = 'flex';
-            metrics.style.justifyContent = 'space-between';
-            metrics.style.fontSize = '12px';
-            metrics.style.gap = '6px';
+            metrics.className = 'stat-metrics';
 
             const total = document.createElement('span');
-            total.innerHTML = `📦 <strong>${loc.totalAssets}</strong> total`;
+            total.innerHTML = '<strong>' + loc.totalAssets + '</strong> total';
 
             const found = document.createElement('span');
             found.innerHTML = `✅ <strong>${loc.assetsFindedCount}</strong> encontrados`;
-            found.style.color = '#188038';
+            found.className = 'stat-found';
 
             const missing = document.createElement('span');
             missing.innerHTML = `❌ <strong>${loc.missingAssets}</strong> faltantes`;
-            missing.style.color = '#d93025';
+            missing.className = 'stat-missing';
 
             metrics.appendChild(total);
             metrics.appendChild(found);
@@ -212,7 +214,15 @@ StatsManager.prototype._setupEvents = function () {
 
     // 1. Clique para reenvio de falhas
     const fCard = document.getElementById('card-failed');
-    if (fCard) fCard.onclick = () => assetRepository.retryFailed();
+    if (fCard) {
+        fCard.onclick = () => assetRepository.retryFailed();
+        fCard.onkeydown = (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                assetRepository.retryFailed();
+            }
+        };
+    }
 
     // 2. Eventos de atualização de dados locais (Sincronização de saída)
     ['syncCompleted', 'syncStarted', 'assetDataChanged', 'assetAdded'].forEach(evt => {
@@ -238,9 +248,11 @@ StatsManager.prototype._setupEvents = function () {
             // Roda o ícone de carregamento
             statusIcon.className = 'is-fetching';
             statusIcon.textContent = '🔁';
+            statusIcon.setAttribute('aria-label', 'Sincronizando');
         } else {
             // Para o ícone e mostra o check de sucesso
             statusIcon.textContent = '✅';
+            statusIcon.setAttribute('aria-label', 'Sincronizado');
             if (statusIcon.classList.contains('is-fetching')) {
                 statusIcon.classList.remove('is-fetching');
             }

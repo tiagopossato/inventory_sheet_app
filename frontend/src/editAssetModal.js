@@ -11,6 +11,7 @@
 
 import { assetRepository } from './assetRepository.js';
 import { inventoryBaseline } from './inventoryBaseline.js';
+import { userWarnings } from './userWarnings.js';
 
 /**
  * @typedef {Object} FormFields
@@ -104,7 +105,7 @@ EditAssetModal.prototype.innerHTML = function () {
 
                 <div class="form-group">
                     <label>Tombamento</label>
-                    <input type="text" id="tombamentoField" class="input-modal-readonly" style="height: 40px;" readonly/>
+                    <input type="text" id="tombamentoField" class="input-modal-readonly" readonly/>
                 </div>
 
                <div class="form-group">
@@ -242,10 +243,11 @@ EditAssetModal.prototype.submit = function () {
     }
 
     // Captura o item retornado pelo storage
-    const success = assetRepository.updateItem(uid, newState, newIpvu, newObs);
+    var success = assetRepository.updateItem(uid, newState, newIpvu, newObs);
 
     if (!success) {
-        console.error('EditAssetModal: Falha ao atualizar item');
+        userWarnings.printUserWarning('Falha ao salvar alterações. Tente novamente.');
+        return; // Mantém o modal aberto para o usuário revisar ou tentar novamente
     }
 
     this.close();

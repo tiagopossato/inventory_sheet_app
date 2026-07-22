@@ -28,6 +28,21 @@ export function InputArea() {
     this.manualBarcodeInput = null;
 
     /**
+     * Cache de códigos recentemente despachados para evitar double-fire de scanners
+     * Mapeia código → timestamp (Date.now())
+     * @type {Object<string, number>}
+     * @private
+     */
+    this._recentCodes = {};
+
+    /**
+     * Janela de debounce para rejeitar códigos duplicados (em ms)
+     * @type {number}
+     * @private
+     */
+    this._debounceWindow = 3000;
+
+    /**
      * Inicializa o módulo
      * @private
      */
@@ -89,12 +104,26 @@ InputArea.prototype._setupManualInput = function () {
 
         // Se chegar a 10 caracteres, dispara o envio automático!
         if (currentValue.length >= 10) {
-            // CORREÇÃO: Limpa o campo ANTES de disparar o evento. 
+            // CORREÇÃO: Limpa o campo ANTES de disparar o evento.
             // Assim, se o evento der erro em outro arquivo, o campo já estará limpo.
-            self.manualBarcodeInput.value = ""; 
+            self.manualBarcodeInput.value = "";
+
+            // Debounce: rejeita o mesmo código se despachado dentro da janela de 3s
+            // Previne double-fire de scanners e digitação acidental repetida
+            var now = Date.now();
+            var lastTime = self._recentCodes[currentValue];
+            if (lastTime && (now - lastTime) < self._debounceWindow) {
+                // Código já foi despachado recentemente — ignora
+                self._cleanupRecentCodes();
+                return;
+            }
+
+            // Registra o código como despachado
+            self._recentCodes[currentValue] = now;
+            self._cleanupRecentCodes();
 
             // Dispara o evento de forma assíncrona para não travar a UI
-            setTimeout(() => {
+            setTimeout(function () {
                 window.dispatchEvent(new CustomEvent('codeScanned', {
                     detail: {
                         code: currentValue,
@@ -111,6 +140,21 @@ InputArea.prototype._setupManualInput = function () {
             self.setFocus();
         });
     }
+};
+
+/**
+ * Remove entradas expiradas do cache de códigos recentes
+ * para evitar acúmulo de memória
+ * @private
+ */
+InputArea.prototype._cleanupRecentCodes = function () {
+    var self = this;
+    var now = Date.now();
+    Object.keys(self._recentCodes).forEach(function (code) {
+        if (now - self._recentCodes[code] > self._debounceWindow) {
+            delete self._recentCodes[code];
+        }
+    });
 };
 
 /**

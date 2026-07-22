@@ -62,7 +62,7 @@ function BarcodeTable() {
             <table id="barcode-table">
                 <thead>
                     <tr>
-                        <th class="col-stat">Stat</th>
+                        <th class="col-stat">Status</th>
                         <th class="col-patrimonio">Patrimônio</th>
                         <th class="col-name">Descrição curta</th>
                         <th class="col-location">Local</th>
@@ -142,11 +142,8 @@ BarcodeTable.prototype._updateItemInTable = function (item) {
     if (row.cells[3].textContent !== loc) {
         row.cells[3].textContent = loc;
 
-        // --- 🎨 Deixando o texto com visual "clicável" ---
-        row.cells[3].style.cursor = 'pointer';         // Muda o mouse para a "mãozinha"
-        row.cells[3].style.color = '#007bff';          // Deixa a cor azul (padrão de links)
-        row.cells[3].style.textDecoration = 'underline'; // Adiciona o sublinhado
-        // row.cells[3].style.fontWeight = 'bold';     // (Opcional) Deixa em negrito
+        // Aplica classe de link clicável
+        row.cells[3].classList.add('cell-link');
 
         // Adiciona a ação de clique
         row.cells[3].onclick = () => {
@@ -216,10 +213,8 @@ BarcodeTable.prototype.renderTable = function (currentFilter = null) {
         const loc = item.location.split(' ')[0];
         const locationCell = self._createCell(loc, "default-cell");
 
-        // Aplica o estilo visual
-        locationCell.style.cursor = 'pointer';
-        locationCell.style.color = '#007bff';
-        locationCell.style.textDecoration = 'underline';
+        // Aplica classe de link clicável
+        locationCell.classList.add('cell-link');
 
         // Usamos addEventListener que é mais robusto que o onclick
         locationCell.onclick = () => {

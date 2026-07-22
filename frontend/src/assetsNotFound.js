@@ -95,10 +95,10 @@ AssetsNotFound.prototype.injectHTML = function () {
                 <table id="notFoundTable">
                     <thead>
                         <tr>
-                            <th style="width: 40px;">#</th>
-                            <th style="width: 100px;">Tombo</th>
+                            <th class="col-narrow">#</th>
+                            <th class="col-medium">Tombo</th>
                             <th>Descrição</th>
-                            <th style="width: 90px;">Ação</th>
+                            <th class="col-action">Ação</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
