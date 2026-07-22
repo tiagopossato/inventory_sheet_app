@@ -4,58 +4,53 @@
 
 ## ✅ Concluído (2026-07-22)
 
+### Rodada 1 — Critique P0 + P1 visuais
 - [x] **P0 — Save silencioso no modal de edição** (`editAssetModal.js`): `updateItem()` retorna `false` e o modal fechava como sucesso. Corrigido: warning visível + modal mantém dados abertos para retry.
 - [x] **P0 — Double-fire de scanner sem debounce** (`inputArea.js`): mesmo código disparado 2x em <3s era processado em duplicata. Corrigido: cache `_recentCodes` com janela de 3s bloqueia reenvios.
 - [x] **P1 — Cabeçalho "Stat" em inglês** (`barcodeTable.js`): trocado para "Status".
 - [x] **P1 — Grid de stats com label órfã** (`statsManager.js` + `style.css`): dois containers separados unificados em grid único com `.stats-section-label`.
 - [x] **P1 — Emoji noise na tabela de contexto** (`statsManager.js`): removido 📦 redundante; mantidos ✅❌ (suporte a daltonismo) e 🔍 (ícone de ação).
+
+### Rodada 2 — Documentação
 - [x] **DESIGN.md gerado** via `/impeccable document` — 27 tokens de cor, 5 escalas tipográficas, 7 variantes de componente, 10 componentes renderizáveis no sidecar.
 - [x] **PRODUCT.md atualizado** com base no novo CLAUDE.md — GAS template safety, capabilities expandidas, 4 abas da planilha documentadas.
+- [x] **DATA_FLOW.md criado** — fluxo completo de dados em 6 fases, máquina de estados, pontos de atenção.
+- [x] **LOCAL_SERVER_TODO.md** — itens do servidor local extraídos para arquivo separado.
+
+### Rodada 3 — 7 problemas de fluxo de dados
+- [x] **P1 — `_handleStorageFull` com warning e evicção inteligente** (`assetRepository.js` + `main.js`): SYNCED removidos primeiro, PENDING/FAILED preservados. Evento `storageEmergency` dispara warning "X leituras NÃO SALVAS foram perdidas!".
+- [x] **P2 — Health check no `assetSyncManager`** (`assetSyncManager.js`): `getAppSettings()` antes de cada batch. Se inacessível, pula ciclo sem marcar FAILED. Complementa `navigator.onLine`.
+- [x] **P3 — Warning de registry offline** (`processBarcode.js`): se `!remoteInventoryRegistry.ready`, avisa "Verificação remota indisponível. Item salvo localmente."
+- [x] **P4 — `beforeunload` condicional** (`main.js`): só bloqueia se `stats.pending > 0`. Removeu chamada inútil a `userWarnings.printUserWarning`.
+- [x] **P5 — Ícone de sync distingue ocioso** (`statsManager.js`): listener `syncCompleted` mostra ⏸️ quando `total===0 && pending===0`.
+- [x] **P6 — `checkConnectivity()` corrigido** (`backendService.js`): `getInventoryDataJSON` → `getAppSettings`.
+- [x] **P7 — `async` removido de `hasItem()` e `addItem()`** (`assetRepository.js` + `processBarcode.js`): funções 100% síncronas, `async`/`await` desnecessários removidos.
+- [x] **Debug: log de localização** (`locationSelector.js`): `console.log` a cada seleção de local.
 
 ---
 
 ## 1. Crítico — Risco de Perda de Dados
-
-### 1.1 `_handleStorageFull` descarta dados silenciosamente (P0)
-Quando a quota do LocalStorage é excedida, o método trunca para os 100 itens mais recentes (ordenados por `createdAt`) sem alertar o usuário. Itens PENDING podem ser descartados junto com SYNCED.
-
-**Sugestão:** Disparar `userWarnings.printUserWarning` ANTES do truncamento. Priorizar remover itens SYNCED primeiro (já estão na planilha), depois PENDING mais antigos. Se houver PENDING sendo descartados, warning crítico: "X leituras não salvas foram perdidas. Verifique a planilha."
 
 ### 1.2 Sem migração de schema do LocalStorage
 A chave `BARCODE_APP_DATA_V1` é fixa. Se a estrutura do item mudar, `JSON.parse` no `_load()` pode criar objetos inconsistentes.
 
 **Sugestão:** Adicionar campo `schemaVersion` e função `_migrate()`.
 
-### 1.3 `beforeunload` ineficaz em browsers modernos
-O handler de `beforeunload` tenta avisar sobre dados PENDING, mas browsers modernos ignoram `returnValue` customizado. O `userWarnings.printUserWarning` tem timeout de 12.5s — a página pode fechar antes do usuário ver.
-
-**Sugestão:** Como browsers não permitem mais mensagens customizadas no `beforeunload`, o comportamento padrão do browser (diálogo genérico "Você tem alterações não salvas") é o melhor disponível. Garantir que `e.preventDefault()` e `e.returnValue = ''` estejam presentes para triggar o diálogo nativo.
-
 ---
 
 ## 2. Alto — Integridade e Confiabilidade
 
-### 2.1 `remoteInventoryRegistry` com cache de 30s permite duplicação entre usuários
-Dois usuários escaneando o mesmo item em intervalo <30s não veem a leitura um do outro. No modo offline, a verificação remota falha silenciosamente e o item é aceito.
+### 2.1 `remoteInventoryRegistry` com cache de 30s permite duplicação entre usuários (PARCIAL)
+Dois usuários escaneando o mesmo item em intervalo <30s não veem a leitura um do outro. ✅ Já feito: warning quando registry está offline (`!remoteInventoryRegistry.ready`). ❌ Pendente: reduzir intervalo para 10-15s, tentative lock local, deduplicação por código no backend.
 
 **Sugestão:** Reduzir intervalo para 10-15s. Adicionar "tentative lock" local — quando um item é escaneado, registrá-lo imediatamente no cache como provisório. Backend deve ter deduplicação por código de barras, não só por UID.
 
-### 2.2 `navigator.onLine` não detecta Wi-Fi sem internet
-`assetSyncManager._processQueue()` confia em `navigator.onLine` para decidir se tenta sync. Dispositivo em Wi-Fi sem acesso real à internet reporta `true`, sync tenta, falha 5x, item vai para FAILED. Usuário vê ❌ sem diagnóstico.
-
-**Sugestão:** Adicionar health check real ao backend (endpoint leve como `getAppSettings`). Antes de marcar lote como FAILED, verificar conectividade real. Expor diagnóstico no card de falhas: "Sem internet", "Erro do servidor", "Timeout".
-
-### 2.3 `checkConnectivity` chama endpoint inexistente (CONFIRMADO)
-`backendService.js` linha 365 chama `getInventoryDataJSON` que não existe no `backend/main.js`. A função sempre retorna `false`. Não é usada no fluxo principal, mas é uma armadilha para código futuro.
-
-**Sugestão:** Trocar para `getAppSettings` (já existe, é leve) ou implementar endpoint `/api/health` dedicado.
-
-### 2.4 Erros silenciosos no catch do `processBarcode`
+### 2.2 Erros silenciosos no catch do `processBarcode`
 O catch (linhas 166-178) engole qualquer erro e mostra mensagem genérica. Se `assetRepository.addItem` lançar exceção inesperada, o operador não sabe o que aconteceu.
 
 **Sugestão:** Diferenciar tipos de erro (rede, validação, storage cheio) com mensagens específicas.
 
-### 2.5 Quota da Google Sheets API sob carga concorrente
+### 2.3 Quota da Google Sheets API sob carga concorrente
 20 usuários escaneando simultaneamente. Cada `saveCodeBatch` faz leitura completa da aba `leituras` (para `uidToRow`) + escritas. Chamadas podem falhar com `ScriptError` por cota.
 
 **Sugestão:** Aumentar `BATCH_SIZE` nos horários de pico, consolidar batches pendentes, usar `CacheService` para o mapa `uidToRow`.
@@ -131,12 +126,7 @@ Para 1000+ itens, `JSON.stringify` + `localStorage.setItem` síncrono pode causa
 
 ## 6. Qualidade de Código
 
-### 6.1 `async` desnecessário em `hasItem()` e `addItem()`
-Declarados `async` mas sem `await` — microtasks desnecessárias.
-
-**Sugestão:** Remover `async` e ajustar callers.
-
-### 6.2 Módulos sem padrão consistente
+### 6.1 Módulos sem padrão consistente
 - `AppModal` → objeto literal com métodos
 - `AssetRepository` → constructor function + prototype
 - `InputArea` → constructor function com `export function`
@@ -145,22 +135,22 @@ Declarados `async` mas sem `await` — microtasks desnecessárias.
 
 **Sugestão:** Documentar convenção no CLAUDE.md (já feito). Migrar `InputArea` e `processBarcode` para constructor+prototype quando conveniente.
 
-### 6.3 `barcodeScanner.js` existe mas não é usado
+### 6.2 `barcodeScanner.js` existe mas não é usado
 Módulo implementado e funcional, mas importação comentada em `main.js`.
 
 **Sugestão:** Reativar (necessário para dispositivos sem câmera) ou remover o arquivo.
 
-### 6.4 `state` e `ipvu` como magic numbers
+### 6.3 `state` e `ipvu` como magic numbers
 Valores 0-4 para estado e 0-10 para IPVU sem constantes definidas.
 
 **Sugestão:** Criar enum `ConservationState` e `EstimatedLifespan` similar ao `AssetStatus`.
 
-### 6.5 `innerHTML +=` para injeção de botões
+### 6.4 `innerHTML +=` para injeção de botões
 `openMessageModalBtn` e `notFoundBtn` injetados via `innerHTML +=` — força reparse completo do container.
 
 **Sugestão:** Usar `insertAdjacentHTML('beforeend', ...)` ou `createElement` + `appendChild`.
 
-### 6.6 ESLint ecmaVersion discorda do target de build
+### 6.5 ESLint ecmaVersion discorda do target de build
 `vite.config.js` define `target: "es2015"` mas `eslint.config.js` usa `ecmaVersion: 2017`. `String.padStart` e `async/await` passam no linter mas precisam de polyfill para ES2015.
 
 **Sugestão:** Alinhar — ou target sobe para ES2017 (GAS V8 suporta) ou ecmaVersion desce para 2015.
@@ -179,12 +169,7 @@ Deploy manual via `npm run deploy`.
 
 **Sugestão:** GitHub Action que rode lint + testes em PRs para `main`.
 
-### 7.3 Sem health check funcional no backend GAS (CONFIRMADO)
-`backendService.checkConnectivity()` chama endpoint que não existe.
-
-**Sugestão:** Usar `getAppSettings` como health check (já existe, é leve, responde rápido).
-
-### 7.4 Sem log de erros no backend de produção
+### 7.3 Sem log de erros no backend de produção
 Erros no GAS só são visíveis no editor do Apps Script. Em produção, ninguém monitora.
 
 **Sugestão:** Adicionar aba `logs` na planilha para registrar erros críticos com timestamp.
@@ -195,11 +180,11 @@ Erros no GAS só são visíveis no editor do Apps Script. Em produção, ningué
 
 | # | Cenário | Gatilho | Dano | Mitigação |
 |---|---------|---------|------|-----------|
-| 1 | LocalStorage overflow silencioso | 2000+ itens escaneados | Perda de leituras PENDING sem warning | Limpar SYNCED primeiro, alertar antes de descartar PENDING |
-| 2 | Duplicação por cache staleness | 2 usuários, mesmo item, <30s | Duplicata na planilha | Intervalo menor + deduplicação no backend |
+| 1 | LocalStorage overflow | 2000+ itens escaneados | Perda de leituras PENDING com warning ativo | ✅ SYNCED primeiro, evento `storageEmergency` com warning |
+| 2 | Duplicação por cache staleness | 2 usuários, mesmo item, <30s | Duplicata na planilha | ⚠️ Parcial: warning offline adicionado. Pendente: intervalo menor + deduplicação |
 | 3 | Quota Sheets API estourada | 50 usuários simultâneos | Chamadas falham, fila PENDING cresce | CacheService, batch maior, consolidar batches |
 | 4 | Erro de build flag em produção | `__IS_DEV__` mal avaliado | Mock GAS carregado em prod, chamadas para localhost | Smoke test pós-build |
-| 5 | Wi-Fi sem internet | `navigator.onLine === true` mas sem rota | Itens marcados FAILED após 5 tentativas, diagnóstico ausente | Health check real antes de marcar FAILED |
+| 5 | Wi-Fi sem internet | `navigator.onLine === true` mas sem rota | Ciclo de sync pula com health check, itens não punidos | ✅ Health check `getAppSettings()` antes de cada batch |
 
 ---
 
@@ -207,23 +192,19 @@ Erros no GAS só são visíveis no editor do Apps Script. Em produção, ningué
 
 | Prio | Item | Impacto |
 |------|------|---------|
-| **P0** | 1.1 — `_handleStorageFull` silencioso | Perda de dados |
 | **P0** | 1.2 — Migração de schema do LocalStorage | Perda de dados |
-| **Alta** | 2.1 — Duplicação entre usuários (cache 30s) | Integridade |
-| **Alta** | 2.2 — `navigator.onLine` não detecta Wi-Fi sem internet | Integridade |
-| **Alta** | 2.5 — Quota da Sheets API | App inoperante |
+| **Alta** | 2.1 — Duplicação entre usuários (cache 30s) — parcial: warning adicionado | Integridade |
+| **Alta** | 2.3 — Quota da Sheets API | App inoperante |
 | **Alta** | 3.1 — Modals sem ARIA dialog | Acessibilidade |
 | **Alta** | 3.2 — Sections com aria-labelledby órfãos | Acessibilidade |
 | **Alta** | 3.5 — Zero onboarding | Experiência |
-| **Média** | 2.3 — `checkConnectivity` quebrado | Confiabilidade |
 | **Média** | 3.3 — Touch targets <44px | Acessibilidade |
 | **Média** | 3.6 — Sem undo | Experiência |
 | **Média** | 4.1 — Sanitização no backend GAS | Segurança |
 | **Média** | 5.1 — Cache `getAppSettings` | Performance |
-| **Média** | 6.1 — `async` desnecessário | Qualidade |
 | **Média** | 7.1 — Sem testes | Regressões |
-| **Baixa** | 1.3 — `beforeunload` ineficaz | UX (limitação de browser) |
+| **Baixa** | 2.2 — Erros silenciosos no catch do `processBarcode` | UX |
 | **Baixa** | 3.4 — Inconsistência readonly fields | Qualidade |
 | **Baixa** | 3.7 — Sem atalhos power user | UX |
-| **Baixa** | 6.3 — `barcodeScanner.js` órfão | Manutenção |
-| **Baixa** | 6.5 — `innerHTML +=` | Performance |
+| **Baixa** | 6.2 — `barcodeScanner.js` órfão | Manutenção |
+| **Baixa** | 6.4 — `innerHTML +=` | Performance |
