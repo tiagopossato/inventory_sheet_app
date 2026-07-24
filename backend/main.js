@@ -133,8 +133,34 @@ function getUserName() {
 }
 
 // ============================================================
-// saveCodeBatch — Aba "leituras" (escrita com Lock)
+// saveCodeBatch — Aba "leituras" (escrita com Lock + cache UID)
 // ============================================================
+
+// Cache do índice UID→linha (evita ler planilha inteira a cada chamada)
+let _uidIndexCache = null;
+let _uidIndexLastRow = 0;
+
+function getUidIndex(sheet) {
+  if (_uidIndexCache) return _uidIndexCache;
+
+  _uidIndexCache = Object.create(null);
+  const lastRow = sheet.getLastRow();
+  _uidIndexLastRow = lastRow;
+  if (lastRow > 1) {
+    const values = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    for (let i = 0; i < values.length; i++) {
+      const uid = values[i][0];
+      if (uid) _uidIndexCache[uid] = 2 + i;
+    }
+  }
+  return _uidIndexCache;
+}
+
+// Valida que o UID na linha cacheada ainda é o esperado (1 leitura de 1 célula)
+function validateUidAtRow(sheet, uid, row) {
+  const actualUid = sheet.getRange(row, 1).getValue();
+  return actualUid === uid;
+}
 
 function saveCodeBatch(items) {
   if (!Array.isArray(items) || items.length === 0) {
@@ -165,21 +191,9 @@ function saveCodeBatch(items) {
     );
     const user = getUserName();
 
-    const lastRow = sheet.getLastRow();
-    const uidToRow = Object.create(null);
-
-    if (lastRow > HEADER_ROWS) {
-      const values = sheet
-        .getRange(HEADER_ROWS + 1, 1, lastRow - HEADER_ROWS, LAST_COL_LEITURAS)
-        .getValues();
-
-      values.forEach(function (row, index) {
-        const uid = row[0];
-        if (uid && !uidToRow[uid]) {
-          uidToRow[uid] = HEADER_ROWS + 1 + index;
-        }
-      });
-    }
+    // Índice UID→linha com cache (lê planilha só no cold start)
+    let uidToRow = getUidIndex(sheet);
+    let indexStale = false;
 
     const rowsToUpdate = [];
     const rowsToAppend = [];
@@ -200,7 +214,16 @@ function saveCodeBatch(items) {
         String(item.source != null ? item.source : '')
       ];
 
-      const existingRow = uidToRow[item.uid];
+      let existingRow = uidToRow[item.uid];
+
+      // Valida que o UID na linha cacheada ainda é o correto
+      if (existingRow && !validateUidAtRow(sheet, item.uid, existingRow)) {
+        // Cache stale — invalida e recria
+        _uidIndexCache = null;
+        uidToRow = getUidIndex(sheet);
+        existingRow = uidToRow[item.uid];
+        indexStale = true;
+      }
 
       if (existingRow) {
         rowsToUpdate.push({ row: existingRow, data: rowData });
@@ -226,6 +249,16 @@ function saveCodeBatch(items) {
       sheet
         .getRange(appendStartRow, 1, rowsToAppend.length, LAST_COL_LEITURAS)
         .setValues(rowsToAppend);
+
+      // Atualiza cache incrementalmente com os novos UIDs
+      if (!indexStale && _uidIndexCache) {
+        for (let a = 0; a < persistedUids.length; a++) {
+          const appendedUid = persistedUids[a];
+          if (!_uidIndexCache[appendedUid]) {
+            _uidIndexCache[appendedUid] = appendStartRow + a;
+          }
+        }
+      }
     }
 
     return persistedUids;
@@ -321,10 +354,20 @@ function getNotFoundItens(targetLocation) {
 }
 
 // ============================================================
-// getAppSettings — Aba "app_config"
+// getAppSettings — Aba "app_config" (com cache de 60s)
 // ============================================================
 
-function getAppSettings() {
+let _appSettingsCache = null;
+let _appSettingsCacheTime = 0;
+const APPSETTINGS_CACHE_TTL = 60 * 1000; // 1 minuto
+
+function getAppSettings(params) {
+  const forceRefresh = params && params._forceRefresh;
+  const now = Date.now();
+  if (!forceRefresh && _appSettingsCache && (now - _appSettingsCacheTime) < APPSETTINGS_CACHE_TTL) {
+    return _appSettingsCache;
+  }
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('app_config');
 
@@ -341,5 +384,8 @@ function getAppSettings() {
   // Delega para inventory-logic.js
   const settings = buildAppSettings(data);
   Logger.log(settings);
+
+  _appSettingsCache = settings;
+  _appSettingsCacheTime = now;
   return settings;
 }

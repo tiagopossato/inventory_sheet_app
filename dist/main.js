@@ -47,20 +47,20 @@
 function getInventoryData(add_spec) {
   if (add_spec === undefined) { add_spec = true; }
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheetInventario = ss.getSheetByName('inventario');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetInventario = ss.getSheetByName('inventario');
 
   if (!sheetInventario) {
     throw new Error("getInventoryData: Aba 'inventario' não encontrada.");
   }
 
-  var lastRowInv = sheetInventario.getLastRow();
+  const lastRowInv = sheetInventario.getLastRow();
   if (lastRowInv < 2) {
     return { locations: [], inventory: [] };
   }
 
-  var numCols = add_spec ? 9 : 3;
-  var invData = sheetInventario.getRange(2, 4, lastRowInv - 1, numCols).getValues();
+  const numCols = add_spec ? 9 : 3;
+  const invData = sheetInventario.getRange(2, 4, lastRowInv - 1, numCols).getValues();
 
   // Delega para inventory-logic.js
   return buildInventoryData(invData, add_spec);
@@ -93,28 +93,28 @@ function getInventoryData(add_spec) {
 function getInventorySummary(targetLocation) {
   if (targetLocation === undefined) { targetLocation = null; }
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // --- Aba "leituras" ---
-  var sheetDados = ss.getSheetByName("leituras");
+  const sheetDados = ss.getSheetByName("leituras");
   if (!sheetDados) {
     throw new Error("getInventorySummary: Aba 'leituras' não encontrada.");
   }
 
-  var leiturasData = [];
-  var sheetDadosLastRow = sheetDados.getLastRow();
+  let leiturasData = [];
+  const sheetDadosLastRow = sheetDados.getLastRow();
   if (sheetDadosLastRow >= 2) {
     leiturasData = sheetDados.getRange(2, 2, sheetDadosLastRow - 1, 3).getValues();
   }
 
   // --- Aba "localidades" ---
-  var sheetLoc = ss.getSheetByName("localidades");
+  const sheetLoc = ss.getSheetByName("localidades");
   if (!sheetLoc) {
     throw new Error("getInventorySummary: Aba 'localidades' não encontrada.");
   }
 
-  var localidadesData = [];
-  var sheetLocLastRow = sheetLoc.getLastRow();
+  let localidadesData = [];
+  const sheetLocLastRow = sheetLoc.getLastRow();
   if (sheetLocLastRow >= 2) {
     localidadesData = sheetLoc.getRange('A2:D' + sheetLocLastRow).getValues();
   }
@@ -128,20 +128,46 @@ function getInventorySummary(targetLocation) {
 // ============================================================
 
 function getUserName() {
-  var userEmail = Session.getActiveUser().getEmail();
+  const userEmail = Session.getActiveUser().getEmail();
   return userEmail ? userEmail.split('@')[0] : 'anonimo';
 }
 
 // ============================================================
-// saveCodeBatch — Aba "leituras" (escrita com Lock)
+// saveCodeBatch — Aba "leituras" (escrita com Lock + cache UID)
 // ============================================================
+
+// Cache do índice UID→linha (evita ler planilha inteira a cada chamada)
+let _uidIndexCache = null;
+let _uidIndexLastRow = 0;
+
+function getUidIndex(sheet) {
+  if (_uidIndexCache) return _uidIndexCache;
+
+  _uidIndexCache = Object.create(null);
+  const lastRow = sheet.getLastRow();
+  _uidIndexLastRow = lastRow;
+  if (lastRow > 1) {
+    const values = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    for (let i = 0; i < values.length; i++) {
+      const uid = values[i][0];
+      if (uid) _uidIndexCache[uid] = 2 + i;
+    }
+  }
+  return _uidIndexCache;
+}
+
+// Valida que o UID na linha cacheada ainda é o esperado (1 leitura de 1 célula)
+function validateUidAtRow(sheet, uid, row) {
+  const actualUid = sheet.getRange(row, 1).getValue();
+  return actualUid === uid;
+}
 
 function saveCodeBatch(items) {
   if (!Array.isArray(items) || items.length === 0) {
     return [];
   }
 
-  var lock = LockService.getScriptLock();
+  const lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000);
   } catch (e) {
@@ -149,46 +175,34 @@ function saveCodeBatch(items) {
   }
 
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("leituras");
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("leituras");
     if (!sheet) {
       throw new Error('Aba "leituras" não encontrada.');
     }
 
-    var HEADER_ROWS = 1;
+    const HEADER_ROWS = 1;
 
-    var now = new Date();
-    var formattedDate = Utilities.formatDate(
+    const now = new Date();
+    const formattedDate = Utilities.formatDate(
       now,
       Session.getScriptTimeZone(),
       'dd/MM/yyyy HH:mm:ss'
     );
-    var user = getUserName();
+    const user = getUserName();
 
-    var lastRow = sheet.getLastRow();
-    var uidToRow = Object.create(null);
+    // Índice UID→linha com cache (lê planilha só no cold start)
+    let uidToRow = getUidIndex(sheet);
+    let indexStale = false;
 
-    if (lastRow > HEADER_ROWS) {
-      var values = sheet
-        .getRange(HEADER_ROWS + 1, 1, lastRow - HEADER_ROWS, LAST_COL_LEITURAS)
-        .getValues();
-
-      values.forEach(function (row, index) {
-        var uid = row[0];
-        if (uid && !uidToRow[uid]) {
-          uidToRow[uid] = HEADER_ROWS + 1 + index;
-        }
-      });
-    }
-
-    var rowsToUpdate = [];
-    var rowsToAppend = [];
-    var persistedUids = [];
+    const rowsToUpdate = [];
+    const rowsToAppend = [];
+    const persistedUids = [];
 
     items.forEach(function (item) {
       if (!item || !item.uid) return;
 
-      var rowData = [
+      const rowData = [
         String(item.uid),
         formattedDate,
         String(item.code != null ? item.code : ''),
@@ -200,7 +214,16 @@ function saveCodeBatch(items) {
         String(item.source != null ? item.source : '')
       ];
 
-      var existingRow = uidToRow[item.uid];
+      let existingRow = uidToRow[item.uid];
+
+      // Valida que o UID na linha cacheada ainda é o correto
+      if (existingRow && !validateUidAtRow(sheet, item.uid, existingRow)) {
+        // Cache stale — invalida e recria
+        _uidIndexCache = null;
+        uidToRow = getUidIndex(sheet);
+        existingRow = uidToRow[item.uid];
+        indexStale = true;
+      }
 
       if (existingRow) {
         rowsToUpdate.push({ row: existingRow, data: rowData });
@@ -222,10 +245,20 @@ function saveCodeBatch(items) {
 
     // Appends
     if (rowsToAppend.length > 0) {
-      var appendStartRow = sheet.getLastRow() + 1;
+      const appendStartRow = sheet.getLastRow() + 1;
       sheet
         .getRange(appendStartRow, 1, rowsToAppend.length, LAST_COL_LEITURAS)
         .setValues(rowsToAppend);
+
+      // Atualiza cache incrementalmente com os novos UIDs
+      if (!indexStale && _uidIndexCache) {
+        for (let a = 0; a < persistedUids.length; a++) {
+          const appendedUid = persistedUids[a];
+          if (!_uidIndexCache[appendedUid]) {
+            _uidIndexCache[appendedUid] = appendStartRow + a;
+          }
+        }
+      }
     }
 
     return persistedUids;
@@ -243,7 +276,7 @@ function saveCodeBatch(items) {
 // ============================================================
 
 function saveMessage(payload) {
-  var lock = LockService.getScriptLock();
+  const lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000);
   } catch (e) {
@@ -251,31 +284,31 @@ function saveMessage(payload) {
   }
 
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("observacoes");
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("observacoes");
 
     if (!sheet) {
       throw new Error("saveMessage: Aba 'observacoes' não encontrada.");
     }
 
-    var uuid = payload.uid;
+    const uuid = payload.uid;
 
     // Verificação de duplicidade
-    var lastRow = sheet.getLastRow();
+    const lastRow = sheet.getLastRow();
     if (lastRow > 0) {
-      var uidsExistentes = sheet.getRange(1, 1, lastRow, 1).getValues().flat();
+      const uidsExistentes = sheet.getRange(1, 1, lastRow, 1).getValues().flat();
       if (uidsExistentes.includes(uuid)) {
         return uuid;
       }
     }
 
-    var now = new Date();
-    var formattedDate = Utilities.formatDate(
+    const now = new Date();
+    const formattedDate = Utilities.formatDate(
       now,
       Session.getScriptTimeZone(),
       'dd/MM/yyyy HH:mm:ss'
     );
-    var aferidor = getUserName();
+    const aferidor = getUserName();
 
     sheet.appendRow([
       uuid,
@@ -304,42 +337,55 @@ function getNotFoundItens(targetLocation) {
     throw new Error("getNotFoundItens: targetLocation não fornecido.");
   }
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('nao_encontrados_geral');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('nao_encontrados_geral');
 
   if (!sheet) {
     throw new Error("getNotFoundItens: aba nao_encontrados_geral não encontrada");
   }
 
-  var lastRow = sheet.getLastRow();
+  const lastRow = sheet.getLastRow();
   if (lastRow < 3) return [];
 
-  var data = sheet.getRange(3, 1, lastRow - 2, 3).getValues();
+  const data = sheet.getRange(3, 1, lastRow - 2, 3).getValues();
 
   // Delega para inventory-logic.js
   return filterNotFoundItems(data, targetLocation);
 }
 
 // ============================================================
-// getAppSettings — Aba "app_config"
+// getAppSettings — Aba "app_config" (com cache de 60s)
 // ============================================================
 
-function getAppSettings() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('app_config');
+let _appSettingsCache = null;
+let _appSettingsCacheTime = 0;
+const APPSETTINGS_CACHE_TTL = 60 * 1000; // 1 minuto
+
+function getAppSettings(params) {
+  const forceRefresh = params && params._forceRefresh;
+  const now = Date.now();
+  if (!forceRefresh && _appSettingsCache && (now - _appSettingsCacheTime) < APPSETTINGS_CACHE_TTL) {
+    return _appSettingsCache;
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('app_config');
 
   if (!sheet) {
     Logger.log("Aba 'app_config' não encontrada.");
     return {};
   }
 
-  var lastRow = sheet.getLastRow();
+  const lastRow = sheet.getLastRow();
   if (lastRow < 1) return {};
 
-  var data = sheet.getRange(2, 1, lastRow, 2).getValues();
+  const data = sheet.getRange(2, 1, lastRow, 2).getValues();
 
   // Delega para inventory-logic.js
-  var settings = buildAppSettings(data);
+  const settings = buildAppSettings(data);
   Logger.log(settings);
+
+  _appSettingsCache = settings;
+  _appSettingsCacheTime = now;
   return settings;
 }

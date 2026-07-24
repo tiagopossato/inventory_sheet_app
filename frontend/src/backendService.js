@@ -361,8 +361,8 @@ BackendService.prototype.resetStats = function () {
  */
 BackendService.prototype.checkConnectivity = async function () {
     try {
-        // Chamada simples para testar conectividade
-        await this._callBackend('getAppSettings', {});
+        // Força refresh para não pegar cache — testa conectividade REAL
+        await this._callBackend('getAppSettings', { _forceRefresh: true });
         return true;
     } catch (error) {
         return false;

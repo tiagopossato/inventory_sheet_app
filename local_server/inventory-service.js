@@ -25,6 +25,10 @@ export class InventoryService {
   constructor(sheetsService) {
     this.sheetsService = sheetsService;
     this._lockQueue = Promise.resolve(); // Fila de locks (mutex assíncrono)
+    this._appSettingsCache = null;       // Cache de getAppSettings
+    this._appSettingsCacheTime = 0;
+    this._uidIndex = null;               // Cache do índice UID→linha
+    this._uidIndexLastRow = 0;
   }
 
   // ==========================================================
@@ -204,7 +208,12 @@ export class InventoryService {
   /**
    * Configurações do aplicativo (chave-valor).
    */
-  async getAppSettings() {
+  async getAppSettings(forceRefresh) {
+    const now = Date.now();
+    if (!forceRefresh && this._appSettingsCache && (now - this._appSettingsCacheTime) < 60000) {
+      return this._appSettingsCache;
+    }
+
     const ss = await this.getActiveSpreadsheet();
     const sheet = await ss.getSheetByName('app_config');
 
@@ -219,7 +228,37 @@ export class InventoryService {
     const data = await (await sheet.getRange(2, 1, lastRow, 2)).getValues();
 
     // Delega para módulo canônico
-    return buildAppSettings(data);
+    const settings = buildAppSettings(data);
+    this._appSettingsCache = settings;
+    this._appSettingsCacheTime = now;
+    return settings;
+  }
+
+  // ==========================================================
+  // Helpers de cache do índice UID→linha
+  // ==========================================================
+
+  async getUidIndex(sheet) {
+    if (this._uidIndex) return this._uidIndex;
+
+    this._uidIndex = Object.create(null);
+    const lastRow = await sheet.getLastRow();
+    this._uidIndexLastRow = lastRow;
+    if (lastRow > 1) {
+      const range = await sheet.getRange(2, 1, lastRow - 1, 1);
+      const values = range.getValues();
+      for (let i = 0; i < values.length; i++) {
+        const uid = values[i][0];
+        if (uid) this._uidIndex[uid] = 2 + i;
+      }
+    }
+    return this._uidIndex;
+  }
+
+  async validateUidAtRow(sheet, uid, row) {
+    const range = await sheet.getRange(row, 1, 1, 1);
+    const values = range.getValues();
+    return values[0][0] === uid;
   }
 
   // ==========================================================
@@ -253,23 +292,9 @@ export class InventoryService {
       const formattedDate = this.formatDate(now, 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm:ss');
       const user = await this.getUserName();
 
-      const lastRow = await sheet.getLastRow();
-      const uidToRow = Object.create(null);
-
-      // Buscar UIDs existentes apenas se houver dados
-      if (lastRow > HEADER_ROWS) {
-        try {
-          const values = await (await sheet.getRange(HEADER_ROWS + 1, 1, lastRow - HEADER_ROWS, LAST_COL_LEITURAS)).getValues();
-          values.forEach(function (row, index) {
-            const uid = row[0];
-            if (uid && !uidToRow[uid]) {
-              uidToRow[uid] = HEADER_ROWS + 1 + index;
-            }
-          });
-        } catch (error) {
-          console.warn('Erro ao buscar UIDs existentes:', error);
-        }
-      }
+      // Índice UID→linha com cache (lê planilha só no cold start)
+      let uidToRow = await this.getUidIndex(sheet);
+      let indexStale = false;
 
       const rowsToUpdate = [];
       const rowsToAppend = [];
@@ -291,7 +316,17 @@ export class InventoryService {
           String(item.source != null ? item.source : '')
         ];
 
-        const existingRow = uidToRow[item.uid];
+        let existingRow = uidToRow[item.uid];
+
+        // Valida que o UID na linha cacheada ainda é o correto
+        if (existingRow && !(await this.validateUidAtRow(sheet, item.uid, existingRow))) {
+          // Cache stale — invalida e recria
+          this._uidIndex = null;
+          uidToRow = await this.getUidIndex(sheet);
+          existingRow = uidToRow[item.uid];
+          indexStale = true;
+        }
+
         if (existingRow) {
           rowsToUpdate.push({ row: existingRow, data: rowData });
         } else {
@@ -311,6 +346,18 @@ export class InventoryService {
       }
       if (rowsToAppend.length > 0) {
         await this.processAppends(sheet, rowsToAppend, LAST_COL_LEITURAS);
+      }
+
+      // Atualiza cache incrementalmente com os novos UIDs
+      if (!indexStale && this._uidIndex) {
+        // Recalcula a última linha após appends
+        const newLastRow = await sheet.getLastRow();
+        for (let a = 0; a < persistedUids.length; a++) {
+          const appendedUid = persistedUids[a];
+          if (!this._uidIndex[appendedUid]) {
+            this._uidIndex[appendedUid] = newLastRow - rowsToAppend.length + a + 1;
+          }
+        }
       }
 
       console.log('✅ Batch processado com sucesso:', persistedUids);

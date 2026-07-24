@@ -1227,7 +1227,7 @@ var __spreadValues = (a, b) => {
   };
   BackendService.prototype.checkConnectivity = async function() {
     try {
-      await this._callBackend("getAppSettings", {});
+      await this._callBackend("getAppSettings", { _forceRefresh: true });
       return true;
     } catch (error) {
       return false;
@@ -2402,11 +2402,8 @@ Deseja prosseguir mesmo assim?`
   };
   AssetSyncManager.prototype._processQueue = async function() {
     if (this.isSyncing || !navigator.onLine) return;
-    try {
-      await backendService.getAppSettings();
-    } catch (e) {
-      return;
-    }
+    const isConnected = await backendService.checkConnectivity();
+    if (!isConnected) return;
     this.cycleCount++;
     if (this.cycleCount >= FAILED_RETRY_CYCLES) {
       this.cycleCount = 0;
@@ -2457,7 +2454,7 @@ Deseja prosseguir mesmo assim?`
   new AssetSyncManager(assetRepository);
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-DpBf6BBe.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-C9RBLoXf.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
@@ -2554,8 +2551,8 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.07.24-003";
-      el.title = `Versão do build: ${"2026.07.24-003"}`;
+      el.textContent = "2026.07.24-004";
+      el.title = `Versão do build: ${"2026.07.24-004"}`;
     }
   });
   window.addEventListener("error", function(e) {
@@ -2588,7 +2585,7 @@ Deseja prosseguir mesmo assim?`
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.07.24-003"}`);
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.07.24-004"}`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
       throw new Error(`Falha na inicialização do debug: ${error.message}`);

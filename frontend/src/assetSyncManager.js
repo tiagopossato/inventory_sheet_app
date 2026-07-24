@@ -93,13 +93,10 @@ AssetSyncManager.prototype._processQueue = async function () {
   // 1. Guardrails
   if (this.isSyncing || !navigator.onLine) return;
 
-  // 1b. Health check: verifica conectividade real (Wi-Fi sem internet = navigator.onLine mente)
-  try {
-    await backendService.getAppSettings();
-  } catch (e) {
-    // Backend inacessível — não tenta sync, não pune itens como FAILED
-    return;
-  }
+  // 1b. Health check: único ponto de teste de conectividade real
+  // (Wi-Fi sem internet = navigator.onLine mente)
+  const isConnected = await backendService.checkConnectivity();
+  if (!isConnected) return;
 
   // Recuperação periódica: itens FAILED podem ter falhado por instabilidade de rede
   // passageira enquanto navigator.onLine permanecia true (ex.: Wi-Fi sem acesso à internet).

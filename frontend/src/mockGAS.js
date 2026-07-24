@@ -31,8 +31,9 @@ if (!isGAS) {
                 return this;
             },
 
-            getInventoryData: function () {
-                return this._httpCall('GET', '/api/inventory-data', 'getInventoryData');
+            getInventoryData: function (params) {
+                const qs = params && params._forceRefresh ? '?_forceRefresh=1' : '';
+                return this._httpCall('GET', '/api/inventory-data' + qs, 'getInventoryData');
             },
 
             getInventorySummary: function (targetLocation = null) {
@@ -47,8 +48,9 @@ if (!isGAS) {
                 return this._httpCall('GET', `/api/not-found-items?location=${encodeURIComponent(targetLocation)}`, 'getNotFoundItens');
             },
 
-            getAppSettings: function () {
-                return this._httpCall('GET', '/api/app-settings', 'getAppSettings');
+            getAppSettings: function (params) {
+                const qs = params && params._forceRefresh ? '?_forceRefresh=1' : '';
+                return this._httpCall('GET', '/api/app-settings' + qs, 'getAppSettings');
             },
 
             saveCodeBatch: function (items) {

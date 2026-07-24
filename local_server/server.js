@@ -317,7 +317,8 @@ app.get('/api/app-settings', async (req, res) => {
             ip: req.ip
         });
 
-        const result = await gasSimulation.getAppSettings();
+        const forceRefresh = req.query._forceRefresh === '1';
+        const result = await gasSimulation.getAppSettings(forceRefresh);
         res.json(result);
     } catch (error) {
         errorResponse(res, error);
