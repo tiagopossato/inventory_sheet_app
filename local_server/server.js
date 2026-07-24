@@ -5,7 +5,7 @@ import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleSheetsService } from './google-sheets-service.js';
-import { GASSimulation } from './gas-simulation.js';
+import { InventoryService } from './inventory-service.js';
 import { CONFIG } from './config.js';
 import os from 'os';
 import { join } from 'path';
@@ -64,10 +64,10 @@ function validate(schema, property = 'body') {
     };
 }
 
-// Função para sanitizar entradas
+// Função para sanitizar entradas (apenas trim + remover caracteres de controle, sem HTML-escape)
 function sanitizeInput(input) {
     if (typeof input === 'string') {
-        return validator.escape(validator.trim(input));
+        return validator.trim(validator.stripLow(input));
     } else if (Array.isArray(input)) {
         return input.map(item => sanitizeInput(item));
     } else if (typeof input === 'object' && input !== null) {
@@ -78,6 +78,15 @@ function sanitizeInput(input) {
         return sanitized;
     }
     return input;
+}
+
+// Helper para respostas de erro padronizadas (evita vazamento de detalhes em produção)
+function errorResponse(res, error, statusCode = 500) {
+    const isDev = process.env.NODE_ENV === 'development';
+    logStructured('error', error.message, { stack: error.stack });
+    res.status(statusCode).json({
+        error: isDev ? error.message : 'Erro interno do servidor'
+    });
 }
 
 const app = express();
@@ -138,17 +147,26 @@ const HOST = shouldUseHost ? '0.0.0.0' : 'localhost';
 // Verificar se deve usar HTTPS
 const useHTTPS = process.argv.includes('--https') || process.env.HTTPS === 'true';
 
-// Configuração mínima para desenvolvimento
-app.use(cors({
-    origin: '*', // Permite absolutamente todas as origens
-    credentials: true
-}));
+// CORS: restrito em produção, permissivo em desenvolvimento
+// Em dev com --host, o frontend pode vir de qualquer IP da rede local
+var corsOrigin;
+if (process.env.NODE_ENV === 'production') {
+    corsOrigin = (process.env.CORS_ORIGIN || '').split(',').filter(Boolean);
+} else if (shouldUseHost) {
+    // Rede local: permite qualquer origem (reflete o Origin da requisição)
+    corsOrigin = true;
+    console.log('🌐 CORS: modo permissivo (rede local — todas as origens permitidas)');
+} else {
+    // localhost apenas
+    corsOrigin = ['https://localhost:5173', 'https://127.0.0.1:5173', 'http://localhost:5173', 'http://127.0.0.1:5173'];
+}
+app.use(cors({ origin: corsOrigin, credentials: true }));
 
 // Middleware de logging
 import morgan from 'morgan';
 app.use(morgan('combined'));
 
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 // Inicialização
 let gasSimulation;
@@ -162,7 +180,7 @@ async function initializeServer() {
         const sheetsService = new GoogleSheetsService();
         await sheetsService.initialize(CONFIG.credentials, CONFIG.spreadsheetId);
 
-        gasSimulation = new GASSimulation(sheetsService);
+        gasSimulation = new InventoryService(sheetsService);
         retryCount = 0; // Resetar contador de tentativas após sucesso
         console.log('✅ Servidor inicializado com sucesso');
     } catch (error) {
@@ -229,36 +247,26 @@ app.get('/api/inventory-data', async (req, res) => {
         logStructured('info', 'Recebendo requisição para dados de inventário', {
             method: req.method,
             url: req.url,
-            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
-        const result = await gasSimulation.getInventoryData(true);
+        const addSpec = req.query.add_spec !== 'false'; // default true (alinhado com GAS)
+        const result = await gasSimulation.getInventoryData(addSpec);
         res.json(result);
     } catch (error) {
-        logStructured('error', 'Erro ao buscar dados de inventário', {
-            error: error.message,
-            stack: error.stack,
-            method: req.method,
-            url: req.url,
-            //userAgent: req.get('User-Agent'),
-            ip: req.ip
-        });
-
-        res.status(500).json({ error: error.message });
+        errorResponse(res, error);
     }
 });
 
 app.get('/api/inventory-summary', async (req, res) => {
     try {
-        // Sanitizar parâmetros de consulta
+        // Sanitizar parâmetros de consulta (apenas trim + stripLow, sem HTML-escape)
         const sanitizedQuery = sanitizeInput(req.query);
 
         logStructured('info', 'Recebendo requisição para resumo de inventário', {
             method: req.method,
             url: req.url,
             query: sanitizedQuery,
-            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -266,30 +274,19 @@ app.get('/api/inventory-summary', async (req, res) => {
         const result = await gasSimulation.getInventorySummary(targetLocation);
         res.json(result);
     } catch (error) {
-        logStructured('error', 'Erro ao buscar resumo de inventário', {
-            error: error.message,
-            stack: error.stack,
-            method: req.method,
-            url: req.url,
-            query: req.query,
-            //userAgent: req.get('User-Agent'),
-            ip: req.ip
-        });
-
-        res.status(500).json({ error: error.message });
+        errorResponse(res, error);
     }
 });
 
 app.get('/api/not-found-items', async (req, res) => {
     try {
-        // Sanitizar parâmetros de consulta
+        // Sanitizar parâmetros de consulta (apenas trim + stripLow, sem HTML-escape)
         const sanitizedQuery = sanitizeInput(req.query);
 
         logStructured('info', 'Recebendo requisição para itens não encontrados', {
             method: req.method,
             url: req.url,
             query: sanitizedQuery,
-            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -299,7 +296,6 @@ app.get('/api/not-found-items', async (req, res) => {
                 method: req.method,
                 url: req.url,
                 query: sanitizedQuery,
-                //userAgent: req.get('User-Agent'),
                 ip: req.ip
             });
 
@@ -309,17 +305,7 @@ app.get('/api/not-found-items', async (req, res) => {
         const result = await gasSimulation.getNotFoundItens(targetLocation);
         res.json(result);
     } catch (error) {
-        logStructured('error', 'Erro ao buscar itens não encontrados', {
-            error: error.message,
-            stack: error.stack,
-            method: req.method,
-            url: req.url,
-            query: req.query,
-            //userAgent: req.get('User-Agent'),
-            ip: req.ip
-        });
-
-        res.status(500).json({ error: error.message });
+        errorResponse(res, error);
     }
 });
 
@@ -328,23 +314,13 @@ app.get('/api/app-settings', async (req, res) => {
         logStructured('info', 'Recebendo requisição para configurações do app', {
             method: req.method,
             url: req.url,
-            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
         const result = await gasSimulation.getAppSettings();
         res.json(result);
     } catch (error) {
-        logStructured('error', 'Erro ao buscar configurações do app', {
-            error: error.message,
-            stack: error.stack,
-            method: req.method,
-            url: req.url,
-            //userAgent: req.get('User-Agent'),
-            ip: req.ip
-        });
-
-        res.status(500).json({ error: error.message });
+        errorResponse(res, error);
     }
 });
 
@@ -353,7 +329,10 @@ app.get('/api/app-settings', async (req, res) => {
 const saveBatchSchema = Joi.object({
     items: Joi.array().items(Joi.object({
         uid: Joi.string().required(),
-        code: Joi.number().integer().required(),
+        code: Joi.alternatives().try(
+            Joi.string().pattern(/^[0-9]+$/).min(1),
+            Joi.number().integer()
+        ).required(),
         location: Joi.string().required(),
         state: Joi.number().integer().required(),
         ipvu: Joi.number().integer().required(),
@@ -373,31 +352,20 @@ app.post('/api/save-batch', validate(saveBatchSchema, 'body'), async (req, res) 
         logStructured('info', 'Recebendo requisição para salvar lote de itens', {
             method: req.method,
             url: req.url,
-            body: { itemsCount: req.body.items?.length },
-            //userAgent: req.get('User-Agent'),
+            body: { itemsCount: req.body.items && req.body.items.length },
             ip: req.ip
         });
 
-        // Converter o campo code para inteiro para cada item
+        // Preservar code como string para manter zeros à esquerda (EAN/barcode)
         const items = req.body.items.map(item => ({
             ...item,
-            code: parseInt(item.code, 10)
+            code: String(item.code)
         }));
 
         const result = await gasSimulation.saveCodeBatch(items);
         res.json(result);
     } catch (error) {
-        logStructured('error', 'Erro ao salvar lote de itens', {
-            error: error.message,
-            stack: error.stack,
-            method: req.method,
-            url: req.url,
-            body: req.body,
-            //userAgent: req.get('User-Agent'),
-            ip: req.ip
-        });
-
-        res.status(500).json({ error: error.message });
+        errorResponse(res, error);
     }
 });
 
@@ -407,7 +375,6 @@ app.post('/api/save-message', validate(saveMessageSchema, 'body'), async (req, r
             method: req.method,
             url: req.url,
             body: { uid: req.body.uid, location: req.body.location },
-            //userAgent: req.get('User-Agent'),
             ip: req.ip
         });
 
@@ -416,17 +383,7 @@ app.post('/api/save-message', validate(saveMessageSchema, 'body'), async (req, r
         const result = await gasSimulation.saveMessage({ uid, location, message });
         res.json(result);
     } catch (error) {
-        logStructured('error', 'Erro ao salvar mensagem', {
-            error: error.message,
-            stack: error.stack,
-            method: req.method,
-            url: req.url,
-            body: req.body,
-            //userAgent: req.get('User-Agent'),
-            ip: req.ip
-        });
-
-        res.status(500).json({ error: error.message });
+        errorResponse(res, error);
     }
 });
 
@@ -508,7 +465,10 @@ async function startServer() {
     try {
         const server = await createServer();
 
-        server.listen(PORT, HOST, async () => {
+        // Inicializa conexão com Google Sheets ANTES de ouvir requisições
+        await initializeServer();
+
+        server.listen(PORT, HOST, () => {
             const protocol = useHTTPS ? 'HTTPS' : 'HTTP';
 
             logStructured('info', 'Servidor iniciado com sucesso', {
@@ -519,6 +479,11 @@ async function startServer() {
             });
 
             if (shouldUseHost) {
+                console.warn('╔══════════════════════════════════════════════════════════════╗');
+                console.warn('║  AVISO DE SEGURANCA: Este servidor NAO tem autenticacao.   ║');
+                console.warn('║  Nao exponha a redes nao confiaveis.                       ║');
+                console.warn('║  Use apenas em LAN confiavel para testes.                  ║');
+                console.warn('╚══════════════════════════════════════════════════════════════╝');
                 console.log(`🌐 Modo rede local ativado (--host)`);
                 console.log(`📊 Acesse localmente: ${protocol.toLowerCase()}://localhost:${PORT}`);
 
@@ -535,7 +500,6 @@ async function startServer() {
             }
 
             console.log(`🔍 Health check: ${protocol.toLowerCase()}://localhost:${PORT}/api/health`);
-            await initializeServer();
         });
 
         return server;

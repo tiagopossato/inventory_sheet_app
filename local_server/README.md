@@ -1,3 +1,123 @@
+# Local Server — Mock do Google Apps Script
+
+## 🏗️ Arquitetura
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                        npm run dev                                   │
+│                                                                      │
+│  ┌──────────────────────┐    ┌─────────────────────────────────────┐ │
+│  │ Vite Dev Server      │    │ Mock Server (Express)               │ │
+│  │ https://localhost:    │    │ https://localhost:3000              │ │
+│  │   5173               │    │                                     │ │
+│  │                      │    │ server.js                           │ │
+│  │ frontend/            │    │   ├─ rotas REST (Joi validation)    │ │
+│  │   index.html         │    │   ├─ CORS, rate-limit, timeout      │ │
+│  │   src/               │    │   └─ inventory-service.js           │ │
+│  │     mockGAS.js ──────┼───▶│        ├─ simula SpreadsheetApp     │ │
+│  │       (fetch API)    │    │        ├─ simula LockService        │ │
+│  │                      │    │        └─ importa inventory-logic   │ │
+│  └──────────────────────┘    │                                     │ │
+│                              │ backend/inventory-logic.js          │ │
+│                              │   └─ funções PURAS (canônico)       │ │
+│                              │                                     │ │
+│                              │ google-sheets-service.js            │ │
+│                              │   └─ Google Sheets API v4            │ │
+│                              │       (service account)              │ │
+│                              └──────────────┬──────────────────────┘ │
+│                                             │                        │
+│                                     ┌───────▼────────┐              │
+│                                     │ Google Sheets   │              │
+│                                     │ (planilha real) │              │
+│                                     └────────────────┘              │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### Fluxo de uma requisição
+
+1. Frontend (`mockGAS.js`) detecta que NÃO está no GAS → substitui `google.script.run` por `fetch()`
+2. `fetch('https://<host>:3000/api/save-batch', { body: ... })`
+3. `server.js` → valida com Joi → chama `inventoryService.saveCodeBatch(items)`
+4. `inventory-service.js` → I/O (lê Sheet via API) → **delega lógica para** `inventory-logic.js`
+5. `inventory-logic.js` → função pura processa arrays → retorna resultado estruturado
+6. Resposta HTTP → frontend atualiza UI
+
+### Por que o mock server escreve na planilha REAL?
+
+O mock server **não é um mock falso** — ele conecta na mesma planilha Google Sheets
+usando uma Service Account. Isso permite testar o fluxo completo (leitura + escrita)
+durante o desenvolvimento, com dados reais.
+
+> ⚠️ **Cuidado**: `npm run dev` escreve na planilha de produção se
+> `MOCK_SPREADSHEET_ID` apontar para ela. Use uma planilha de teste em homologação.
+
+---
+
+## ▶️ Como usar
+
+```bash
+# Subir apenas o mock server (porta 3000, HTTPS)
+npm run mock_server
+
+# Subir tudo (Vite + mock server)
+npm run dev
+
+# Acessar de outro dispositivo na rede
+npm run mock_server -- --host
+# Conecte de https://<IP-DA-MÁQUINA>:3000
+```
+
+---
+
+## 🔗 Endpoints
+
+| Método | Rota | Query/Body | Retorno |
+|--------|------|-----------|---------|
+| GET | `/api/health` | — | `{ status, timestamp }` |
+| GET | `/api/inventory-data` | `?add_spec=true\|false` | `{ locations, inventory }` |
+| GET | `/api/inventory-summary` | `?location=NOME` | `{ locations, assetsFinded }` |
+| GET | `/api/not-found-items` | `?location=NOME` (obrigatório) | `[[tombamento], ...]` |
+| GET | `/api/app-settings` | — | `{ chave: valor }` |
+| POST | `/api/save-batch` | `{ items: [...] }` | `[uid, ...]` |
+| POST | `/api/save-message` | `{ uid, location, message }` | `uid` |
+
+### Exemplos
+
+```bash
+# Dados do inventário (com specName)
+curl -sk https://localhost:3000/api/inventory-data?add_spec=true
+
+# Resumo de uma localidade
+curl -sk "https://localhost:3000/api/inventory-summary?location=A00%20-%20BLOCO%20A"
+
+# Salvar leitura
+curl -sk -X POST https://localhost:3000/api/save-batch \
+  -H "Content-Type: application/json" \
+  -d '{"items":[{"uid":"abc-123","code":"123456789","location":"Depósito","state":1,"ipvu":8,"source":"manual"}]}'
+
+# Enviar observação
+curl -sk -X POST https://localhost:3000/api/save-message \
+  -H "Content-Type: application/json" \
+  -d '{"uid":"abc-123","location":"Depósito","message":"Equipamento danificado"}'
+```
+
+---
+
+## 🧪 Testes
+
+```bash
+# Unitários (funções puras, sem I/O)
+node --test tests/inventory-logic.test.js
+
+# Integração (requer mock_server rodando)
+node --test tests/api.test.js
+
+# Todos
+node --test tests/
+```
+
+---
+
 # Tutorial Completo: Como Obter Credenciais da Google Sheets API
 
 ## 📋 Índice

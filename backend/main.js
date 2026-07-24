@@ -1,290 +1,141 @@
 /**
- * Obtém um objeto consolidado contendo a lista oficial de localidades (com metadados) e o inventário atual agrupado por local.
- * @return {Object} Dados formatados com locations e inventory
- * @property {Array<{name: string, assetsCount: number}>} locations - Lista de localidades com contagem de bens
- * @property {Array<{location: string, assets: number[]}>} inventory - Inventário agrupado por localidade
+ * main.js — THIN ADAPTER Google Apps Script
+ * ==========================================
+ *
+ * Camada fina de I/O: SpreadsheetApp, LockService, Session, Utilities, Logger.
+ * TODA a lógica de transformação está em inventory-logic.js (este diretório).
+ *
+ * ## Modo de uso no GAS
+ *
+ * Este projeto é implantado como **biblioteca GAS** vinculada a uma planilha.
+ * As funções abaixo são os entry points chamados pelo frontend via
+ * `google.script.run`. NÃO são chamadas internamente entre si — o frontend
+ * chama cada uma diretamente.
+ *
+ * ## API Surface (funções expostas ao frontend)
+ *
+ * | Função                  | Modo    | Descrição                              |
+ * |-------------------------|---------|----------------------------------------|
+ * | `getInventoryData()`    | GET     | Lista de locais + inventário agrupado  |
+ * | `getInventorySummary()` | GET     | Resumo de leituras por localidade      |
+ * | `getNotFoundItens()`    | GET     | Itens não encontrados num local        |
+ * | `getAppSettings()`      | GET     | Configurações chave-valor              |
+ * | `saveCodeBatch(items)`  | POST    | Salva/atualiza lote de leituras        |
+ * | `saveMessage(payload)`  | POST    | Salva observação (com dedup)           |
+ *
+ * ## Como o deploy funciona
+ *
+ * `npm run deploy` → deploy.js:
+ *   1. Vite build → dist/index.html (single file)
+ *   2. Copia backend/*.js, *.gs, appsscript.json → dist/
+ *   3. Remove "export " de inventory-logic.js (GAS não suporta ES modules)
+ *   4. clasp push → GAS project
+ *   5. (opcional) clasp update-deployment → publicação
+ *
+ * No ambiente GAS, inventory-logic.gs e main.gs compartilham escopo global.
+ * As funções exportadas em inventory-logic.js viram funções globais após o
+ * deploy (porque o "export" é removido).
+ *
+ * @module main
+ * @author Tiago Possato
  */
-function getInventoryData(add_spec = true) {
+
+// ============================================================
+// getInventoryData — Aba "inventario"
+// ============================================================
+
+function getInventoryData(add_spec) {
+  if (add_spec === undefined) { add_spec = true; }
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheetInventario = ss.getSheetByName('inventario');
 
-  // Early return com array vazio se a aba não existir
   if (!sheetInventario) {
     throw new Error("getInventoryData: Aba 'inventario' não encontrada.");
   }
 
   const lastRowInv = sheetInventario.getLastRow();
-
-  // Early return se não houver dados além do cabeçalho
   if (lastRowInv < 2) {
     return { locations: [], inventory: [] };
   }
 
-  /** ===============================
-   * 1. LEITURA E PROCESSAMENTO OTIMIZADO
-   * =============================== */
-
-  // Se add_spec for true, lê até a coluna L (9 colunas a partir da D). 
-  // Se false, lê apenas até a F (3 colunas a partir da D) para economizar memória.
   const numCols = add_spec ? 9 : 3;
   const invData = sheetInventario.getRange(2, 4, lastRowInv - 1, numCols).getValues();
-  const inventoryMap = new Map();
 
-  // Processamento otimizado com for loop
-  for (let i = 0; i < invData.length; i++) {
-    const row = invData[i];
-    const local = String(row[0]).trim(); // Coluna D (Índice 0)
-
-    // Validação rápida: pular linhas sem local
-    if (!local) continue;
-
-    const asset = parseInt(row[2], 10); // Coluna F (Índice 2)
-
-    // Validação numérica mais eficiente
-    if (isNaN(asset)) continue;
-
-    // Inicializa o array do local se não existir
-    if (!inventoryMap.has(local)) {
-      inventoryMap.set(local, []);
-    }
-
-    // Estrutura o dado de acordo com o parâmetro
-    if (add_spec) {
-      // Coluna L é o índice 8 (D=0, E=1, F=2, G=3, H=4, I=5, J=6, K=7, L=8)
-      // Pega a string, remove espaços extras e corta nos primeiros 50 caracteres
-      const specName = String(row[8] || "").trim().substring(0, 50);
-
-      inventoryMap.get(local).push({
-        code: asset,
-        name: specName
-      });
-    } else {
-      inventoryMap.get(local).push({
-        code: asset
-      });
-    }
-  }
-
-  /** ===============================
-   * 2. ESTRUTURAÇÃO DE SAÍDA OTIMIZADA
-   * =============================== */
-
-  const locationsOutput = [];
-  const inventoryOutput = [];
-
-  for (const [key, assetsList] of inventoryMap) {
-    inventoryOutput.push({
-      location: key,
-      assets: assetsList
-    });
-
-    locationsOutput.push({
-      name: key,
-      // O .length funciona perfeitamente, não importa se é um array de números ou de objetos
-      assetsCount: assetsList.length
-    });
-  }
-
-  /** ===============================
-   * 3. ORDENAÇÃO FINAL
-   * =============================== */
-
-  locationsOutput.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-  inventoryOutput.sort((a, b) => a.location.localeCompare(b.location, 'pt-BR'));
-
-  return {
-    locations: locationsOutput,
-    inventory: inventoryOutput
-  };
+  // Delega para inventory-logic.js
+  return buildInventoryData(invData, add_spec);
 }
+
+// ============================================================
+// getInventorySummary — Abas "leituras" + "localidades"
+// ============================================================
 
 /**
  * @typedef {Object} LocationSummary
- * @property {string} name - Nome da localidade
- * @property {number} totalAssets - Quantidade total de bens
- * @property {number} assetsFindedCount - Bens encontrados no local
- * @property {number} missingAssets - Bens faltantes
+ * @property {string} name
+ * @property {number} totalAssets
+ * @property {number} assetsFindedCount
+ * @property {number} missingAssets
  */
 
 /**
  * @typedef {Object} AssetMapping
- * @property {string} location - O nome da localidade correspondente
- * @property {number[]} assets - Array contendo os números de tombamento
+ * @property {string} location
+ * @property {number[]} assets
  */
 
 /**
  * @typedef {Object} InventoryDataResponse
- * @property {LocationSummary[]} locations - Lista resumida para preenchimento de seletores de UI
- * @property {AssetMapping[]} assetsFinded - Mapeamento detalhado de bens agrupados por local
+ * @property {LocationSummary[]} locations
+ * @property {AssetMapping[]} assetsFinded
  */
 
-/**
- * Processa os dados da aba "leituras" para gerar um resumo do inventário agrupado por localidade
- * @param {string} [targetLocation] - A localidade que o usuário está inventariando (opcional)
- * @return {InventoryDataResponse} Objeto contendo o resumo das localidades e o mapa de bens
- */
-function getInventorySummary(targetLocation = null) {
+function getInventorySummary(targetLocation) {
+  if (targetLocation === undefined) { targetLocation = null; }
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const groups = {};
 
-  /** ===============================
-   * 1. PROCESSAMENTO DA ABA "leituras" (Otimizado V8)
-   * =============================== */
+  // --- Aba "leituras" ---
   const sheetDados = ss.getSheetByName("leituras");
   if (!sheetDados) {
     throw new Error("getInventorySummary: Aba 'leituras' não encontrada.");
   }
 
+  let leiturasData = [];
   const sheetDadosLastRow = sheetDados.getLastRow();
   if (sheetDadosLastRow >= 2) {
-    const data = sheetDados.getRange(2, 2, sheetDadosLastRow - 1, 3).getValues();
-
-    // Loop for...of: É mais rápido no motor V8 e o código fica mais limpo sem os [i]
-    for (const row of data) {
-      const code = parseInt(row[1], 10);
-      if (isNaN(code)) continue;
-
-      const location = String(row[2]).trim();
-      if (!location) continue;
-
-      if (!groups[location]) groups[location] = [];
-      groups[location].push(code);
-    }
+    leiturasData = sheetDados.getRange(2, 2, sheetDadosLastRow - 1, 3).getValues();
   }
 
-  /** ===============================
-   * 2. PROCESSAMENTO DA ABA "localidades" (Otimizado V8)
-   * =============================== */
+  // --- Aba "localidades" ---
   const sheetLoc = ss.getSheetByName("localidades");
   if (!sheetLoc) {
     throw new Error("getInventorySummary: Aba 'localidades' não encontrada.");
   }
 
-  let locations = [];
-  const sheetLocGetLastRow = sheetLoc.getLastRow();
-
-  if (sheetLocGetLastRow >= 2) {
-    const locData = sheetLoc.getRange('A2:D' + sheetLocGetLastRow).getValues();
-    const target = targetLocation ? String(targetLocation).trim() : null;
-
-    // Loop Fusion: Fazemos o papel do filter() e do map() numa única passada
-    for (const row of locData) {
-      const locName = row[0] ? String(row[0]).trim() : '';
-
-      // Funciona como o .filter()
-      if (!locName || (target && locName !== target)) continue;
-
-      // Funciona como o .map()
-      locations.push({
-        name: locName,
-        totalAssets: Number(row[1]) || 0,
-        assetsFindedCount: Number(row[2]) || 0,
-        missingAssets: Number(row[3]) || 0
-      });
-    }
-
-    // O sort fica de fora, ordenando apenas o array final já filtrado e montado
-    locations.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }));
+  let localidadesData = [];
+  const sheetLocLastRow = sheetLoc.getLastRow();
+  if (sheetLocLastRow >= 2) {
+    localidadesData = sheetLoc.getRange('A2:D' + sheetLocLastRow).getValues();
   }
 
-  /** ===============================
-   * 3. ESTRUTURAÇÃO FINAL
-   * =============================== */
-  const assetsFinded = Object.keys(groups)
-    .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
-    .map(loc => ({ location: loc, assets: groups[loc] }));
-
-  return { locations, assetsFinded };
+  // Delega para inventory-logic.js
+  return buildInventorySummary(leiturasData, localidadesData, targetLocation);
 }
 
-// function getInventorySummary(targetLocation = null) {
-//   const ss = SpreadsheetApp.getActiveSpreadsheet();
-//   const groups = {};
+// ============================================================
+// getUserName
+// ============================================================
 
-//   /** ===============================
-//    * 1. PROCESSAMENTO DA ABA "leituras" (Otimizado)
-//    * =============================== */
-//   const sheetDados = ss.getSheetByName("leituras");
-
-//   // Early return com array vazio se a aba não existir
-//   if (!sheetDados) {
-//     throw new Error("getInventorySummary: Aba 'leituras' não encontrada.");
-//   }
-//   const sheetDadosLastRow = sheetDados.getLastRow();
-//   if (sheetDadosLastRow >= 2) {
-//     const data = sheetDados.getRange(2, 2, sheetDadosLastRow - 1, 3).getValues();
-
-//     // Loop otimizado
-//     for (let i = 0; i < data.length; i++) {
-//       const code = parseInt(data[i][1], 10);
-//       if (isNaN(code)) continue;
-
-//       const location = String(data[i][2]).trim();
-//       if (!location) continue;
-
-//       groups[location] = groups[location] || [];
-//       groups[location].push(code);
-//     }
-//   }
-
-//   /** ===============================
-//    * 2. PROCESSAMENTO DA ABA "localidades" (Otimizado)
-//    * =============================== */
-//   const sheetLoc = ss.getSheetByName("localidades");
-
-//   // Early return com array vazio se a aba não existir
-//   if (!sheetLoc) {
-//     throw new Error("getInventorySummary: Aba 'localidades' não encontrada.");
-//   }
-
-//   let locations = [];
-//   const sheetLocGetLastRow = sheetLoc.getLastRow();
-//   if (sheetLocGetLastRow >= 2) {
-//     const locData = sheetLoc.getRange('A2:D' + sheetLocGetLastRow).getValues();
-//     const target = targetLocation ? String(targetLocation).trim() : null;
-
-//     locations = locData
-//       .filter(row => row[0] && (!target || String(row[0]).trim() === target))
-//       .map(row => ({
-//         name: String(row[0]).trim(),
-//         totalAssets: Number(row[1]) || 0,
-//         assetsFindedCount: Number(row[2]) || 0,
-//         missingAssets: Number(row[3]) || 0
-//       }))
-//       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }));
-//   }
-
-//   /** ===============================
-//    * 3. ESTRUTURAÇÃO FINAL (Otimizada)
-//    * =============================== */
-//   const assetsFinded = Object.keys(groups)
-//     .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
-//     .map(loc => ({ location: loc, assets: groups[loc] }));
-
-//   return { locations, assetsFinded };
-// }
-
-/**
- * Obtém o nome do usuário atual baseado no email
- * @return {string} Nome do usuário ou 'anonimo' se não identificado
- */
 function getUserName() {
   const userEmail = Session.getActiveUser().getEmail();
   return userEmail ? userEmail.split('@')[0] : 'anonimo';
 }
 
-/**
- * Salva ou atualiza um lote de itens na planilha "leituras" de forma segura, idempotente e otimizada
- * @param {Array<Object>} items - Array de itens para salvar
- * @param {string} items[].uid - Identificador único do item
- * @param {string|number} items[].code - Código do item
- * @param {string} items[].location - Localidade do item
- * @param {number} items[].state - Estado do item
- * @param {number} items[].ipvu - Valor IPVU do item
- * @param {string} items[].obs - Observações sobre o item
- * @param {string} items[].source - Fonte da leitura
- * @return {Array<string>} UIDs efetivamente persistidos
- */
+// ============================================================
+// saveCodeBatch — Aba "leituras" (escrita com Lock)
+// ============================================================
+
 function saveCodeBatch(items) {
   if (!Array.isArray(items) || items.length === 0) {
     return [];
@@ -304,7 +155,6 @@ function saveCodeBatch(items) {
       throw new Error('Aba "leituras" não encontrada.');
     }
 
-    const LAST_COL = 9;
     const HEADER_ROWS = 1;
 
     const now = new Date();
@@ -315,18 +165,15 @@ function saveCodeBatch(items) {
     );
     const user = getUserName();
 
-    /* ------------------------------------------------------------
-     * 1. Leitura única da planilha (UID -> linha)
-     * ------------------------------------------------------------ */
     const lastRow = sheet.getLastRow();
     const uidToRow = Object.create(null);
 
     if (lastRow > HEADER_ROWS) {
       const values = sheet
-        .getRange(HEADER_ROWS + 1, 1, lastRow - HEADER_ROWS, LAST_COL)
+        .getRange(HEADER_ROWS + 1, 1, lastRow - HEADER_ROWS, LAST_COL_LEITURAS)
         .getValues();
 
-      values.forEach((row, index) => {
+      values.forEach(function (row, index) {
         const uid = row[0];
         if (uid && !uidToRow[uid]) {
           uidToRow[uid] = HEADER_ROWS + 1 + index;
@@ -334,26 +181,23 @@ function saveCodeBatch(items) {
       });
     }
 
-    /* ------------------------------------------------------------
-     * 2. Separação entre updates e appends
-     * ------------------------------------------------------------ */
     const rowsToUpdate = [];
     const rowsToAppend = [];
     const persistedUids = [];
 
-    items.forEach(item => {
+    items.forEach(function (item) {
       if (!item || !item.uid) return;
 
       const rowData = [
         String(item.uid),
         formattedDate,
-        String(item.code ?? ''), // preserva zeros/EAN
-        String(item.location ?? ''),
+        String(item.code != null ? item.code : ''),
+        String(item.location != null ? item.location : ''),
         user,
-        Number(item.state ?? ''),
-        Number(item.ipvu ?? ''),
-        String(item.obs ?? ''),
-        String(item.source ?? '')
+        Number(item.state != null ? item.state : ''),
+        Number(item.ipvu != null ? item.ipvu : ''),
+        String(item.obs != null ? item.obs : ''),
+        String(item.source != null ? item.source : '')
       ];
 
       const existingRow = uidToRow[item.uid];
@@ -367,24 +211,20 @@ function saveCodeBatch(items) {
       persistedUids.push(item.uid);
     });
 
-    /* ------------------------------------------------------------
-     * 3. Escrita segura
-     * ------------------------------------------------------------ */
-
     // Updates
     rowsToUpdate
-      .sort((a, b) => a.row - b.row)
-      .forEach(update => {
+      .sort(function (a, b) { return a.row - b.row; })
+      .forEach(function (update) {
         sheet
-          .getRange(update.row, 1, 1, LAST_COL)
+          .getRange(update.row, 1, 1, LAST_COL_LEITURAS)
           .setValues([update.data]);
       });
 
-    // Appends (recalcula lastRow para evitar race lógica)
+    // Appends
     if (rowsToAppend.length > 0) {
       const appendStartRow = sheet.getLastRow() + 1;
       sheet
-        .getRange(appendStartRow, 1, rowsToAppend.length, LAST_COL)
+        .getRange(appendStartRow, 1, rowsToAppend.length, LAST_COL_LEITURAS)
         .setValues(rowsToAppend);
     }
 
@@ -392,20 +232,16 @@ function saveCodeBatch(items) {
 
   } catch (err) {
     Logger.log('Erro em saveCodeBatch:', err);
-    throw new Error(`Falha ao salvar lote: ${err.message}`);
+    throw new Error('Falha ao salvar lote: ' + err.message);
   } finally {
     lock.releaseLock();
   }
 }
 
-/**
- * Salva uma mensagem na aba 'observacoes'
- * @param {Object} payload - Objeto contendo dados da mensagem
- * @param {string} payload.uid - Identificador único
- * @param {string} payload.location - Localidade
- * @param {string} payload.message - Mensagem a ser salva
- * @return {string} O UID da mensagem salva
- */
+// ============================================================
+// saveMessage — Aba "observacoes" (escrita com Lock)
+// ============================================================
+
 function saveMessage(payload) {
   const lock = LockService.getScriptLock();
   try {
@@ -416,27 +252,22 @@ function saveMessage(payload) {
 
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName("observacoes");
+    const sheet = ss.getSheetByName("observacoes");
 
-    // Early return com array vazio se a aba não existir
     if (!sheet) {
       throw new Error("saveMessage: Aba 'observacoes' não encontrada.");
     }
 
     const uuid = payload.uid;
 
-    // --- VERIFICAÇÃO DE DUPLICIDADE ---
+    // Verificação de duplicidade
     const lastRow = sheet.getLastRow();
     if (lastRow > 0) {
-      // Pega todos os valores da Coluna A (onde ficam os UIDs) e transforma em um array simples (.flat)
       const uidsExistentes = sheet.getRange(1, 1, lastRow, 1).getValues().flat();
-
-      // Se o UID já estiver na planilha, não adiciona uma nova linha e apenas retorna o UID
       if (uidsExistentes.includes(uuid)) {
         return uuid;
       }
     }
-    // ----------------------------------
 
     const now = new Date();
     const formattedDate = Utilities.formatDate(
@@ -446,20 +277,14 @@ function saveMessage(payload) {
     );
     const aferidor = getUserName();
 
-    // Preparação dos dados
-    const localidade = payload.location;
-    const mensagem = payload.message;
-
-    // Inserção na planilha (A:E)
     sheet.appendRow([
-      uuid,           // Coluna A
-      formattedDate,  // Coluna B
-      localidade,     // Coluna C
-      aferidor,       // Coluna D
-      mensagem        // Coluna E
+      uuid,
+      formattedDate,
+      payload.location,
+      aferidor,
+      payload.message
     ]);
 
-    // Retorna o UID para o frontend confirmar o sucesso
     return uuid;
 
   } catch (error) {
@@ -470,14 +295,11 @@ function saveMessage(payload) {
   }
 }
 
+// ============================================================
+// getNotFoundItens — Aba "nao_encontrados_geral"
+// ============================================================
 
-/**
- * Obtém itens não encontrados filtrados por localidade
- * @param {string} targetLocation Nome da localidade (Obrigatório)
- * @return {Array<Array<string>>} Lista de [Tombamento, Descrição]
- */
 function getNotFoundItens(targetLocation) {
-  // 1. Validação de Entrada (Parâmetro Obrigatório)
   if (!targetLocation) {
     throw new Error("getNotFoundItens: targetLocation não fornecido.");
   }
@@ -492,65 +314,32 @@ function getNotFoundItens(targetLocation) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 3) return [];
 
-  // 2. Otimização de I/O: Leitura em lote
-  // Inicia na linha 3, coluna 1, pega (lastRow - 2) linhas e 3 colunas (A, B, C)
   const data = sheet.getRange(3, 1, lastRow - 2, 3).getValues();
 
-  // 3. Normalização fora do loop (Evita repetir trim() milhares de vezes)
-  const target = String(targetLocation).trim();
-  const result = [];
-
-  // Usando for...of com desestruturação é mais rápido e legível
-  for (const [colA, colB] of data) {
-    // Checagem rápida para pular nulos/vazios antes de gastar processamento com String() e trim()
-    if (colA != null && String(colA).trim() === target) {
-      result.push([colB]);
-    }
-  }
-
-  return result;
+  // Delega para inventory-logic.js
+  return filterNotFoundItems(data, targetLocation);
 }
 
-/**
- * Lê as configurações da aba 'app_config' e retorna um objeto chave-valor
- * @return {Object} Objeto contendo todas as configurações
- */
+// ============================================================
+// getAppSettings — Aba "app_config"
+// ============================================================
+
 function getAppSettings() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('app_config');
 
-  // Objeto de retorno padrão caso a aba não exista
-  const settings = {};
-
   if (!sheet) {
     Logger.log("Aba 'app_config' não encontrada.");
-    return settings;
+    return {};
   }
 
   const lastRow = sheet.getLastRow();
-  if (lastRow < 1) return settings;
+  if (lastRow < 1) return {};
 
-  // Lê as colunas A e B (Chave e Valor)
   const data = sheet.getRange(2, 1, lastRow, 2).getValues();
 
-  // Transforma o array bidimensional em um objeto { chave: valor }
-  for (let i = 0; i < data.length; i++) {
-    const key = String(data[i][0]).trim();
-    const value = data[i][1];
-
-    if (key) {
-      // Type handling
-      if (value instanceof Date) {
-        settings[key] = value.toISOString().split('T')[0]; // Returns YYYY-MM-DD
-      } else if (value === 'true' || value === true) {
-        settings[key] = true;
-      } else if (value === 'false' || value === false) {
-        settings[key] = false;
-      } else {
-        settings[key] = value;
-      }
-    }
-  }
+  // Delega para inventory-logic.js
+  const settings = buildAppSettings(data);
   Logger.log(settings);
   return settings;
 }

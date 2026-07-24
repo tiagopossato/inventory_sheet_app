@@ -4,3 +4,5 @@ node_modules/
 init.bat
 .impeccable
 .claude/skills/
+local_server/certs/
+local_server/.cert-password

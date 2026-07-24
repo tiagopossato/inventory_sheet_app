@@ -7,74 +7,6 @@ import dotenv from 'dotenv';
 // Carrega as variáveis do .env
 dotenv.config();
 
-/**
- * Pega todos os arquivos JS da pasta dist, concatena-os
- * e adiciona a função getHtmlContent() com o index.html embutido.
- */
-function generateBuildFile() {
-    const distDir = './dist';
-    const outputFile = path.join(distDir, 'bundle.js');
-
-    try {
-        // 1. Lê o index.html gerado pelo Vite
-        const htmlPath = path.join(distDir, 'index.html');
-        if (!fs.existsSync(htmlPath)) {
-            throw new Error("Arquivo index.html não encontrado na pasta dist.");
-        }
-
-        const htmlContent = fs.readFileSync(htmlPath, 'utf8');
-
-        // 2. Prepara o conteúdo HTML para ser uma string JS segura
-        // Escapa crases e o símbolo de interpolação ${}
-        const safeHtml = htmlContent
-            .replace(/\\/g, '\\\\')      // Escapa barras invertidas
-            .replace(/`/g, '\\`')        // Escapa crases
-            .replace(/\${/g, '\\${')     // Escapa interpolação
-            // .replace(/\r?\n|\r/g, ' ');  // REMOVE quebras de linha, substituindo por espaço
-
-        // 3. Busca todos os arquivos .js na pasta dist (exceto o próprio bundle se ele já existir)
-        const files = fs.readdirSync(distDir);
-        let jsBundleContent = "";
-
-        files.forEach(file => {
-            if (file.endsWith('.js') && file !== 'bundle.js') {
-                const filePath = path.join(distDir, file);
-                jsBundleContent += `\n/* --- Arquivo: ${file} --- */\n`;
-                jsBundleContent += fs.readFileSync(filePath, 'utf8') + "\n";
-
-                // Opcional: Remove o arquivo original após concatenar para limpar a pasta dist
-                // fs.unlinkSync(filePath); 
-            }
-        });
-
-        // 4. Cria a função que o Apps Script usará para servir o HTML
-        const getHtmlContentFunction = `
-/**
- * Retorna o conteúdo HTML embutido gerado pelo build.
- * @return {string}
- */
-function getHtmlContent() {
-  return \`${safeHtml}\`;
-}
-`;
-
-        // 5. Escreve o arquivo final concatenando o JS e a função do HTML
-        const finalOutput = jsBundleContent + getHtmlContentFunction;
-        fs.writeFileSync(outputFile, finalOutput);
-
-        // 6. Remove o index.html da pasta dist para que o clasp não o envie como arquivo separado
-        // (Opcional, dependendo de como você configurou o clasp)
-        if (fs.existsSync(htmlPath)) {
-            fs.unlinkSync(htmlPath);
-        }
-
-        console.log(`✅ Bundle gerado com sucesso: ${outputFile}`);
-    } catch (error) {
-        console.error("❌ Erro ao gerar o arquivo de build único:", error.message);
-        throw error;
-    }
-}
-
 function setupClaspJson() {
     const template = fs.readFileSync('.clasp.json.template', 'utf8');
     // Substitui a variável do template pela variável do seu arquivo .env
@@ -173,15 +105,20 @@ async function deploy() {
         const files = fs.readdirSync(backendDir);
         files.forEach(file => {
             if (file.endsWith('.gs') || file.endsWith('.js') || file === 'appsscript.json') {
-                fs.copyFileSync(
-                    path.join(backendDir, file),
-                    path.join(distDir, file)
-                );
+                const srcPath = path.join(backendDir, file);
+                const destPath = path.join(distDir, file);
+                fs.copyFileSync(srcPath, destPath);
+
+                // GAS não suporta ES modules — remove "export " de inventory-logic.js
+                if (file === 'inventory-logic.js') {
+                    let content = fs.readFileSync(destPath, 'utf8');
+                    content = content.replace(/^export /gm, '');
+                    fs.writeFileSync(destPath, content);
+                    console.log('🔧 inventory-logic.js: "export" removido para compatibilidade GAS');
+                }
             }
         });
 
-        // generateBuildFile();
-        
         console.log("✅ Arquivos backend copiados para dist/");
 
         // 4. Clasp Push
