@@ -2,18 +2,28 @@
  * @OnlyCurrentDoc
  */
 
+/**
+ * Para adicionar a biblioteca, vá em "Editor" > "Bibliotecas..." e insira o ID da biblioteca: 1hZvSwSTBrskpZvWD-uPmsFOhF8zDGr54WkcerTOw5PK5HuWwgxSVxj1U
+ */
+
+/**
+ * Para fazer o deploy da interface web, vá em "Implantar" > "Nova implantação" > "Implantar como App da web..." e configure:
+ * - Executar o aplicativo como: "Eu"
+ * - Quem tem acesso ao aplicativo: "Qualquer pessoa com uma conta no Google"
+ * Após fazer o deploy da interface web, substitua o valor da variável deploymentId pelo Código de implantação.
+ */
 const deploymentId = ""; // Substitua pelo ID real do deployment da interface web
 
 /* FUNÇÕES PARA ACESSO DA BIBLIOTECA */
-const interfaceTitle = "Leitora de código de barras"
-function doGet(evt) { return InterfaceLeitora.doGet(evt, title = interfaceTitle); }
-function getInventoryData() { return InterfaceLeitora.getInventoryData(); }
-function getInventorySummary(targetLocation = null) { return InterfaceLeitora.getInventorySummary(targetLocation); }
-function getUserName() { return InterfaceLeitora.getUserName(); }
-function saveCodeBatch(items) { return InterfaceLeitora.saveCodeBatch(items); }
-function saveMessage(payload) { return InterfaceLeitora.saveMessage(payload); }
-function getNotFoundItens(targetLocation) { return InterfaceLeitora.getNotFoundItens(targetLocation); }
-function getAppSettings() { return InterfaceLeitora.getAppSettings(); }
+const interfaceTitle = "Inventário 2026"
+function doGet(evt ) { return BibliotecaInterfaceLeitoraInventario.doGet(evt, title = interfaceTitle); }
+function getInventoryData(add_spec=true) { return BibliotecaInterfaceLeitoraInventario.getInventoryData(add_spec); }
+function getInventorySummary(targetLocation = null) { return BibliotecaInterfaceLeitoraInventario.getInventorySummary(targetLocation); }
+function getUserName() { return BibliotecaInterfaceLeitoraInventario.getUserName(); }
+function saveCodeBatch(items) { return BibliotecaInterfaceLeitoraInventario.saveCodeBatch(items); }
+function saveMessage(payload) { return BibliotecaInterfaceLeitoraInventario.saveMessage(payload); }
+function getNotFoundItens(targetLocation) { return BibliotecaInterfaceLeitoraInventario.getNotFoundItens(targetLocation); }
+function getAppSettings() { return BibliotecaInterfaceLeitoraInventario.getAppSettings(); }
 /* fim das funções para acesso da biblioteca */
 
 /* -----MENU DA PLANIHA--------- */
@@ -25,7 +35,7 @@ function onOpen(e) {
   const menu = SpreadsheetApp.getUi().createMenu("APP Inventário");
   menu
     .addItem('Exibir link do leitor', 'openReader')
-    // .addItem('Gerar e Baixar JSON do inventário base', 'mostrarPromptDownload')
+    .addItem('Gerar e Baixar JSON do inventário base', 'mostrarPromptDownload')
     .addToUi();
 }
 
@@ -86,7 +96,7 @@ function openReader() {
       
       <a href="${url}" target="_blank" class="btn" onclick="google.script.host.close()">ABRIR NO COMPUTADOR</a>
       
-      <div class="url-text">Link direto: ${url}</div>
+      <div class="url-text">Link direto: https://bit.ly/inv-ifc-2026</div>
     </div>
   `;
 
@@ -99,10 +109,8 @@ function openReader() {
 }
 
 function mostrarPromptDownload() {
-  const dadosJson = getInventoryData();
+  const dadosJson = getInventoryData(add_spec=true);
   const stringJson = JSON.stringify(dadosJson);
-
-  Logger.log(stringJson);
 
   // Usamos um template literal para injetar os dados de forma segura
   const htmlContent = `
