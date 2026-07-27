@@ -347,22 +347,6 @@ saveCodeBatch(payload)
                           └─ break → throw
 ```
 
-### Desenvolvimento (Mock Local)
-
-```
-__IS_DEV__ → import('./mockGAS.js')
-  │
-  └─ Substitui google.script.run
-      │
-      └─ Redireciona chamadas via fetch() para:
-          https://localhost:3000/api/<functionName>
-          │
-          └─ Express server (local_server/server.js)
-              │
-              └─ Google Sheets API (service account)
-                  └─ spreadsheet.values.get() / append()
-```
-
 ### Configurações por endpoint
 
 | Endpoint | Timeout | Max Retries | Base Delay |
