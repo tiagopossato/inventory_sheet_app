@@ -4,6 +4,7 @@ import js from "@eslint/js";
 export default [
   js.configs.recommended, // Regras recomendadas do ESLint
   {
+    files: ["frontend/**/*.js", "backend/**/*.js", "deploy.js"],
     languageOptions: {
       ecmaVersion: 2017,
       sourceType: "module",
@@ -32,6 +33,6 @@ export default [
   },
   {
     // Ignorar pastas de build para o linter não perder tempo nelas
-    ignores: ["backups", "dist/**", "node_modules/**"]
+    ignores: ["backups", "dist/**", "node_modules/**", ".claude/**", ".impecable/**", "local_server/**"],
   }
 ];

@@ -116,6 +116,8 @@ RemoteInventoryRegistry.prototype._setupListeners = function () {
     // Usa arrow functions ou referências nomeadas para evitar duplicidade
     window.addEventListener('online', () => self.start());
     window.addEventListener('offline', () => self.stop());
+    window.addEventListener('accessDenied', () => self.stop());
+    window.addEventListener('inventoryClosed', () => self.stop());
 
     // Evita múltiplas chamadas rápidas com um pequeno debounce ou flag
     const syncHandler = () => self._syncWithRemote();

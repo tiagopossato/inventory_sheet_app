@@ -14,6 +14,7 @@ import Joi from 'joi';
 import validator from 'validator';
 import timeout from 'connect-timeout';
 import rateLimit from 'express-rate-limit';
+import selfsigned from 'selfsigned';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -413,19 +414,43 @@ app.get('/api/health', async (req, res) => {
 // Configuração do servidor HTTPS
 function createServer() {
     if (useHTTPS) {
-        const keyPath = join(__dirname, 'certs', 'key.pem');
-        const certPath = join(__dirname, 'certs', 'cert.pem');
+        const certsDir = join(__dirname, 'certs');
+        const keyPath = join(certsDir, 'key.pem');
+        const certPath = join(certsDir, 'cert.pem');
+
+        var key, cert;
 
         if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
-            const options = {
-                key: fs.readFileSync(keyPath),
-                cert: fs.readFileSync(certPath)
-            };
-            return https.createServer(options, app);
+            key = fs.readFileSync(keyPath);
+            cert = fs.readFileSync(certPath);
+        } else {
+            var attrs = [{ name: 'commonName', value: 'localhost' }];
+            var pems = selfsigned.generate(attrs, {
+                days: 365,
+                algorithm: 'sha256',
+                keySize: 2048
+            });
+
+            key = pems.private;
+            cert = pems.cert;
+
+            if (!fs.existsSync(certsDir)) {
+                fs.mkdirSync(certsDir, { recursive: true });
+            }
+            fs.writeFileSync(keyPath, key);
+            fs.writeFileSync(certPath, cert);
+
+            console.log('Certificados auto-assinados gerados em local_server/certs/');
         }
-    } else {
-        return http.createServer(app);
+
+        var options = {
+            key: key,
+            cert: cert
+        };
+        return https.createServer(options, app);
     }
+
+    return http.createServer(app);
 }
 
 // Middleware de tratamento de erros global

@@ -12,10 +12,10 @@
 
 import {
   LAST_COL_LEITURAS,
-  buildInventoryData,
-  buildInventorySummary,
-  filterNotFoundItems,
-  buildAppSettings
+  buildInventoryData_ as buildInventoryData,
+  buildInventorySummary_ as buildInventorySummary,
+  filterNotFoundItems_ as filterNotFoundItems,
+  buildAppSettings_ as buildAppSettings
 } from '../backend/inventory-logic.js';
 
 // ============================================================

@@ -24,7 +24,9 @@
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    ".claude",
+    ".impecable"
   ],
   "typeAcquisition": {
     "enable": true,

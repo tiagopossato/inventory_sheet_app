@@ -185,16 +185,12 @@ window.addEventListener('load', async () => {
     // --- Estratégia de Manutenção (Kill Switch de Acesso) ---
     // Se a chave existir e for estritamente false, bloqueia o app
     if (appSettings && appSettings.inventory_open === false) {
-      console.error('⚠️ Coleta de dados fechada.');
 
-      // Bloqueio visual simples e eficaz
-      document.body.innerHTML = `
-      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; font-family: sans-serif; background: #f8f9fa; color: #333;">
-        <div style="font-size: 80px;">🔐</div>
-        <h1 style="margin-top: 20px;">Inventário fechado</h1>
-        <p style="max-width: 80%; color: #666;">O prazo para inventário está fechado.</p>
-      </div>
-      `;
+      window.dispatchEvent(new CustomEvent('inventoryClosed', {
+        detail: {
+          reason: 'O inventário está fechado. Nenhuma operação é permitida.'
+        }
+      }));
 
       loadingModal.toggle(false);
       return; // Encerra a execução do listener 'load'
@@ -242,6 +238,46 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 //  Tratamento de erros globais
+
+/**
+ * Bloqueia a interface quando o inventário está fechado
+ * Exibe tela cheia com mensagem informativa e impede novas requisições.
+ * @event inventoryClosed
+ * @listens window#inventoryClosed
+ */
+window.addEventListener('inventoryClosed', function (e) {
+  console.error('🔐 Inventário fechado');
+
+  // Bloqueio visual simples e eficaz
+  document.body.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; font-family: sans-serif; background: #f8f9fa; color: #333;">
+        <div style="font-size: 80px;">🔐</div>
+        <h1 style="margin-top: 20px;">Inventário fechado</h1>
+        <p style="max-width: 80%; color: #666;">O prazo para inventário está fechado.</p>
+      </div>
+      `;
+
+});
+
+
+/**
+ * Bloqueia a interface quando o backend retorna acesso negado.
+ * Exibe tela cheia com mensagem informativa e impede novas requisições.
+ * @event accessDenied
+ * @listens window#accessDenied
+ */
+window.addEventListener('accessDenied', function (e) {
+  console.error('⛔ Acesso negado:', e.detail ? e.detail.reason : 'Erro de autorização');
+
+  // Bloqueio visual — mesmo padrão do inventário fechado
+  document.body.innerHTML = `
+  <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; font-family: sans-serif; background: #f8f9fa; color: #333;">
+    <div style="font-size: 80px;">🚫</div>
+    <h1 style="margin-top: 20px;">Acesso negado</h1>
+    <p style="max-width: 80%; color: #666;">${e.detail ? e.detail.reason : 'Você não está na lista de usuários autorizados.'}<br>Solicite autorização ao administrador do inventário.</p>
+  </div>
+  `;
+});
 
 // Captura de erros não tratados
 window.addEventListener('error', function (e) {

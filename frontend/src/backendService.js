@@ -68,6 +68,14 @@ function BackendService() {
         failure: 0,
         pending: 0
     };
+
+    /**
+     * Flag que indica se o acesso foi negado permanentemente.
+     * Quando `true`, todas as chamadas ao backend são bloqueadas.
+     * @type {boolean}
+     * @private
+     */
+    this.accessDenied = false;
 }
 
 BackendService.prototype.getCallConfig = function (functionName) {
@@ -128,6 +136,11 @@ BackendService.prototype.isGASEnvironment = function () {
 BackendService.prototype._callBackend = function (functionName, params = {}) {
     const self = this;
 
+    // Bloqueia novas chamadas se acesso foi negado permanentemente
+    if (self.accessDenied) {
+        return Promise.reject(new Error('Acesso negado: novas requisições bloqueadas.'));
+    }
+
     const functionConfig = self.getCallConfig(functionName);
     const config = { ...functionConfig, };
 
@@ -183,7 +196,7 @@ BackendService.prototype._callBackend = function (functionName, params = {}) {
                 if (errorString.includes('Timeout')) return true;
 
                 // Não repetir para esses tipos de erro
-
+                if (errorString.includes('Acesso negado')) return false;
                 if (errorString.includes('Auth')) return false;
                 if (errorString.includes('404')) return false;
                 return true;
@@ -200,6 +213,16 @@ BackendService.prototype._callBackend = function (functionName, params = {}) {
         .catch((error) => {
             self.callStats.failure++;
             self.callStats.pending--;
+
+            // Detecta erro de acesso negado e trava novas requisições
+            const errorString = error ? (error.message || error.toString()) : '';
+            if (errorString.includes('Acesso negado')) {
+                self.accessDenied = true;
+                window.dispatchEvent(new CustomEvent('accessDenied', {
+                    detail: { reason: errorString }
+                }));
+            }
+
             throw error;
         });
 };
@@ -325,7 +348,7 @@ BackendService.prototype.getAppSettings = function () {
  * @public
  */
 BackendService.prototype.getInventoryData = function () {
-    return this._callBackend('getInventoryData', {});
+    return this._callBackend('getInventoryData', true);
 };
 
 /* ============================================================================
@@ -360,6 +383,9 @@ BackendService.prototype.resetStats = function () {
  * @public
  */
 BackendService.prototype.checkConnectivity = async function () {
+    // Se acesso já foi negado, não tenta mais
+    if (this.accessDenied) return false;
+
     try {
         // Força refresh para não pegar cache — testa conectividade REAL
         await this._callBackend('getAppSettings', { _forceRefresh: true });

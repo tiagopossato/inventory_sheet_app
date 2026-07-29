@@ -231,9 +231,9 @@ StatsManager.prototype._setupEvents = function () {
 
     // Atualiza o ícone de sync quando o ciclo de sincronização termina
     window.addEventListener('syncCompleted', function () {
-        var icon = document.getElementById('syncStatusIcon');
+        const icon = document.getElementById('syncStatusIcon');
         if (!icon) return;
-        var stats = assetRepository.getStats();
+        const stats = assetRepository.getStats();
         if (stats.total === 0 && stats.pending === 0) {
             icon.textContent = '⏸️';
             icon.setAttribute('aria-label', 'Ocioso');

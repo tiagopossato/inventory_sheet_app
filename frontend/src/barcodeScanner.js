@@ -66,7 +66,7 @@ BarcodeScanner.prototype.stop = function () {
  * @private
  */
 BarcodeScanner.prototype._handleKeyDown = function (e) {
-    var currentTime = Date.now();
+    const currentTime = Date.now();
 
     // Se o intervalo entre teclas for maior que 50ms,
     // provavelmente é um humano digitando, então limpamos o buffer.
@@ -91,7 +91,7 @@ BarcodeScanner.prototype._handleKeyDown = function (e) {
             e.stopPropagation();
 
             // Limpa o campo de texto manual (remove o 1º caractere que escapou)
-            var manualInput = document.getElementById('manualBarcode');
+            const manualInput = document.getElementById('manualBarcode');
             if (manualInput) {
                 manualInput.value = '';
             }

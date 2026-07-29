@@ -243,7 +243,7 @@ EditAssetModal.prototype.submit = function () {
     }
 
     // Captura o item retornado pelo storage
-    var success = assetRepository.updateItem(uid, newState, newIpvu, newObs);
+    const success = assetRepository.updateItem(uid, newState, newIpvu, newObs);
 
     if (!success) {
         userWarnings.printUserWarning('Falha ao salvar alterações. Tente novamente.');

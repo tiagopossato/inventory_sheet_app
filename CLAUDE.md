@@ -4,18 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project is
 
-A mobile-first barcode/QR scanner for physical inventory counting. The frontend runs in the browser (bundled by Vite into a single HTML file), the backend is a **Google Apps Script (GAS)** project hosted on a Google Sheets document, and a local Express server mocks the GAS environment during development.
+A mobile-first barcode/QR scanner for physical inventory counting. The frontend runs in the browser (bundled by Vite into a single HTML file), the backend is a **Google Apps Script (GAS)** project hosted on a Google Sheets document.
 
 ## Commands
 
 ```bash
-npm run dev            # Vite dev server + mock Express server (hot reload)
+npm run dev            # Vite dev server (hot reload)
 npm run build          # Production build → dist/
 npm run preview        # Staging build + local preview
 npm run deploy:homolog # Deploy to GAS staging environment
 npm run deploy         # Deploy to GAS production
 npm run lint           # ESLint validation
-npm run mock_server    # Run mock server alone (HTTPS port 3000)
 ```
 
 **First-time setup:**
@@ -31,13 +30,11 @@ cp .env.example .env   # fill in credentials
 
 ```
 Browser (Vite bundle)
-    ↓ fetch / GAS.withSuccessHandler
+    ↓ google.script.run
 Google Apps Script (backend/)
     ↓ SpreadsheetApp
 Google Sheets (inventario, leituras, observacoes, app_config tabs)
 ```
-
-During local development the GAS layer is replaced by `local_server/server.js` (Express), which uses a service account in `local_server/credentials.json` to hit the real spreadsheet via the Sheets API.
 
 ### Frontend data flow
 
@@ -67,7 +64,11 @@ Input (scanner / keyboard)
 ### Backend (backend/)
 
 `Código.js` — `doGet()` serves the compiled HTML template.
-`main.js` — all data functions: `getInventoryData`, `getAppSettings`, `saveCodeBatch`, `saveMessage`, `getNotFoundItens`, `getInventorySummary`.
+`public.js` — all data functions: `getInventoryData`, `getAppSettings`, `saveCodeBatch`, `saveMessage`, `getNotFoundItens`, `getInventorySummary`.
+`auth.js` — authorization (checks `usuarios_autorizados` sheet) and user identity.
+`inventory-logic.js` — pure business logic functions, single source of truth for data transforms.
+`common.js` — shared utilities: `include_()` for GAS templates, JSON response helpers.
+`Menu.js` — Google Sheets menu integration (QR code modal for app access).
 
 ### Google Sheets tabs
 
@@ -164,4 +165,4 @@ See `.env.example` for the full list. The critical ones:
 | `MOCK_SPREADSHEET_ID` | Spreadsheet used by the mock server |
 | `GOOGLE_CLIENT_EMAIL` / `GOOGLE_PRIVATE_KEY` | Service account for local dev |
 
-`local_server/credentials.json` (git-ignored) holds the same service account keys in JSON format as an alternative to env vars.
+`local_server/credentials.json` (git-ignored) holds the service account keys in JSON format for local development (if a mock server is configured).

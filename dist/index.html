@@ -201,11 +201,11 @@ var __spreadValues = (a, b) => {
     this.manualBarcodeInput.addEventListener("keydown", function(e) {
       if (self2.isLockedExternal) return;
       if (e.key === "Enter") {
-        var currentValue = e.target.value.trim();
+        const currentValue = e.target.value.trim();
         if (currentValue.length > 0) {
           self2.manualBarcodeInput.value = "";
-          var now = Date.now();
-          var lastTime = self2._recentCodes[currentValue];
+          const now = Date.now();
+          const lastTime = self2._recentCodes[currentValue];
           if (lastTime && now - lastTime < self2._debounceWindow) {
             self2._cleanupRecentCodes();
             return;
@@ -231,8 +231,8 @@ var __spreadValues = (a, b) => {
     }
   };
   InputArea.prototype._cleanupRecentCodes = function() {
-    var self2 = this;
-    var now = Date.now();
+    const self2 = this;
+    const now = Date.now();
     Object.keys(self2._recentCodes).forEach(function(code) {
       if (now - self2._recentCodes[code] > self2._debounceWindow) {
         delete self2._recentCodes[code];
@@ -320,8 +320,8 @@ var __spreadValues = (a, b) => {
   };
   AssetRepository.prototype._handleStorageFull = function() {
     console.warn("AssetRepository: Storage cheio, aplicando limpeza conservadora");
-    var beforeCount = this.items.length;
-    var pendingBefore = this.items.filter(function(i) {
+    const beforeCount = this.items.length;
+    const pendingBefore = this.items.filter(function(i) {
       return i.status === AssetStatus.PENDING || i.status === AssetStatus.FAILED;
     }).length;
     this.items.sort(function(a, b) {
@@ -329,12 +329,12 @@ var __spreadValues = (a, b) => {
       if (a.status !== AssetStatus.SYNCED && b.status === AssetStatus.SYNCED) return -1;
       return b.createdAt - a.createdAt;
     });
-    var removedCount = beforeCount - Math.min(beforeCount, 100);
+    const removedCount = beforeCount - Math.min(beforeCount, 100);
     this.items = this.items.slice(0, 100);
-    var pendingAfter = this.items.filter(function(i) {
+    const pendingAfter = this.items.filter(function(i) {
       return i.status === AssetStatus.PENDING || i.status === AssetStatus.FAILED;
     }).length;
-    var pendingLost = pendingBefore - pendingAfter;
+    const pendingLost = pendingBefore - pendingAfter;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.items));
       /* @__PURE__ */ console.info("AssetRepository: Limpeza aplicada. " + removedCount + " itens removidos.");
@@ -1070,6 +1070,7 @@ var __spreadValues = (a, b) => {
       failure: 0,
       pending: 0
     };
+    this.accessDenied = false;
   }
   BackendService.prototype.getCallConfig = function(functionName) {
     const configs = {
@@ -1114,6 +1115,9 @@ var __spreadValues = (a, b) => {
   };
   BackendService.prototype._callBackend = function(functionName, params = {}) {
     const self2 = this;
+    if (self2.accessDenied) {
+      return Promise.reject(new Error("Acesso negado: novas requisições bloqueadas."));
+    }
     const functionConfig = self2.getCallConfig(functionName);
     const config = __spreadValues({}, functionConfig);
     self2.callStats.total++;
@@ -1151,6 +1155,7 @@ var __spreadValues = (a, b) => {
         if (!errorString) return false;
         if (errorString.includes("ScriptError") || errorString.includes("Rate Limit")) return true;
         if (errorString.includes("Timeout")) return true;
+        if (errorString.includes("Acesso negado")) return false;
         if (errorString.includes("Auth")) return false;
         if (errorString.includes("404")) return false;
         return true;
@@ -1163,6 +1168,13 @@ var __spreadValues = (a, b) => {
     }).catch((error) => {
       self2.callStats.failure++;
       self2.callStats.pending--;
+      const errorString = error ? error.message || error.toString() : "";
+      if (errorString.includes("Acesso negado")) {
+        self2.accessDenied = true;
+        window.dispatchEvent(new CustomEvent("accessDenied", {
+          detail: { reason: errorString }
+        }));
+      }
       throw error;
     });
   };
@@ -1212,7 +1224,7 @@ var __spreadValues = (a, b) => {
     return this._callBackend("getAppSettings", {});
   };
   BackendService.prototype.getInventoryData = function() {
-    return this._callBackend("getInventoryData", {});
+    return this._callBackend("getInventoryData", true);
   };
   BackendService.prototype.getStats = function() {
     return __spreadValues({}, this.callStats);
@@ -1226,6 +1238,7 @@ var __spreadValues = (a, b) => {
     };
   };
   BackendService.prototype.checkConnectivity = async function() {
+    if (this.accessDenied) return false;
     try {
       await this._callBackend("getAppSettings", { _forceRefresh: true });
       return true;
@@ -1262,6 +1275,8 @@ var __spreadValues = (a, b) => {
     const self2 = this;
     window.addEventListener("online", () => self2.start());
     window.addEventListener("offline", () => self2.stop());
+    window.addEventListener("accessDenied", () => self2.stop());
+    window.addEventListener("inventoryClosed", () => self2.stop());
     const syncHandler = () => self2._syncWithRemote();
     window.addEventListener("locationChanged", syncHandler);
     window.addEventListener("syncCompleted", syncHandler);
@@ -1654,7 +1669,7 @@ Deseja prosseguir mesmo assim?`
     }
   };
   BarcodeScanner.prototype._handleKeyDown = function(e) {
-    var currentTime = Date.now();
+    const currentTime = Date.now();
     if (currentTime - this.lastKeyTime > 50) {
       this.buffer = "";
     }
@@ -1666,7 +1681,7 @@ Deseja prosseguir mesmo assim?`
       if (this.buffer.length >= 5) {
         e.preventDefault();
         e.stopPropagation();
-        var manualInput = document.getElementById("manualBarcode");
+        const manualInput = document.getElementById("manualBarcode");
         if (manualInput) {
           manualInput.value = "";
         }
@@ -2031,7 +2046,7 @@ Deseja prosseguir mesmo assim?`
       console.error("EditAssetModal: UID não encontrado para salvar");
       return;
     }
-    var success = assetRepository.updateItem(uid, newState, newIpvu, newObs);
+    const success = assetRepository.updateItem(uid, newState, newIpvu, newObs);
     if (!success) {
       userWarnings.printUserWarning("Falha ao salvar alterações. Tente novamente.");
       return;
@@ -2171,9 +2186,9 @@ Deseja prosseguir mesmo assim?`
       });
     });
     window.addEventListener("syncCompleted", function() {
-      var icon = document.getElementById("syncStatusIcon");
+      const icon = document.getElementById("syncStatusIcon");
       if (!icon) return;
-      var stats = assetRepository.getStats();
+      const stats = assetRepository.getStats();
       if (stats.total === 0 && stats.pending === 0) {
         icon.textContent = "⏸️";
         icon.setAttribute("aria-label", "Ocioso");
@@ -2384,6 +2399,10 @@ Deseja prosseguir mesmo assim?`
     window.addEventListener("repositoryChanged", function() {
       self2._startSyncLoop();
     });
+    window.addEventListener("accessDenied", function() {
+      console.warn("Acesso negado detectado. Parando sincronização permanentemente.");
+      self2._stopSyncLoop();
+    });
   };
   AssetSyncManager.prototype._startSyncLoop = function() {
     const self2 = this;
@@ -2454,7 +2473,7 @@ Deseja prosseguir mesmo assim?`
   new AssetSyncManager(assetRepository);
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-C9RBLoXf.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-DuzdOnQX.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
@@ -2521,14 +2540,11 @@ Deseja prosseguir mesmo assim?`
       }
       /* @__PURE__ */ console.log("⚙️ Configurações carregadas:", appSettings);
       if (appSettings && appSettings.inventory_open === false) {
-        console.error("⚠️ Coleta de dados fechada.");
-        document.body.innerHTML = `
-      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; font-family: sans-serif; background: #f8f9fa; color: #333;">
-        <div style="font-size: 80px;">🔐</div>
-        <h1 style="margin-top: 20px;">Inventário fechado</h1>
-        <p style="max-width: 80%; color: #666;">O prazo para inventário está fechado.</p>
-      </div>
-      `;
+        window.dispatchEvent(new CustomEvent("inventoryClosed", {
+          detail: {
+            reason: "O inventário está fechado. Nenhuma operação é permitida."
+          }
+        }));
         loadingModal.toggle(false);
         return;
       }
@@ -2551,9 +2567,29 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.07.24-004";
-      el.title = `Versão do build: ${"2026.07.24-004"}`;
+      el.textContent = "2026.07.29-012";
+      el.title = `Versão do build: ${"2026.07.29-012"}`;
     }
+  });
+  window.addEventListener("inventoryClosed", function(e) {
+    console.error("🔐 Inventário fechado");
+    document.body.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; font-family: sans-serif; background: #f8f9fa; color: #333;">
+        <div style="font-size: 80px;">🔐</div>
+        <h1 style="margin-top: 20px;">Inventário fechado</h1>
+        <p style="max-width: 80%; color: #666;">O prazo para inventário está fechado.</p>
+      </div>
+      `;
+  });
+  window.addEventListener("accessDenied", function(e) {
+    console.error("⛔ Acesso negado:", e.detail ? e.detail.reason : "Erro de autorização");
+    document.body.innerHTML = `
+  <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; font-family: sans-serif; background: #f8f9fa; color: #333;">
+    <div style="font-size: 80px;">🚫</div>
+    <h1 style="margin-top: 20px;">Acesso negado</h1>
+    <p style="max-width: 80%; color: #666;">${e.detail ? e.detail.reason : "Você não está na lista de usuários autorizados."}<br>Solicite autorização ao administrador do inventário.</p>
+  </div>
+  `;
   });
   window.addEventListener("error", function(e) {
     console.error("Erro global capturado:", e.error);
@@ -2585,7 +2621,7 @@ Deseja prosseguir mesmo assim?`
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.07.24-004"}`);
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.07.29-012"}`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
       throw new Error(`Falha na inicialização do debug: ${error.message}`);

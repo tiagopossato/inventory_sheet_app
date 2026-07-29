@@ -2,8 +2,15 @@
  * @OnlyCurrentDoc
  */
 
+
 /**
- * Para adicionar a biblioteca, vá em "Editor" > "Bibliotecas..." e insira o ID da biblioteca: 1hZvSwSTBrskpZvWD-uPmsFOhF8zDGr54WkcerTOw5PK5HuWwgxSVxj1U
+ * Código.js — Integração com a planilha do Google Sheets e a bibliteca de interface de inventário
+ * ===============================================
+ *
+ * Adiciona o menu "APP Inventário" na planilha e fornece funções
+ * para acesso rápido ao aplicativo de inventário via QR code.
+ *
+ * @author Tiago Possato
  */
 
 /**
@@ -12,9 +19,14 @@
  * - Quem tem acesso ao aplicativo: "Qualquer pessoa com uma conta no Google"
  * Após fazer o deploy da interface web, substitua o valor da variável deploymentId pelo Código de implantação.
  */
-const deploymentId = ""; // Substitua pelo ID real do deployment da interface web
+const deploymentId = "não configurado"; // Substitua pelo ID real do deployment da interface web
 
 /* FUNÇÕES PARA ACESSO DA BIBLIOTECA */
+/**
+ * Para adicionar a biblioteca, vá em "Editor" > "Bibliotecas..." e 
+ * insira o ID da biblioteca: 1hZvSwSTBrskpZvWD-uPmsFOhF8zDGr54WkcerTOw5PK5HuWwgxSVxj1U
+ * Na Versão, selecione HEAD (modo de desenvolvimento)
+ */
 const interfaceTitle = "Inventário 2026"
 function doGet(evt ) { return BibliotecaInterfaceLeitoraInventario.doGet(evt, title = interfaceTitle); }
 function getInventoryData(add_spec=true) { return BibliotecaInterfaceLeitoraInventario.getInventoryData(add_spec); }
@@ -26,21 +38,23 @@ function getNotFoundItens(targetLocation) { return BibliotecaInterfaceLeitoraInv
 function getAppSettings() { return BibliotecaInterfaceLeitoraInventario.getAppSettings(); }
 /* fim das funções para acesso da biblioteca */
 
-/* -----MENU DA PLANIHA--------- */
-
 /**
- * Cria o menu personalizado no Google Sheets.
+ * Trigger onOpen — executado quando a planilha é aberta.
+ * Cria o menu "APP Inventário" com acesso rápido ao app.
+ *
+ * @param {Object} e - Evento de abertura da planilha
  */
 function onOpen(e) {
   const menu = SpreadsheetApp.getUi().createMenu("APP Inventário");
   menu
     .addItem('Exibir link do leitor', 'openReader')
-    .addItem('Gerar e Baixar JSON do inventário base', 'mostrarPromptDownload')
+    // .addItem('Gerar e Baixar JSON do inventário base', 'mostrarPromptDownload')
     .addToUi();
 }
 
 /**
- * Exibe uma janela modal com o link direto para o aplicativo.
+ * Exibe uma janela modal com QR code e link direto para o aplicativo.
+ * O QR code é gerado via QuickChart.io e aponta para a URL do deployment GAS.
  */
 function openReader() {
   const url = `https://script.google.com/a/macros/ifc.edu.br/s/${deploymentId}/exec`;
@@ -96,7 +110,7 @@ function openReader() {
       
       <a href="${url}" target="_blank" class="btn" onclick="google.script.host.close()">ABRIR NO COMPUTADOR</a>
       
-      <div class="url-text">Link direto: https://bit.ly/inv-ifc-2026</div>
+      <div class="url-text">Link direto: ${url}</div>
     </div>
   `;
 
@@ -108,9 +122,16 @@ function openReader() {
   SpreadsheetApp.getUi().showModalDialog(html, '🚀 QR Code Gerado');
 }
 
+/**
+ * Gera e inicia o download do JSON do inventário completo.
+ * Chamada via menu da planilha (atualmente comentada no menu).
+ * Utiliza `getInventoryData()` de `public.js`.
+ */
 function mostrarPromptDownload() {
-  const dadosJson = getInventoryData(add_spec=true);
+  const dadosJson = getInventoryData();
   const stringJson = JSON.stringify(dadosJson);
+
+  Logger.log(stringJson);
 
   // Usamos um template literal para injetar os dados de forma segura
   const htmlContent = `

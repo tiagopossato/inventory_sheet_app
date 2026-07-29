@@ -13,24 +13,24 @@ import {
   COL_INV_ASSET,
   COL_INV_SPECNAME,
   SPEC_NAME_MAX_LEN,
-  buildInventoryData,
+  buildInventoryData_,
   groupLeiturasByLocation,
   buildLocationSummaries,
   buildAssetsFinded,
-  buildInventorySummary,
-  filterNotFoundItems,
-  buildAppSettings
+  buildInventorySummary_,
+  filterNotFoundItems_,
+  buildAppSettings_
 } from '../backend/inventory-logic.js';
 
 // ============================================================
-// buildInventoryData
+// buildInventoryData_
 // ============================================================
 
-describe('buildInventoryData', () => {
+describe('buildInventoryData_', () => {
 
   it('retorna vazio para array null/undefined/vazio', () => {
-    assert.deepEqual(buildInventoryData(null), { locations: [], inventory: [] });
-    assert.deepEqual(buildInventoryData([]), { locations: [], inventory: [] });
+    assert.deepEqual(buildInventoryData_(null), { locations: [], inventory: [] });
+    assert.deepEqual(buildInventoryData_([]), { locations: [], inventory: [] });
   });
 
   it('com addSpec=true (default) inclui specName', () => {
@@ -42,7 +42,7 @@ describe('buildInventoryData', () => {
       ['Deposito', '', 11111, '', '', '', '', '', 'Teclado']
     ];
 
-    const result = buildInventoryData(rows, true);
+    const result = buildInventoryData_(rows, true);
 
     assert.equal(result.locations.length, 2);
     assert.equal(result.inventory.length, 2);
@@ -70,7 +70,7 @@ describe('buildInventoryData', () => {
       ['Deposito', '', 12345, '', '', '', '', '', 'Computador Dell']
     ];
 
-    const result = buildInventoryData(rows, false);
+    const result = buildInventoryData_(rows, false);
     assert.deepEqual(result.inventory[0].assets[0], { code: 12345 });
   });
 
@@ -80,7 +80,7 @@ describe('buildInventoryData', () => {
       ['Valida', '', 67890, '', '', '', '', '', 'Com local']
     ];
 
-    const result = buildInventoryData(rows, true);
+    const result = buildInventoryData_(rows, true);
     assert.equal(result.locations.length, 1);
     assert.equal(result.locations[0].name, 'Valida');
   });
@@ -92,7 +92,7 @@ describe('buildInventoryData', () => {
       ['Deposito', '', 'abc',   '', '', '', '', '', 'Texto']
     ];
 
-    const result = buildInventoryData(rows, true);
+    const result = buildInventoryData_(rows, true);
     assert.equal(result.inventory[0].assets.length, 1);
     assert.equal(result.inventory[0].assets[0].code, 12345);
   });
@@ -104,7 +104,7 @@ describe('buildInventoryData', () => {
       ['Beta',   '', 3, '', '', '', '', '', '']
     ];
 
-    const result = buildInventoryData(rows, false);
+    const result = buildInventoryData_(rows, false);
     assert.equal(result.locations[0].name, 'Alfa');
     assert.equal(result.locations[1].name, 'Beta');
     assert.equal(result.locations[2].name, 'Zeta');
@@ -116,7 +116,7 @@ describe('buildInventoryData', () => {
       ['Deposito', '', 1, '', '', '', '', '', longName]
     ];
 
-    const result = buildInventoryData(rows, true);
+    const result = buildInventoryData_(rows, true);
     assert.equal(result.inventory[0].assets[0].name.length, SPEC_NAME_MAX_LEN);
   });
 
@@ -125,7 +125,7 @@ describe('buildInventoryData', () => {
       ['Deposito', '', 1, '', '', '', '', '', null]
     ];
 
-    const result = buildInventoryData(rows, true);
+    const result = buildInventoryData_(rows, true);
     assert.equal(result.inventory[0].assets[0].name, '');
   });
 });
@@ -249,10 +249,10 @@ describe('buildAssetsFinded', () => {
 });
 
 // ============================================================
-// buildInventorySummary (composta)
+// buildInventorySummary_ (composta)
 // ============================================================
 
-describe('buildInventorySummary', () => {
+describe('buildInventorySummary_', () => {
 
   it('combina leituras + localidades corretamente', () => {
     const leiturasData = [
@@ -266,7 +266,7 @@ describe('buildInventorySummary', () => {
       ['Sala A',   '30', '1', '29']
     ];
 
-    const result = buildInventorySummary(leiturasData, localidadesData, null);
+    const result = buildInventorySummary_(leiturasData, localidadesData, null);
 
     assert.equal(result.locations.length, 2);
     assert.equal(result.assetsFinded.length, 2);
@@ -284,7 +284,7 @@ describe('buildInventorySummary', () => {
     const leiturasData = [['', 100, 'Deposito'], ['', 200, 'Sala A']];
     const localidadesData = [['Deposito', '50', '1', '49'], ['Sala A', '30', '1', '29']];
 
-    const result = buildInventorySummary(leiturasData, localidadesData, 'Deposito');
+    const result = buildInventorySummary_(leiturasData, localidadesData, 'Deposito');
     assert.equal(result.locations.length, 1);
     assert.equal(result.locations[0].name, 'Deposito');
     // assetsFinded ainda inclui todos (não é filtrado)
@@ -293,20 +293,20 @@ describe('buildInventorySummary', () => {
 });
 
 // ============================================================
-// filterNotFoundItems
+// filterNotFoundItems_
 // ============================================================
 
-describe('filterNotFoundItems', () => {
+describe('filterNotFoundItems_', () => {
 
   it('lança erro se targetLocation não fornecida', () => {
     assert.throws(
-      () => filterNotFoundItems([], null),
+      () => filterNotFoundItems_([], null),
       /targetLocation não fornecido/
     );
   });
 
   it('retorna vazio para dados vazios', () => {
-    assert.deepEqual(filterNotFoundItems([], 'Deposito'), []);
+    assert.deepEqual(filterNotFoundItems_([], 'Deposito'), []);
   });
 
   it('filtra itens por localidade', () => {
@@ -317,26 +317,26 @@ describe('filterNotFoundItems', () => {
       ['Sala B',   '22222', '']
     ];
 
-    const result = filterNotFoundItems(rows, 'Deposito');
+    const result = filterNotFoundItems_(rows, 'Deposito');
     assert.deepEqual(result, [['12345'], ['11111']]);
   });
 
   it('retorna vazio se nenhuma linha coincide', () => {
     const rows = [['Sala A', '12345', '']];
-    const result = filterNotFoundItems(rows, 'Inexistente');
+    const result = filterNotFoundItems_(rows, 'Inexistente');
     assert.deepEqual(result, []);
   });
 });
 
 // ============================================================
-// buildAppSettings
+// buildAppSettings_
 // ============================================================
 
-describe('buildAppSettings', () => {
+describe('buildAppSettings_', () => {
 
   it('retorna objeto vazio para dados vazios', () => {
-    assert.deepEqual(buildAppSettings(null), {});
-    assert.deepEqual(buildAppSettings([]), {});
+    assert.deepEqual(buildAppSettings_(null), {});
+    assert.deepEqual(buildAppSettings_([]), {});
   });
 
   it('converte "true"/"false" string para boolean', () => {
@@ -345,7 +345,7 @@ describe('buildAppSettings', () => {
       ['debug_mode', 'false']
     ];
 
-    const result = buildAppSettings(rows);
+    const result = buildAppSettings_(rows);
     assert.strictEqual(result.inventory_open, true);
     assert.strictEqual(result.debug_mode, false);
   });
@@ -356,7 +356,7 @@ describe('buildAppSettings', () => {
       ['flag_lower', 'FALSE']
     ];
 
-    const result = buildAppSettings(rows);
+    const result = buildAppSettings_(rows);
     assert.strictEqual(result.flag_upper, true);
     assert.strictEqual(result.flag_lower, false);
   });
@@ -367,7 +367,7 @@ describe('buildAppSettings', () => {
       ['flag_b', false]
     ];
 
-    const result = buildAppSettings(rows);
+    const result = buildAppSettings_(rows);
     assert.strictEqual(result.flag_a, true);
     assert.strictEqual(result.flag_b, false);
   });
@@ -378,7 +378,7 @@ describe('buildAppSettings', () => {
       ['env', 'Produção']
     ];
 
-    const result = buildAppSettings(rows);
+    const result = buildAppSettings_(rows);
     // Valor deve ser preservado exatamente como veio (sem uppercase!)
     assert.equal(result.app_name, 'Inventário App');
     assert.equal(result.env, 'Produção');
@@ -390,7 +390,7 @@ describe('buildAppSettings', () => {
       ['valida', 'ok']
     ];
 
-    const result = buildAppSettings(rows);
+    const result = buildAppSettings_(rows);
     assert.equal(Object.keys(result).length, 1);
     assert.equal(result.valida, 'ok');
   });
@@ -403,7 +403,7 @@ describe('buildAppSettings', () => {
     ];
 
     // Não deve lançar exceção
-    const result = buildAppSettings(rows);
+    const result = buildAppSettings_(rows);
     assert.equal(result.chave_valida, 'valor');
     assert.equal(result.chave_nula, null);
     assert.equal(result.chave_undefined, undefined);
@@ -413,7 +413,7 @@ describe('buildAppSettings', () => {
     const date = new Date('2026-03-27T00:00:00Z');
     const rows = [['min_valid_date', date]];
 
-    const result = buildAppSettings(rows);
+    const result = buildAppSettings_(rows);
     assert.equal(result.min_valid_date, '2026-03-27');
   });
 });

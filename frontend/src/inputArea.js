@@ -102,15 +102,15 @@ InputArea.prototype._setupManualInput = function () {
 
         // Enter: dispara o envio do código digitado manualmente
         if (e.key === 'Enter') {
-            var currentValue = e.target.value.trim();
+            const currentValue = e.target.value.trim();
 
             if (currentValue.length > 0) {
                 // Limpa o campo antes de disparar o evento
                 self.manualBarcodeInput.value = "";
 
                 // Debounce: rejeita o mesmo código se despachado dentro da janela de 3s
-                var now = Date.now();
-                var lastTime = self._recentCodes[currentValue];
+                const now = Date.now();
+                const lastTime = self._recentCodes[currentValue];
                 if (lastTime && (now - lastTime) < self._debounceWindow) {
                     self._cleanupRecentCodes();
                     return;
@@ -147,8 +147,8 @@ InputArea.prototype._setupManualInput = function () {
  * @private
  */
 InputArea.prototype._cleanupRecentCodes = function () {
-    var self = this;
-    var now = Date.now();
+    const self = this;
+    const now = Date.now();
     Object.keys(self._recentCodes).forEach(function (code) {
         if (now - self._recentCodes[code] > self._debounceWindow) {
             delete self._recentCodes[code];

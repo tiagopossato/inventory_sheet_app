@@ -53,6 +53,12 @@ AssetSyncManager.prototype._setupListeners = function () {
   window.addEventListener('repositoryChanged', function () {
     self._startSyncLoop();
   });
+
+  // Listener de acesso negado — para todas as tentativas de sync
+  window.addEventListener('accessDenied', function () {
+    console.warn('Acesso negado detectado. Parando sincronização permanentemente.');
+    self._stopSyncLoop();
+  });
 };
 
 /**

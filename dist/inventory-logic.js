@@ -20,7 +20,7 @@
  *     └──────┬──────┘ └──────┬──────────────┘
  *            │               │
  *     ┌──────▼──────┐ ┌──────▼──────────────┐
- *     │ inventory-  │ │ main.js/.gs         │
+ *     │ inventory-  │ │ public.js/.gs         │
  *     │ service.js  │ │ Thin I/O adapter    │
  *     │ Thin I/O    │ │ SpreadsheetApp,     │
  *     │ adapter     │ │ LockService, etc.   │
@@ -28,19 +28,19 @@
  *
  * ## Regra de ouro
  * >>> Alterou regra de negócio? Mexa SOMENTE neste arquivo. <<<
- * main.js e inventory-service.js são thin adapters — não contêm lógica.
+ * public.js e inventory-service.js são thin adapters — não contêm lógica.
  *
  * ## Mapeamento: função pura → equivalente GAS
  *
- * | inventory-logic.js            | main.js (GAS)            |
+ * | inventory-logic.js            | public.js (GAS)            |
  * |-------------------------------|--------------------------|
- * | `buildInventoryData()`        | `getInventoryData()`     |
- * | `buildInventorySummary()`     | `getInventorySummary()`  |
+ * | `buildInventoryData_()`        | `getInventoryData()`     |
+ * | `buildInventorySummary_()`     | `getInventorySummary()`  |
  * | `groupLeiturasByLocation()`   | (interno)                |
  * | `buildLocationSummaries()`    | (interno)                |
  * | `buildAssetsFinded()`         | (interno)                |
- * | `filterNotFoundItems()`       | `getNotFoundItens()`     |
- * | `buildAppSettings()`          | `getAppSettings()`       |
+ * | `filterNotFoundItems_()`       | `getNotFoundItens()`     |
+ * | `buildAppSettings_()`          | `getAppSettings()`       |
  *
  * ## Layout das abas da planilha
  *
@@ -65,9 +65,9 @@
  *      importado por outras planilhas. As funções públicas (getInventoryData,
  *      saveCodeBatch, etc.) ficam disponíveis para o script host.
  *
- * Em AMBOS os modos, as funções aqui definidas (buildInventoryData, etc.)
+ * Em AMBOS os modos, as funções aqui definidas (buildInventoryData_, etc.)
  * são funções auxiliares internas — NÃO são expostas diretamente ao frontend.
- * O frontend chama apenas as funções definidas em main.js.
+ * O frontend chama apenas as funções definidas em public.js.
  *
  * @module inventory-logic
  * @author Tiago Possato
@@ -78,18 +78,18 @@
 // ============================================================
 
 /** Índices base 0 a partir da coluna D da aba "inventario" */
-const COL_INV_LOCATION  = 0; // Coluna D — Nome da localidade
-const COL_INV_ASSET     = 2; // Coluna F — Número de tombamento
-const COL_INV_SPECNAME  = 8; // Coluna L — Nome da especificação
+const COL_INV_LOCATION = 0; // Coluna D — Nome da localidade
+const COL_INV_ASSET = 2; // Coluna F — Número de tombamento
+const COL_INV_SPECNAME = 8; // Coluna L — Nome da especificação
 const SPEC_NAME_MAX_LEN = 140; // Limite de caracteres para specName
 
 /** Índices base 0 a partir da coluna B da aba "leituras" */
 const COL_LEITURAS_CODE = 1; // Coluna C — Código do bem
-const COL_LEITURAS_LOC  = 2; // Coluna D — Localidade
-const LAST_COL_LEITURAS = 9;  // Número total de colunas (A até I)
+const COL_LEITURAS_LOC = 2; // Coluna D — Localidade
+let LAST_COL_LEITURAS = 9; //Número total de colunas na aba "leituras" (A até I).
 
 /** Índices base 0 da aba "nao_encontrados_geral" */
-const COL_NOTFOUND_LOC   = 0; // Coluna A — Localidade
+const COL_NOTFOUND_LOC = 0; // Coluna A — Localidade
 const COL_NOTFOUND_ASSET = 1; // Coluna B — Tombamento
 
 // ============================================================
@@ -104,7 +104,7 @@ const COL_NOTFOUND_ASSET = 1; // Coluna B — Tombamento
  * @param {boolean} [addSpec=true] - Se true, inclui `name` (coluna L) em cada asset
  * @returns {{ locations: Array<{name: string, assetsCount: number}>, inventory: Array<{location: string, assets: Array}> }}
  */
-function buildInventoryData(invData, addSpec) {
+function buildInventoryData_(invData, addSpec) {
   if (addSpec === undefined) { addSpec = true; }
   if (!invData || invData.length === 0) {
     return { locations: [], inventory: [] };
@@ -161,7 +161,7 @@ function buildInventoryData(invData, addSpec) {
  * @param {Array<Array>} data - Array 2D a partir da linha 2, colunas B-D
  * @returns {Object<string, number[]>} Mapa localidade → [códigos]
  */
-function groupLeiturasByLocation(data) {
+function groupLeiturasByLocation_(data) {
   const groups = {};
   if (!data || data.length === 0) return groups;
 
@@ -189,7 +189,7 @@ function groupLeiturasByLocation(data) {
  * @param {string|null} targetLocation - Localidade específica ou null para todas
  * @returns {Array<{name: string, totalAssets: number, assetsFindedCount: number, missingAssets: number}>}
  */
-function buildLocationSummaries(locData, targetLocation) {
+function buildLocationSummaries_(locData, targetLocation) {
   const locations = [];
   if (!locData || locData.length === 0) return locations;
 
@@ -222,7 +222,7 @@ function buildLocationSummaries(locData, targetLocation) {
  * @param {Object<string, number[]>} groups - Mapa de localidade → códigos
  * @returns {Array<{location: string, assets: number[]}>}
  */
-function buildAssetsFinded(groups) {
+function buildAssetsFinded_(groups) {
   return Object.keys(groups)
     .sort(function (a, b) { return a.localeCompare(b, 'pt-BR', { numeric: true }); })
     .map(function (loc) { return { location: loc, assets: groups[loc] }; });
@@ -237,10 +237,10 @@ function buildAssetsFinded(groups) {
  * @param {string|null} targetLocation - Localidade alvo (opcional)
  * @returns {{ locations: Array, assetsFinded: Array }}
  */
-function buildInventorySummary(leiturasData, localidadesData, targetLocation) {
-  const groups = groupLeiturasByLocation(leiturasData);
-  const locations = buildLocationSummaries(localidadesData, targetLocation);
-  const assetsFinded = buildAssetsFinded(groups);
+function buildInventorySummary_(leiturasData, localidadesData, targetLocation) {
+  const groups = groupLeiturasByLocation_(leiturasData);
+  const locations = buildLocationSummaries_(localidadesData, targetLocation);
+  const assetsFinded = buildAssetsFinded_(groups);
   return { locations: locations, assetsFinded: assetsFinded };
 }
 
@@ -255,9 +255,9 @@ function buildInventorySummary(leiturasData, localidadesData, targetLocation) {
  * @param {string} targetLocation - Localidade a filtrar (obrigatório)
  * @returns {Array<Array<string>>} Lista de [Tombamento]
  */
-function filterNotFoundItems(data, targetLocation) {
+function filterNotFoundItems_(data, targetLocation) {
   if (!targetLocation) {
-    throw new Error('filterNotFoundItems: targetLocation não fornecido.');
+    throw new Error('filterNotFoundItems_: targetLocation não fornecido.');
   }
   if (!data || data.length === 0) return [];
 
@@ -288,7 +288,7 @@ function filterNotFoundItems(data, targetLocation) {
  * @param {Array<Array>} data - Array 2D a partir da linha 2, colunas A-B
  * @returns {Object} Configurações como { chave: valor }
  */
-function buildAppSettings(data) {
+function buildAppSettings_(data) {
   const settings = {};
   if (!data || data.length === 0) return settings;
 

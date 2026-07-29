@@ -112,8 +112,8 @@ AssetRepository.prototype._handleStorageFull = function () {
    * @type {Array<Object>}
    */
   // Prioriza manter PENDING/FAILED sobre SYNCED (que já estão na planilha)
-  var beforeCount = this.items.length;
-  var pendingBefore = this.items.filter(function (i) {
+  const beforeCount = this.items.length;
+  const pendingBefore = this.items.filter(function (i) {
     return i.status === AssetStatus.PENDING || i.status === AssetStatus.FAILED;
   }).length;
 
@@ -123,13 +123,13 @@ AssetRepository.prototype._handleStorageFull = function () {
     return b.createdAt - a.createdAt;
   });
 
-  var removedCount = beforeCount - Math.min(beforeCount, 100);
+  const removedCount = beforeCount - Math.min(beforeCount, 100);
   this.items = this.items.slice(0, 100);
 
-  var pendingAfter = this.items.filter(function (i) {
+  const pendingAfter = this.items.filter(function (i) {
     return i.status === AssetStatus.PENDING || i.status === AssetStatus.FAILED;
   }).length;
-  var pendingLost = pendingBefore - pendingAfter;
+  const pendingLost = pendingBefore - pendingAfter;
 
   try {
     /**

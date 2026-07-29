@@ -120,7 +120,7 @@ async function deploy() {
         });
 
         console.log("✅ Arquivos backend copiados para dist/");
-
+        
         // 4. Clasp Push
         console.log("📤 Enviando arquivos para o servidor do Google...");
         setupClaspJson();
