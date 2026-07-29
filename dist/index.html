@@ -2473,7 +2473,7 @@ Deseja prosseguir mesmo assim?`
   new AssetSyncManager(assetRepository);
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-DuzdOnQX.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-BCU6rXa5.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
@@ -2539,6 +2539,10 @@ Deseja prosseguir mesmo assim?`
         inventoryData = inventoryRes;
       }
       /* @__PURE__ */ console.log("⚙️ Configurações carregadas:", appSettings);
+      var emailEl = document.getElementById("footer-email");
+      if (emailEl && appSettings && appSettings.email) {
+        emailEl.textContent = appSettings.email;
+      }
       if (appSettings && appSettings.inventory_open === false) {
         window.dispatchEvent(new CustomEvent("inventoryClosed", {
           detail: {
@@ -2567,8 +2571,8 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.07.29-012";
-      el.title = `Versão do build: ${"2026.07.29-012"}`;
+      el.textContent = "2026.07.29-001";
+      el.title = `Versão do build: ${"2026.07.29-001"}`;
     }
   });
   window.addEventListener("inventoryClosed", function(e) {
@@ -2621,7 +2625,7 @@ Deseja prosseguir mesmo assim?`
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.07.29-012"}`);
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.07.29-001"}`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
       throw new Error(`Falha na inicialização do debug: ${error.message}`);
@@ -2784,7 +2788,7 @@ Deseja prosseguir mesmo assim?`
 
   <footer class="app-footer" role="contentinfo">
     <div>
-      App Inventário &copy; IFC 2026 | Build: <a id="footer-version" title="Informações da versão">---</a>
+      App Inventário &copy; IFC 2026 | Build: <a id="footer-version" title="Informações da versão">---</a> | User: <span id="footer-email"></span>
     </div>
   </footer>
 

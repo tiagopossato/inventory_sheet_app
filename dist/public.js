@@ -568,6 +568,7 @@ function getAppSettings(params) {
 
     // Delega para inventory-logic.js
     const settings = buildAppSettings_(data);
+    settings.email = Session.getActiveUser().getEmail() || '';
     Logger.log(settings);
 
     _appSettingsCache = settings;

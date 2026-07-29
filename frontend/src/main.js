@@ -182,6 +182,12 @@ window.addEventListener('load', async () => {
 
     console.log('⚙️ Configurações carregadas:', appSettings);
 
+    // Exibe o email do usuário no rodapé
+    var emailEl = document.getElementById('footer-email');
+    if (emailEl && appSettings && appSettings.email) {
+      emailEl.textContent = appSettings.email;
+    }
+
     // --- Estratégia de Manutenção (Kill Switch de Acesso) ---
     // Se a chave existir e for estritamente false, bloqueia o app
     if (appSettings && appSettings.inventory_open === false) {

@@ -229,6 +229,7 @@ export class InventoryService {
 
     // Delega para módulo canônico
     const settings = buildAppSettings(data);
+    settings.email = 'localhost';
     this._appSettingsCache = settings;
     this._appSettingsCacheTime = now;
     return settings;
