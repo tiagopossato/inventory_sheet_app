@@ -22,12 +22,12 @@ Tight Google Sheets integration is the mechanism a neighboring product cannot tr
 
 Staff move through institutional buildings scanning patrimonial assets — equipment, furniture, and fixtures — each tagged with a barcode or QR code. They use their personal Android or iOS phones via the mobile browser. Wi-Fi connectivity varies across buildings (some rooms have dead zones); the app works offline and queues readings in LocalStorage for later sync. Ambient conditions include variable lighting from bright classrooms to dim storage rooms. The inventory event runs intensively for days or weeks, then the app goes dormant until the next cycle.
 
-The Google Sheets document backing the app has four tabs: `inventario` (master inventory, read-only), `leituras` (scan log, written by `saveCodeBatch`), `observacoes` (user-submitted notes, written by `saveMessage`), and `app_config` (key-value settings including the `inventory_open` kill switch). Non-technical staff can edit any of these directly — the spreadsheet is the admin interface.
+The Google Sheets document backing the app has seven tabs: `inventario` (master inventory, read-only), `leituras` (scan log, written by `saveCodeBatch` with UID-based upsert), `localidades` (location list), `nao_encontrados_geral` (items not found per location), `observacoes` (user-submitted notes, written by `saveMessage`), `app_config` (key-value settings including the `inventory_open` kill switch), and `usuarios_autorizados` (authorized users whitelist). Non-technical staff can edit any of these directly — the spreadsheet is the admin interface.
 
 ## Capabilities and Constraints
 
 **Capabilities:**
-- Camera-based barcode/QR scanning plus manual keyboard input (with optional "bypass location" for unrestricted scans)
+- Camera-based barcode/QR scanning plus keyboard-emulated scanner support (OTG/Bluetooth) and manual keyboard input (with optional "bypass location" for unrestricted scans)
 - Location-aware validation: each scan checks whether the asset is expected in the selected room
 - Offline-first operation: LocalStorage queue with debounced writes, batch sync to GAS, and exponential backoff retry
 - Multi-user duplicate prevention via a remote inventory registry (30-second polling interval)
@@ -52,7 +52,7 @@ The Google Sheets document backing the app has four tabs: `inventario` (master i
 - Deployment to GAS is via `clasp` CLI; never edit code directly in the Apps Script Editor
 
 **Undecided:**
-- Whether the barcode scanner module (`barcodeScanner.js`, currently commented out) should be re-enabled or removed
+- None currently — all major architectural decisions are settled
 
 ## Brand Commitments
 
@@ -63,8 +63,8 @@ The Google Sheets document backing the app has four tabs: `inventario` (master i
 ## Evidence on Hand
 
 - Working production code deployed on Google Apps Script, with real usage during inventory cycles
-- Comprehensive `CLAUDE.md` documenting the full architecture: three-layer design (Browser → GAS → Sheets), 17-module frontend inventory with responsibilities, data flow pipeline, and development workflow
-- Detailed `TODO.md` with prioritized risk analysis including a pré-mortem: silent LocalStorage data loss on overflow (critical), cross-user duplicate detection window (high), Google Sheets API quota exhaustion under concurrent load (high), service account key rotation risk, and missing input sanitization on the GAS backend
+- Comprehensive `CLAUDE.md` documenting the full architecture: three-layer design (Browser → GAS → Sheets), 22-module frontend inventory with responsibilities, data flow pipeline, and development workflow
+- Detailed `TODO.md` with prioritized risk analysis including a pré-mortem: silent LocalStorage data loss on overflow (mitigated with smart eviction), cross-user duplicate detection window (partial), Google Sheets API quota exhaustion under concurrent load (partial — `uidToRow` cache and `getAppSettings` cache implemented), and missing input sanitization on the GAS backend
 - Git history shows continuous development by a single author (Tiago Possato)
 - `version.json` uses calendar-based versioning (`YYYY.MM.DD-NNN`)
 

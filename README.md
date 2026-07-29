@@ -4,10 +4,10 @@ Este projeto é uma Web App (PWA) de alta performance para leitura de códigos d
 
 ## ✨ Funcionalidades
 
-* **Scanner Híbrido:** Biblioteca `html5-qrcode` com máxima compatibilidade entre dispositivos, área de foco (mira) e controle de lanterna.
+* **Scanner Híbrido:** Biblioteca `html5-qrcode` com máxima compatibilidade entre dispositivos, área de foco (mira) e controle de lanterna. Suporte adicional a scanners de teclado (OTG/Bluetooth) via detecção de velocidade de digitação.
 * **Versionamento Automático:** Script de deploy que gera versões baseadas em data (`YYYY.MM.DD-XXX`) injetadas na interface.
 * **Modo Multi-Ambiente:** Suporte nativo para ambientes de `produção` e `homologação` via flags de compilação e modos do Vite.
-* **Arquitetura ES2017/V8:** Frontend modularizado e validado via ESLint para compatibilidade total com o motor V8 do Google Apps Script.
+* **Arquitetura ES2015+/V8:** Frontend com build target ES2015 (compatível com GAS) e ESLint ecmaVersion 2017. Código validado contra sintaxes incompatíveis (`?.`, `??`).
 * **Console de Debug:** Ferramenta integrada na tela para visualizar logs diretamente no celular.
 * **Servidor Local de Testes:** Preview em tempo real com suporte a hot reload para desenvolvimento ágil.
 
@@ -92,15 +92,15 @@ Para implantar uma cópia em produção do projeto como está, siga os seguintes
 3. Abra o Apps Script vinculado à planilha (Extensões > Apps Script).
 4. Renomeie o projeto caso desejar.
 5. No editor do Apps Script, vá em Implantar > Nova Implantação > Selecione o tipo > App da web.
-6. Configure quem tem acesso ao aplicativo
+6. Configure quem tem acesso ao aplicativo:
     1. Executar como: Usuário com acesso ao app da Web
     2. Quem pode acessar: "Qualquer pessoa com uma Conta do Google".
-9. Clique em "Implantar"
-10. Copie a URL do app da web.
-11. Acesse a URL em um navegador.
+7. Clique em "Implantar".
+8. Copie a URL do app da web.
+9. Acesse a URL em um navegador.
     1. Caso solicite permissões, conceda acesso à conta Google vinculada à planilha.
 
-Para alterar o título do app e o ícone exibido na aba do navegador, edite os parâmetros da função `doGet` em `backend/Código.gs`.
+Para alterar o título do app e o ícone exibido na aba do navegador, edite os parâmetros da função `doGet` em `backend/public.js`.
 
 --
 ## ⚠️ Regra de Ouro

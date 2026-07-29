@@ -6,6 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A mobile-first barcode/QR scanner for physical inventory counting. The frontend runs in the browser (bundled by Vite into a single HTML file), the backend is a **Google Apps Script (GAS)** project hosted on a Google Sheets document.
 
+## Project files
+
+- **TODO.md** — prioritized backlog of pending improvements, bugs, and risks. **Only open items live here.**
+- **CHANGELOG.md** — completed work history. **When an item from TODO.md is fully resolved, move it to CHANGELOG.md and remove it from TODO.md.** Never leave resolved items in TODO.md.
+- **PRODUCT.md** — product spec: users, purpose, capabilities, constraints, principles.
+- **README.md** — public-facing README in Portuguese (pt-BR) with setup and deploy instructions.
+
 ## Commands
 
 ```bash
@@ -33,7 +40,8 @@ Browser (Vite bundle)
     ↓ google.script.run
 Google Apps Script (backend/)
     ↓ SpreadsheetApp
-Google Sheets (inventario, leituras, observacoes, app_config tabs)
+Google Sheets (inventario, leituras, localidades, nao_encontrados_geral,
+               observacoes, app_config, usuarios_autorizados tabs)
 ```
 
 ### Frontend data flow
@@ -63,25 +71,27 @@ Input (scanner / keyboard)
 
 ### Backend (backend/)
 
-`Código.js` — `doGet()` serves the compiled HTML template.
-`public.js` — all data functions: `getInventoryData`, `getAppSettings`, `saveCodeBatch`, `saveMessage`, `getNotFoundItens`, `getInventorySummary`.
-`auth.js` — authorization (checks `usuarios_autorizados` sheet) and user identity.
-`inventory-logic.js` — pure business logic functions, single source of truth for data transforms.
-`common.js` — shared utilities: `include_()` for GAS templates, JSON response helpers.
-`Menu.js` — Google Sheets menu integration (QR code modal for app access).
+`public.js` — thin I/O adapter. Contains `doGet()` (HTTP entry point that serves the compiled HTML), plus all data functions exposed via `google.script.run`: `getInventoryData`, `getAppSettings`, `saveCodeBatch`, `saveMessage`, `getNotFoundItens`, `getInventorySummary`. Delegates business logic to `inventory-logic.js`.
+`inventory-logic.js` — pure business logic functions, single source of truth for data transforms. ES module syntax (`export`) is stripped by `deploy.js` for GAS compatibility.
+`auth.js` — authorization (checks `usuarios_autorizados` sheet) and user identity: `authenticateRequest_()`, `checkAuthorization_()`, `getUserName_()`.
+`common.js` — shared utilities: `include_()` for GAS HTML templates, `jsonSuccess_()` / `jsonError_()` response helpers.
+`appsscript.json` — GAS project manifest: timezone, V8 runtime, OAuth scopes.
 
 ### Google Sheets tabs
 
 | Tab | Purpose |
 |---|---|
 | `inventario` | Master inventory (read-only by app) |
-| `leituras` | Written by `saveCodeBatch()` |
-| `observacoes` | Written by `saveMessage()` |
+| `leituras` | Written by `saveCodeBatch()` — scan log with upsert by UID |
+| `localidades` | Location list used by `getInventorySummary()` |
+| `nao_encontrados_geral` | Items not found per location, read by `getNotFoundItens()` |
+| `observacoes` | Written by `saveMessage()` — user-submitted notes |
 | `app_config` | Key-value settings; `inventory_open: false` closes scanning |
+| `usuarios_autorizados` | Authorized users list checked by `auth.js` |
 
 ## GAS Template Safety (CRITICAL)
 
-The production GAS endpoint serves HTML via `HtmlService.createHtmlOutputFromFile('index')` (see `backend/Código.js:14`). This method does **not** activate the GAS template parser. However, the template-based alternative (`createTemplateFromFile('index').evaluate()`) is preserved in comments (lines 9–12) and could be re-enabled. When the template parser is active, the GAS server scans **all** content — including inline `<script>` tags and JavaScript strings — for scriptlet tags. A false positive match crashes the deployment with a syntax error.
+The production GAS endpoint serves HTML via `HtmlService.createHtmlOutputFromFile('index')` (see `backend/public.js:62–74`). This method does **not** activate the GAS template parser. However, the template-based alternative (`createTemplateFromFile('index').evaluate()`) is preserved in comments (lines 67–70) and could be re-enabled. When the template parser is active, the GAS server scans **all** content — including inline `<script>` tags and JavaScript strings — for scriptlet tags. A false positive match crashes the deployment with a syntax error.
 
 ### Rules for ALL JavaScript that could end up in the served HTML
 
@@ -101,7 +111,7 @@ The production GAS endpoint serves HTML via `HtmlService.createHtmlOutputFromFil
 
 - **Active mode**: `createHtmlOutputFromFile` — no template parsing. `<?` in frontend JS is tolerated today but must still be avoided per these rules.
 - **Commented-out mode**: `createTemplateFromFile` + `.evaluate()` — template parsing ACTIVE. Re-enabling this requires `minify: false` in `vite.config.js` (minified output contains raw `?` characters that form `<?` with neighboring `<`).
-- **Frontend code** (audited 2026-07-22): ZERO `<?` patterns found in `frontend/src/**/*.js`. The only `<?!=` occurrences are in `backend/Código.js` where they are intentional GAS scriptlets.
+- **Frontend code** (audited 2026-07-22): ZERO `<?` patterns found in `frontend/src/**/*.js`. The only `<?!=` occurrences are in `backend/public.js` where they are intentional GAS scriptlets.
 
 ## Key constraints
 
@@ -143,6 +153,7 @@ All user-facing text must be in **Portuguese (pt-BR)**. Comments and JSDoc are i
 | `backendService.js` | GAS `google.script.run` wrapper with retry |
 | `inventoryBaseline.js` | Master inventory lookup & verification |
 | `remoteInventoryRegistry.js` | Cross-user scan cache (30s polling) |
+| `barcodeScanner.js` | Keyboard-emulated barcode scanner (OTG/Bluetooth) via keystroke timing |
 | `barcodeTable.js` | Paginated table of scanned items |
 | `statsManager.js` | Statistics dashboard |
 | `locationSelector.js` | Dropdown of inventory locations |
@@ -153,6 +164,10 @@ All user-facing text must be in **Portuguese (pt-BR)**. Comments and JSDoc are i
 | `userWarnings.js` | Toast-style warning messages |
 | `connectivityManager.js` | Online/offline detection and banner |
 | `audioManager.js` | Audio feedback for scan events |
+| `loadingModal.js` | Loading overlay shown during data fetch/init |
+| `appModal.js` | Base modal component (constructor+prototype) used by other modals |
+| `debug.js` | On-screen console overlay for mobile debugging (dev/homolog only) |
+| `mockGAS.js` | Local mock of `google.script.run` for development |
 
 ## Environment variables (.env)
 
