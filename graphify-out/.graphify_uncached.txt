@@ -1,0 +1,14 @@
+C:\Users\Tiago\Documents\projetos\inventory_sheet_app\CHANGELOG.md
+C:\Users\Tiago\Documents\projetos\inventory_sheet_app\CLAUDE.md
+C:\Users\Tiago\Documents\projetos\inventory_sheet_app\DATA_FLOW.md
+C:\Users\Tiago\Documents\projetos\inventory_sheet_app\DESIGN.md
+C:\Users\Tiago\Documents\projetos\inventory_sheet_app\PRODUCT.md
+C:\Users\Tiago\Documents\projetos\inventory_sheet_app\README.md
+C:\Users\Tiago\Documents\projetos\inventory_sheet_app\TODO.md
+C:\Users\Tiago\Documents\projetos\inventory_sheet_app\backend\README.md
+C:\Users\Tiago\Documents\projetos\inventory_sheet_app\backend\TODO.md
+C:\Users\Tiago\Documents\projetos\inventory_sheet_app\frontend\index.html
+C:\Users\Tiago\Documents\projetos\inventory_sheet_app\local_server\README.md
+C:\Users\Tiago\Documents\projetos\inventory_sheet_app\local_server\TODO.md
+C:\Users\Tiago\Documents\projetos\inventory_sheet_app\megaprompt-android-app.md
+C:\Users\Tiago\Documents\projetos\inventory_sheet_app\planilha_cliente\README.md
