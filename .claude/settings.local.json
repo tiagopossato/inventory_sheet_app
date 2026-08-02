@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(IMPECCABLE_CRITIQUE_META='{\"target\":\"frontend/index.html\",\"total_score\":23,\"max_score\":40,\"na_heuristics\":\"\",\"p0_count\":2,\"p1_count\":3}' node *)",
+      "Bash(node *)",
+      "Bash(find \"C:\\\\\\\\Users\\\\\\\\Tiago\\\\\\\\Documents\\\\\\\\projetos\\\\\\\\inventory_sheet_app\\\\\\\\leitor-de-codigo-de-barras\" -name \"*.md\" -o -name \"*.txt\" -o -name \"*.gradle\" -o -name \"*.kts\" -o -name \"*.json\")",
+      "Bash(claude plugin *)",
+      "Bash(npm run *)",
+      "Bash(taskkill //F //IM node.exe)",
+      "WebSearch",
+      "Bash(npx impeccable *)",
+      "Skill(impeccable)"
+    ],
+    "deny": [
+      "Edit(dist/**)",
+      "Edit(node_modules/**)",
+      "Edit(planilha_cliente/**)",
+      "Read(z_futuro/**)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/hook.mjs\"",
+            "timeout": 5,
+            "statusMessage": "Checking UI changes"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/hook.mjs\"",
+            "timeout": 30,
+            "statusMessage": "Design deep pass"
+          }
+        ]
+      }
+    ]
+  },
+  "description": "Impeccable design detector: immediate-tier checks after Edit/Write/MultiEdit on UI files, full-rule deep pass on Stop."
+}
