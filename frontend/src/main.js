@@ -51,7 +51,6 @@ import { processBarcode } from './processBarcode.js';
 import { userWarnings } from './userWarnings.js'
 import { backendService } from './backendService.js'
 import { loadingModal } from './loadingModal.js'
-import { barcodeScanner } from './barcodeScanner.js';
 import './assetsNotFound.js';
 import './audioManager.js'
 import './editAssetModal.js';
@@ -80,7 +79,13 @@ window.addEventListener('codeScanned', async function (e) {
 
   try {
     const selectedLocation = locationSelector.getSelectedLocation();
-    const bypassCheckLocation = document.querySelector("#bypassCheckLocation").checked;
+
+    let bypassCheckLocation = true;
+
+    if (source == 'manual_input') {
+      //bypassCheckLocation = document.querySelector("#bypassCheckLocation").checked;
+      bypassCheckLocation = false; // Força bypass para input manual
+    }
 
     await processBarcode(codigo, selectedLocation, source, bypassCheckLocation);
   } finally {
@@ -104,10 +109,8 @@ window.addEventListener('locationChanged', function (e) {
 
   if (novoLocal === locationSelector.NONE_SELECTED) {
     inputArea.hide();
-    barcodeScanner.stop(); // Para a escuta do scanner quando nenhum local é selecionado
   } else {
     inputArea.show();
-    barcodeScanner.start(); // Inicia a escuta do scanner quando um local é selecionado
   }
 });
 

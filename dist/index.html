@@ -155,6 +155,58 @@ var __spreadValues = (a, b) => {
     return false;
   };
   const locationSelector = new LocationSelector();
+  function BarcodeScanner() {
+    this.buffer = "";
+    this.lastKeyTime = Date.now();
+    this.isListening = false;
+    this._handleKeyDown = this._handleKeyDown.bind(this);
+  }
+  BarcodeScanner.prototype.start = function() {
+    if (!this.isListening) {
+      window.addEventListener("keydown", this._handleKeyDown);
+      this.isListening = true;
+    }
+  };
+  BarcodeScanner.prototype.stop = function() {
+    if (this.isListening) {
+      window.removeEventListener("keydown", this._handleKeyDown);
+      this.isListening = false;
+    }
+  };
+  BarcodeScanner.prototype._handleKeyDown = function(e) {
+    const currentTime = Date.now();
+    if (currentTime - this.lastKeyTime > 50) {
+      this.buffer = "";
+    }
+    this.lastKeyTime = currentTime;
+    if (e.key === "Enter") {
+      while (this.buffer.length > 0 && isNaN(this.buffer[this.buffer.length - 1])) {
+        this.buffer = this.buffer.slice(0, -1);
+      }
+      if (this.buffer.length >= 5) {
+        e.preventDefault();
+        e.stopPropagation();
+        const manualInput = document.getElementById("manualBarcode");
+        if (manualInput) {
+          manualInput.value = "";
+        }
+        window.dispatchEvent(new CustomEvent("codeScanned", {
+          detail: {
+            code: this.buffer,
+            source: "otg"
+          }
+        }));
+      }
+      this.buffer = "";
+      return;
+    }
+    if (e.key.length > 1) return;
+    if (this.buffer.length > 0) {
+      e.preventDefault();
+    }
+    this.buffer += e.key;
+  };
+  const barcodeScanner = new BarcodeScanner();
   function InputArea() {
     this.isLockedExternal = false;
     this.manualBarcodeInput = null;
@@ -185,10 +237,6 @@ var __spreadValues = (a, b) => {
                 data-form-type="other"
             >
             <button id="clearManualBarcode" class="btn btn-danger">Limpar</button>
-        </div>
-        <div class="control-row">
-            <input type="checkbox" id="bypassCheckLocation" name="bypassCheckLocation" value="bypassCheckLocation">
-            <label for="bypassCheckLocation"> Ignorar verificação de localização?</label><br>
         </div>
     `;
     this.manualBarcodeInput = document.getElementById("manualBarcode");
@@ -249,16 +297,19 @@ var __spreadValues = (a, b) => {
   InputArea.prototype.show = function() {
     const el = document.querySelector("#scanner-area");
     if (el) el.style.display = "block";
+    this.unlock();
   };
   InputArea.prototype.hide = function() {
     const el = document.querySelector("#scanner-area");
     if (el) el.style.display = "none";
+    this.lock();
   };
   InputArea.prototype.lock = function() {
     this.isLockedExternal = true;
     if (this.manualBarcodeInput) {
       this.manualBarcodeInput.disabled = true;
     }
+    barcodeScanner.stop();
   };
   InputArea.prototype.unlock = function() {
     this.isLockedExternal = false;
@@ -266,6 +317,7 @@ var __spreadValues = (a, b) => {
       this.manualBarcodeInput.disabled = false;
       this.setFocus();
     }
+    barcodeScanner.start();
   };
   const inputArea = new InputArea();
   const STORAGE_KEY = "BARCODE_APP_DATA_V1";
@@ -1650,58 +1702,6 @@ Deseja prosseguir mesmo assim?`
     }
   };
   const loadingModal = new LoadingModal();
-  function BarcodeScanner() {
-    this.buffer = "";
-    this.lastKeyTime = Date.now();
-    this.isListening = false;
-    this._handleKeyDown = this._handleKeyDown.bind(this);
-  }
-  BarcodeScanner.prototype.start = function() {
-    if (!this.isListening) {
-      window.addEventListener("keydown", this._handleKeyDown);
-      this.isListening = true;
-    }
-  };
-  BarcodeScanner.prototype.stop = function() {
-    if (this.isListening) {
-      window.removeEventListener("keydown", this._handleKeyDown);
-      this.isListening = false;
-    }
-  };
-  BarcodeScanner.prototype._handleKeyDown = function(e) {
-    const currentTime = Date.now();
-    if (currentTime - this.lastKeyTime > 50) {
-      this.buffer = "";
-    }
-    this.lastKeyTime = currentTime;
-    if (e.key === "Enter") {
-      while (this.buffer.length > 0 && isNaN(this.buffer[this.buffer.length - 1])) {
-        this.buffer = this.buffer.slice(0, -1);
-      }
-      if (this.buffer.length >= 5) {
-        e.preventDefault();
-        e.stopPropagation();
-        const manualInput = document.getElementById("manualBarcode");
-        if (manualInput) {
-          manualInput.value = "";
-        }
-        window.dispatchEvent(new CustomEvent("codeScanned", {
-          detail: {
-            code: this.buffer,
-            source: "otg"
-          }
-        }));
-      }
-      this.buffer = "";
-      return;
-    }
-    if (e.key.length > 1) return;
-    if (this.buffer.length > 0) {
-      e.preventDefault();
-    }
-    this.buffer += e.key;
-  };
-  const barcodeScanner = new BarcodeScanner();
   function ConnectivityManager() {
     this.bannerId = "offlineBanner";
     this.isOnline = navigator.onLine;
@@ -2473,7 +2473,7 @@ Deseja prosseguir mesmo assim?`
   new AssetSyncManager(assetRepository);
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-BCU6rXa5.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-CYvke_1h.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
@@ -2487,7 +2487,10 @@ Deseja prosseguir mesmo assim?`
     isProcessing = true;
     try {
       const selectedLocation = locationSelector.getSelectedLocation();
-      const bypassCheckLocation = document.querySelector("#bypassCheckLocation").checked;
+      let bypassCheckLocation = true;
+      if (source == "manual_input") {
+        bypassCheckLocation = false;
+      }
       await processBarcode(codigo, selectedLocation, source, bypassCheckLocation);
     } finally {
       isProcessing = false;
@@ -2501,10 +2504,8 @@ Deseja prosseguir mesmo assim?`
     if (novoLocal === null || novoLocal === void 0) return;
     if (novoLocal === locationSelector.NONE_SELECTED) {
       inputArea.hide();
-      barcodeScanner.stop();
     } else {
       inputArea.show();
-      barcodeScanner.start();
     }
   });
   window.addEventListener("beforeunload", function(e) {
@@ -2571,8 +2572,8 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.07.29-001";
-      el.title = `Versão do build: ${"2026.07.29-001"}`;
+      el.textContent = "2026.08.01-001";
+      el.title = `Versão do build: ${"2026.08.01-001"}`;
     }
   });
   window.addEventListener("inventoryClosed", function(e) {
@@ -2625,7 +2626,7 @@ Deseja prosseguir mesmo assim?`
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.07.29-001"}`);
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.08.01-001"}`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
       throw new Error(`Falha na inicialização do debug: ${error.message}`);

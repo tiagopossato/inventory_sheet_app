@@ -8,6 +8,8 @@
  * @author Tiago Possato
  */
 
+import { barcodeScanner } from './barcodeScanner.js';
+
 /**
  * Classe principal do módulo InputArea
  * @class
@@ -78,11 +80,14 @@ InputArea.prototype.init = function () {
             >
             <button id="clearManualBarcode" class="btn btn-danger">Limpar</button>
         </div>
-        <div class="control-row">
-            <input type="checkbox" id="bypassCheckLocation" name="bypassCheckLocation" value="bypassCheckLocation">
-            <label for="bypassCheckLocation"> Ignorar verificação de localização?</label><br>
-        </div>
     `;
+    // TODO: Ao reativar esse trecho, criar um método para recuperar o estado do checkbox de bypass, 
+    // sem usar querySelector diretamente no main.js
+    //     <div class="control-row">
+    //         <input type="checkbox" id="bypassCheckLocation" name="bypassCheckLocation" value="bypassCheckLocation">
+    //         <label for="bypassCheckLocation"> Ignorar verificação de localização?</label><br>
+    //     </div>
+    // `;
     this.manualBarcodeInput = document.getElementById('manualBarcode');
     this._setupManualInput();
     this.hide();
@@ -175,6 +180,7 @@ InputArea.prototype.setFocus = function () {
 InputArea.prototype.show = function () {
     const el = document.querySelector('#scanner-area');
     if (el) el.style.display = 'block';
+    this.unlock();
 };
 
 /**
@@ -184,6 +190,7 @@ InputArea.prototype.show = function () {
 InputArea.prototype.hide = function () {
     const el = document.querySelector('#scanner-area');
     if (el) el.style.display = 'none';
+    this.lock();
 };
 
 /**
@@ -195,6 +202,7 @@ InputArea.prototype.lock = function () {
     if (this.manualBarcodeInput) {
         this.manualBarcodeInput.disabled = true; // CORREÇÃO: Bloqueia o input visualmente
     }
+    barcodeScanner.stop(); // Para a escuta do scanner quando nenhum local é selecionado
 };
 
 /**
@@ -207,6 +215,7 @@ InputArea.prototype.unlock = function () {
         this.manualBarcodeInput.disabled = false; // CORREÇÃO: Desbloqueia o input
         this.setFocus();
     }
+    barcodeScanner.start(); // Inicia a escuta do scanner quando um local é selecionado
 };
 
 /**
