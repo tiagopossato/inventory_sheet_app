@@ -156,7 +156,7 @@ window.addEventListener('load', async () => {
     loadingModal.toggle(true, "Buscando dados");
 
     // Oculta o conteúdo principal durante o carregamento
-    document.querySelector('main').style.display = 'none';
+    document.querySelector('main').classList.add('is-hidden');
 
     // 1. CARREGAMENTO DOS DADOS (Híbrido: Estático ou Dinâmico)
     let inventoryData;
@@ -206,7 +206,7 @@ window.addEventListener('load', async () => {
     }
 
     // Mostra o conteúdo principal depois do carregamento
-    document.querySelector('main').style.display = 'block';
+    document.querySelector('main').classList.remove('is-hidden');
 
     // 2. EXECUTA ESTRATÉGIA DE LIMPEZA (Kill Switch)
     assetRepository.applyMaintenance(appSettings);
@@ -259,10 +259,10 @@ window.addEventListener('inventoryClosed', function (e) {
 
   // Bloqueio visual simples e eficaz
   document.body.innerHTML = `
-      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; font-family: sans-serif; background: #f8f9fa; color: #333;">
-        <div style="font-size: 80px;">🔐</div>
-        <h1 style="margin-top: 20px;">Inventário fechado</h1>
-        <p style="max-width: 80%; color: #666;">O prazo para inventário está fechado.</p>
+      <div class="lock-screen">
+        <div class="lock-screen-icon">🔐</div>
+        <h1 class="lock-screen-title">Inventário fechado</h1>
+        <p class="lock-screen-desc">O prazo para inventário está fechado.</p>
       </div>
       `;
 
@@ -280,10 +280,10 @@ window.addEventListener('accessDenied', function (e) {
 
   // Bloqueio visual — mesmo padrão do inventário fechado
   document.body.innerHTML = `
-  <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; font-family: sans-serif; background: #f8f9fa; color: #333;">
-    <div style="font-size: 80px;">🚫</div>
-    <h1 style="margin-top: 20px;">Acesso negado</h1>
-    <p style="max-width: 80%; color: #666;">${e.detail ? e.detail.reason : 'Você não está na lista de usuários autorizados.'}<br>Solicite autorização ao administrador do inventário.</p>
+  <div class="lock-screen">
+    <div class="lock-screen-icon">🚫</div>
+    <h1 class="lock-screen-title">Acesso negado</h1>
+    <p class="lock-screen-desc">${e.detail ? e.detail.reason : 'Você não está na lista de usuários autorizados.'}<br>Solicite autorização ao administrador do inventário.</p>
   </div>
   `;
 });

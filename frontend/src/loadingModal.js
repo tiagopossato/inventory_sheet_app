@@ -35,16 +35,12 @@ LoadingModal.prototype.toggle = function (show, message = "⏳ Consultando plani
 
     if (show) {
         this.alert.querySelector('p').textContent = message;
-        this.overlay.style.display = 'block';
-        this.alert.style.display = 'block';
-        this.overlay.style.zIndex = '9998'; // Coloca logo abaixo do alert (9999)
-        this.overlay.onclick = null;
-        this.overlay.style.cursor = 'default'; // Remove o ponteiro de mão
+        this.overlay.classList.add('is-loading');
+        this.alert.classList.add('is-visible');
 
     } else {
-        this.alert.style.display = 'none';
-        this.overlay.style.display = 'none';
-        this.overlay.style.zIndex = '1900'; // Retorna ao z-index original do modal
+        this.alert.classList.remove('is-visible');
+        this.overlay.classList.remove('is-loading');
     }
 };
 

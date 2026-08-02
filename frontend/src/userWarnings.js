@@ -27,7 +27,6 @@ function UserWarnings() {
      * @private
      */
     this.warningArea = document.getElementById('warning-area');
-    this.warningArea.style.display = 'none';
 
     /**
      * ID do timer para limpeza automática
@@ -57,7 +56,7 @@ UserWarnings.prototype.printUserWarning = function (message) {
     if (!this.warningArea) return;
 
     // Define o conteúdo e ativa a classe CSS
-    this.warningArea.style.display = 'block';
+    this.warningArea.classList.add('is-visible');
 
     this.warningArea.textContent = message;
     this.warningArea.classList.add('warning-active');
@@ -86,7 +85,7 @@ UserWarnings.prototype.clearUserWarning = function () {
     this.warningArea.textContent = '';
     this.warningArea.classList.remove('warning-active');
 
-    this.warningArea.style.display = 'none';
+    this.warningArea.classList.remove('is-visible');
 
     if (this.timerId) {
         clearTimeout(this.timerId);

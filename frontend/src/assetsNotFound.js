@@ -116,7 +116,7 @@ AssetsNotFound.prototype.injectHTML = function () {
  */
 AssetsNotFound.prototype.showButton = function () {
     const btn = document.getElementById('notFoundBtn');
-    if (btn) btn.style.display = 'block';
+    if (btn) btn.classList.add('is-visible');
 };
 
 /**
@@ -125,7 +125,7 @@ AssetsNotFound.prototype.showButton = function () {
  */
 AssetsNotFound.prototype.hideButton = function () {
     const btn = document.getElementById('notFoundBtn');
-    if (btn) btn.style.display = 'none';
+    if (btn) btn.classList.remove('is-visible');
 };
 
 /**
@@ -179,9 +179,9 @@ AssetsNotFound.prototype.open = function () {
     // Move para o final do body para evitar z-index/parent issues
     document.body.appendChild(this.modal);
 
-    this.overlay.style.display = 'block';
-    this.modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden'; // Trava o scroll do fundo
+    this.overlay.classList.add('is-visible');
+    this.modal.classList.add('is-visible-flex');
+    document.body.classList.add('body-no-scroll'); // Trava o scroll do fundo
 };
 
 /**
@@ -189,9 +189,9 @@ AssetsNotFound.prototype.open = function () {
  * @public
  */
 AssetsNotFound.prototype.close = function () {
-    this.overlay.style.display = 'none';
-    this.modal.style.display = 'none';
-    document.body.style.overflow = 'auto'; // Destrava o scroll
+    this.overlay.classList.remove('is-visible');
+    this.modal.classList.remove('is-visible-flex');
+    document.body.classList.remove('body-no-scroll'); // Destrava o scroll
     // 2. DESBLOQUEIA O SCANNER 
     inputArea.unlock();
 };

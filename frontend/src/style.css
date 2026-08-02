@@ -537,6 +537,10 @@ select.w-100 {
 /* =========================================================
    6. SCANNER & CAMERA
    ========================================================= */
+#scanner-area {
+  display: none;
+}
+
 #videoArea {
   position: relative;
   background: var(--color-black);
@@ -1106,6 +1110,7 @@ video {
 
 /* Warning Area */
 #warning-area {
+  display: none;
   text-align: center;
   font-size: var(--text-sm);
   margin: var(--space-xs) 0;
@@ -1205,6 +1210,152 @@ video {
   width: 100%;
   height: 100%;
   background: var(--color-overlay-light);
-  z-index: var(--z-toast);
+  z-index: 9998;
   cursor: wait;
+}
+
+/* =========================================================
+   13. UTILITY — VISIBILITY TOGGLES (substitui style.display inline)
+   ========================================================= */
+
+/* Exibe elementos com display:none padrão no CSS */
+.is-visible {
+  display: block !important;
+}
+
+/* Exibe modals full-screen que usam flex */
+.is-visible-flex {
+  display: flex !important;
+}
+
+/* Trava o scroll do body quando um modal está aberto */
+.body-no-scroll {
+  overflow: hidden !important;
+}
+
+/* =========================================================
+   14. DEBUG CONSOLE (extraído de debug.js)
+   ========================================================= */
+#debug-container {
+  margin-top: 30px;
+  border-top: 5px solid var(--color-gray-800);
+  padding: 10px;
+  background: #f0f0f0;
+}
+
+#debug-container .debug-controls {
+  margin-bottom: 5px;
+  display: flex;
+  gap: 10px;
+}
+
+.debug-btn {
+  padding: 8px 15px;
+  color: var(--color-white);
+  border: none;
+  cursor: pointer;
+  font-size: var(--text-sm);
+}
+
+.debug-btn-clear {
+  background: #555;
+}
+
+.debug-btn-clear:hover {
+  background: #444;
+}
+
+.debug-btn-download {
+  background: #28a745;
+}
+
+.debug-btn-download:hover {
+  background: #218838;
+}
+
+#debug-console {
+  width: 100%;
+  height: 250px;
+  background: var(--color-debug-bg);
+  color: var(--color-debug-text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--color-black);
+}
+
+/* =========================================================
+   15. LOCK SCREENS (extraído de main.js — inventário fechado / acesso negado)
+   ========================================================= */
+.lock-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  text-align: center;
+  font-family: var(--font-family);
+  background: var(--color-gray-50);
+  color: var(--color-gray-800);
+}
+
+.lock-screen-icon {
+  font-size: 80px;
+  line-height: 1;
+}
+
+.lock-screen-title {
+  margin-top: 20px;
+  font-size: var(--text-2xl);
+}
+
+.lock-screen-desc {
+  max-width: 80%;
+  color: var(--color-gray-700);
+  font-size: var(--text-base);
+  line-height: 1.5;
+}
+
+/* =========================================================
+   16. OPEN MESSAGE BUTTON (inicialmente oculto, exibido via JS)
+   ========================================================= */
+#openMessageModalBtn {
+  display: none;
+}
+
+/* =========================================================
+   17. NOT FOUND BUTTON (inicialmente oculto, exibido via JS)
+   ========================================================= */
+#notFoundBtn {
+  display: none;
+}
+
+/* =========================================================
+   18. NOSCRIPT FALLBACK (extraído de index.html)
+   ========================================================= */
+.noscript-fallback {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 1rem;
+  text-align: center;
+}
+
+/* =========================================================
+   19. MAIN CONTENT HIDDEN STATE (durante carregamento)
+   ========================================================= */
+main.is-hidden {
+  display: none;
+}
+
+/* =========================================================
+   20. LOADING OVERLAY ACTIVE STATE
+   ========================================================= */
+#loadingOverlay.is-loading {
+  display: block;
+  cursor: default;
+}
+
+#consultingAlert.is-visible {
+  display: block;
 }

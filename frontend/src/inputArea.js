@@ -179,7 +179,7 @@ InputArea.prototype.setFocus = function () {
  */
 InputArea.prototype.show = function () {
     const el = document.querySelector('#scanner-area');
-    if (el) el.style.display = 'block';
+    if (el) el.classList.add('is-visible');
     this.unlock();
 };
 
@@ -189,7 +189,7 @@ InputArea.prototype.show = function () {
  */
 InputArea.prototype.hide = function () {
     const el = document.querySelector('#scanner-area');
-    if (el) el.style.display = 'none';
+    if (el) el.classList.remove('is-visible');
     this.lock();
 };
 

@@ -81,7 +81,7 @@ ConnectivityManager.prototype.updateStatus = function () {
 
     // Atualiza a exibição do banner de offline
     if (banner) {
-        banner.style.display = this.isOnline ? 'none' : 'block';
+        banner.classList.toggle('is-visible', !this.isOnline);
     }
 
     // Logs informativos para debugging

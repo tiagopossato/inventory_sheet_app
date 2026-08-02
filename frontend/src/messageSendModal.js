@@ -68,7 +68,7 @@ SendMessage.prototype.injectHTML = function () {
     // Botão para abrir o modal (inicialmente oculto)
     if (!document.getElementById('openMessageModalBtn')) {
         container.innerHTML += (
-            '<button id="openMessageModalBtn" class="btn location-btn" style="display:none;">' +
+            '<button id="openMessageModalBtn" class="btn location-btn">' +
             'Enviar observação' +
             '</button>'
         );
@@ -177,7 +177,7 @@ SendMessage.prototype.setupEvents = function () {
  */
 SendMessage.prototype.showButton = function () {
     const btn = document.getElementById('openMessageModalBtn');
-    if (btn) btn.style.display = 'block';
+    if (btn) btn.classList.add('is-visible');
 };
 
 /**
@@ -186,7 +186,7 @@ SendMessage.prototype.showButton = function () {
  */
 SendMessage.prototype.hideButton = function () {
     const btn = document.getElementById('openMessageModalBtn');
-    if (btn) btn.style.display = 'none';
+    if (btn) btn.classList.remove('is-visible');
 };
 
 /**
@@ -201,8 +201,8 @@ SendMessage.prototype.open = function () {
     }
 
     document.getElementById('obsLocationName').textContent = `Local: ${loc}`;
-    document.getElementById('modalObs').style.display = 'block';
-    document.getElementById('messageModalOverlay').style.display = 'block';
+    document.getElementById('modalObs').classList.add('is-visible');
+    document.getElementById('messageModalOverlay').classList.add('is-visible');
     document.getElementById('obsText').focus();
 };
 
@@ -211,8 +211,8 @@ SendMessage.prototype.open = function () {
  * @public
  */
 SendMessage.prototype.close = function () {
-    document.getElementById('modalObs').style.display = 'none';
-    document.getElementById('messageModalOverlay').style.display = 'none';
+    document.getElementById('modalObs').classList.remove('is-visible');
+    document.getElementById('messageModalOverlay').classList.remove('is-visible');
     document.getElementById('obsText').value = '';
     document.getElementById('obsCharCount').textContent = '0 / 140';
 };

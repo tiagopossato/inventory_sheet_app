@@ -26,15 +26,13 @@ export function setupDebug() {
 
     try {
         container.innerHTML = `
-            <div id="debug-container" style="margin-top: 30px; border-top: 5px solid #333; padding: 10px; background: #f0f0f0;">
-                <h3 style="margin: 0 0 10px 0;" id="debug-heading" class="sr-only">Console de Debug</h3>
-                <div style="margin-bottom: 5px; display: flex; gap: 10px;">
-                    <button id="btn-clear-debug" style="padding: 8px 15px; background: #555; color: white; border: none; cursor: pointer;">Limpar Log</button>
-                    <button id="btn-download-debug" style="padding: 8px 15px; background: #28a745; color: white; border: none; cursor: pointer;">📥 Baixar Log</button>
+            <div id="debug-container">
+                <h3 id="debug-heading" class="sr-only">Console de Debug</h3>
+                <div class="debug-controls">
+                    <button id="btn-clear-debug" class="debug-btn debug-btn-clear">Limpar Log</button>
+                    <button id="btn-download-debug" class="debug-btn debug-btn-download">📥 Baixar Log</button>
                 </div>
-                <textarea id="debug-console" 
-                    style="width: 100%; height: 250px; background: #1e1e1e; color: #00ff00; font-family: monospace; font-size: 11px; padding: 10px; box-sizing: border-box; border: 1px solid #000;" 
-                    readonly></textarea>
+                <textarea id="debug-console" readonly></textarea>
             </div>
         `;
 
