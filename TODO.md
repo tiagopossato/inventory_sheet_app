@@ -45,15 +45,11 @@ O catch (linhas 166-178) engole qualquer erro e mostra mensagem genérica. Se `a
 
 **Sugestão:** Ou criar elementos `<h2>` ocultos (sr-only) com esses IDs, ou remover os `aria-labelledby` e usar `aria-label` diretamente.
 
-### 3.3 Touch targets abaixo de 44px
+### 3.3 Touch targets abaixo de 44px (PARCIAL)
 `.clickable-location` (padding vertical 2px), `.cell-link` (sem min-height), `.stat-metrics` (fonte 12px com gap 6px) criam áreas de toque abaixo do mínimo WCAG para mobile.
 
-**Sugestão:** `.clickable-location`: padding vertical mínimo 10px. `.cell-link`: min-height 44px no `<td>` pai. `.stat-metrics`: aumentar fonte para 14px e gap para 8px.
-
-### 3.4 Inconsistência semântica em campos readonly
-`tombamentoField` é `<input readonly>` mas `specField` e `locationField` são `<div class="input-modal-readonly">` — mesma função visual, elementos HTML diferentes.
-
-**Sugestão:** Padronizar como `<div>` (não são editáveis, não precisam ser inputs).
+✅ **Feito:** `.clickable-location`: `min-height: var(--control-height)` (44px), `padding: var(--space-xs) var(--space-sm)`. `.cell-link`: `min-height: var(--control-height)` (44px).
+❌ **Pendente:** `.stat-metrics`: aumentar fonte para 14px e gap para 8px.
 
 ### 3.5 Zero onboarding para primeiro acesso
 Operador novo vê select, input, checkbox "Ignorar verificação de localização?", stats zerados, tabela vazia. Nenhuma orientação.
@@ -159,11 +155,10 @@ Erros no GAS só são visíveis no editor do Apps Script. Em produção, ningué
 | **Alta** | 3.1 — Modals sem ARIA dialog | Acessibilidade |
 | **Alta** | 3.2 — Sections com aria-labelledby órfãos | Acessibilidade |
 | **Alta** | 3.5 — Zero onboarding | Experiência |
-| **Média** | 3.3 — Touch targets <44px | Acessibilidade |
+| **Média** | 3.3 — Touch targets <44px — parcial: `.clickable-location` + `.cell-link` ok | Acessibilidade |
 | **Média** | 3.6 — Sem undo | Experiência |
 | **Média** | 4.1 — Sanitização no backend GAS (`public.js`) | Segurança |
 | **Média** | 7.1 — Sem testes | Regressões |
 | **Baixa** | 2.2 — Erros silenciosos no catch do `processBarcode` | UX |
-| **Baixa** | 3.4 — Inconsistência readonly fields | Qualidade |
 | **Baixa** | 3.7 — Sem atalhos power user | UX |
 | **Baixa** | 6.3 — `innerHTML +=` | Performance |

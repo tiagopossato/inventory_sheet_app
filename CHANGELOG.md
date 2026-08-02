@@ -4,6 +4,22 @@ Histórico de alterações concluídas. Entradas são movidas do [TODO.md](./TOD
 
 ---
 
+## 2026-08-02 — Redesign CSS: Minimalista Linear + Centralização de estilos
+
+- **CSS inline eliminado** (41 ocorrências em 9 arquivos JS): todos os `.style.display`, `.style.zIndex`, `.style.cursor`, e atributos `style="..."` substituídos por `classList.add/remove()` e classes CSS utilitárias (`.is-visible`, `.is-visible-flex`, `.body-no-scroll`, `.is-loading`).
+- **`style.css` reescrito** (~1600 linhas, 20 seções): design minimalista tipo Linear, tipografia como protagonista, paleta de cores refinada (primary `#0066CC`, success `#0F7943`, danger `#D11A2A`), sistema de 3 níveis de elevação sutil, tabelas sem bordas verticais com zebra striping, select customizado com seta SVG inline.
+- **Tokens tipográficos expandidos**: `--text-2xs` (0.65rem), `--text-sm` (0.8125rem), `--text-4xl` (3rem), `--font-mono` atualizado para SF Mono/Cascadia Code/Consolas.
+- **Design tokens atualizados**: gray-50 (`#fafafa`), gray-200 (`#ebebeb`), gray-800 (`#1a1a1a`), bg (`#fafafa`), overlay (0.5), overlay-light (0.35), modal-header (`#f5f5f5`).
+- **Modal header**: fundo `#f5f5f5` substitui o `#88b6c2` datado.
+- **Warning area**: removido `position: fixed`, agora no fluxo normal da página acima da tabela, sem sombra elevada.
+- **Offline banner**: animação `slideDown` (translateY) ao aparecer.
+- **Tabela de leituras**: `table-layout: fixed` + colunas percentuais (não ultrapassa a viewport), padding reduzido (4px), coluna Local centralizada.
+- **Campos readonly padronizados**: `tombamentoField` alterado de `<input readonly>` para `<div>` (igual `specField` e `locationField`), resolvendo inconsistência semântica (TODO 3.4).
+- **Botão Editar**: com borda visível, padding e fonte reduzidos para caber na coluna Ação.
+- **`impeccable`**: 6 valores de design ignorados como intencionais (debug console, noscript fallback, focus-visible radius).
+
+---
+
 ## 2026-07-29 — Infraestrutura e otimizações
 
 - **`barcodeScanner.js` reativado** (`main.js`): módulo de scanner via teclado (OTG/Bluetooth) agora é importado e usado. Scanner inicia/pausa conforme seleção de localização.

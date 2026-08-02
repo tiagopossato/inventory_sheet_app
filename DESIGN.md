@@ -2,64 +2,76 @@
 name: App Inventário IFC
 description: Scanner de patrimônio mobile-first para contagem de inventário físico no Instituto Federal Catarinense
 colors:
-  primary: "#007bff"
-  primary-hover: "#0056b3"
-  primary-light: "rgba(0, 123, 255, 0.1)"
-  success: "#198754"
-  success-dark: "#188038"
-  success-light: "#e8f5e9"
-  danger: "#dc3545"
-  danger-dark: "#d93025"
-  danger-light: "#fff5f5"
-  warning-text: "#c26400"
-  warning-bg: "#ffc107"
-  warning-light: "#fffaf5"
-  warning-border: "#ffeeba"
-  warning-dark-text: "#856404"
-  warning-active-bg: "#fff8e1"
+  primary: "#0066CC"
+  primary-hover: "#0052A3"
+  primary-light: "rgba(0, 102, 204, 0.08)"
+  success: "#0F7943"
+  success-dark: "#0C5E33"
+  success-light: "#EDF7F0"
+  danger: "#D11A2A"
+  danger-dark: "#B01A25"
+  danger-light: "#FEF2F2"
+  warning-text: "#C26400"
+  warning-bg: "#FFC107"
+  warning-light: "#FFFCF5"
+  warning-border: "#FFE8A0"
+  warning-dark-text: "#8A4600"
+  warning-active-bg: "#FFF8E1"
   white: "#ffffff"
-  gray-50: "#f8f9fa"
+  gray-50: "#fafafa"
   gray-100: "#f5f5f5"
-  gray-200: "#eeeeee"
+  gray-200: "#ebebeb"
   gray-300: "#dddddd"
   gray-400: "#cccccc"
   gray-500: "#999999"
   gray-600: "#777777"
   gray-700: "#666666"
-  gray-800: "#333333"
+  gray-800: "#1a1a1a"
   black: "#000000"
-  bg: "#f4f4f4"
-  overlay: "rgba(0, 0, 0, 0.6)"
-  overlay-light: "rgba(0, 0, 0, 0.4)"
-  modal-header: "#88b6c2"
+  bg: "#fafafa"
+  overlay: "rgba(0, 0, 0, 0.5)"
+  overlay-light: "rgba(0, 0, 0, 0.35)"
+  modal-header: "#f5f5f5"
 typography:
   body:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
-    lineHeight: 1.5
+    lineHeight: 1.6
   label:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-    fontSize: "0.75rem"
-    fontWeight: 700
-    letterSpacing: "normal"
+    fontSize: "0.8125rem"
+    fontWeight: 600
+    letterSpacing: "0.04em"
   title:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     fontSize: "1.25rem"
-    fontWeight: 700
+    fontWeight: 600
     lineHeight: 1.3
+    letterSpacing: "-0.01em"
   headline:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     fontSize: "1.5rem"
-    fontWeight: 800
+    fontWeight: 700
     lineHeight: 1.2
+    letterSpacing: "-0.015em"
   mono:
-    fontFamily: "'Consolas', 'Monaco', 'Courier New', monospace"
+    fontFamily: "'SF Mono', 'Cascadia Code', 'Consolas', 'Monaco', 'Courier New', monospace"
     fontSize: "0.875rem"
     fontWeight: 400
+  sizes:
+    xs: "0.75rem"
+    sm: "0.8125rem"
+    base: "1rem"
+    lg: "1.125rem"
+    xl: "1.25rem"
+    2xl: "1.5rem"
+    3xl: "2rem"
+    4xl: "3rem"
+    2xs: "0.65rem"
 rounded:
-  sm: "4px"
-  md: "8px"
+  sm: "6px"
+  md: "10px"
   lg: "12px"
 spacing:
   xs: "4px"
@@ -112,22 +124,28 @@ components:
 
 ## Overview
 
-**Creative North Star: "O Caderno de Campo"**
+**Creative North Star: "O Caderno de Campo" (evoluído — Linear-inspired functional minimalism)**
 
-O App Inventário IFC é uma prancheta digital: metódica, confiável, funcional. Cada elemento na tela tem uma tarefa específica — nada existe por decoração. A interface é uma ferramenta de trabalho que opera em movimento, sob luz variável, em celulares pessoais de equipes não-técnicas. A linguagem visual recusa adorno e abraça a clareza como valor estético supremo.
+O App Inventário IFC é uma ferramenta de trabalho que opera em movimento, sob luz variável, em celulares pessoais de equipes não-técnicas. A linguagem visual recusa adorno e abraça a clareza como valor estético supremo — tipografia é o protagonista, cor é exclusivamente sinalização, e a informação é o design.
 
-A atmosfera é **funcional e direta**. Não há gradientes, ilustrações, ou micro-interações decorativas. A beleza do sistema está na precisão: cores semânticas que comunicam estado instantaneamente (azul = ação, verde = ok, vermelho = alerta, laranja = atenção), tipografia do sistema que garante legibilidade máxima em qualquer dispositivo, e uma grelha de 4px que impõe ritmo sem que o operador perceba. A interface desaparece para que o patrimônio apareça.
+A atmosfera é **funcional e refinada**. Superfícies se separam por elevação sutil (3 níveis de sombra) em vez de bordas estruturais. A paleta cromática foi refinada para tons mais profundos e elegantes (azul `#0066CC`, verde `#0F7943`, vermelho `#D11A2A`). A tipografia do sistema ganhou escala maior, entrelinha mais generosa (1.6), e variação de peso como principal diferenciador hierárquico (400 corpo, 600 títulos, 700 números). A interface desaparece para que o patrimônio apareça.
 
 Os componentes são **industriais e robustos**: bordas visíveis (1px sólida), cantos controlados (4px), altura mínima de toque de 44px, e contraste alto entre superfície e conteúdo. Como equipamento de fábrica, cada botão e input foi dimensionado para operação em condições reais — dedos sujos, luminosidade variável, pressa. O feedback tátil visual (scale:active a 0.97) confirma cada interação sem depender de animações complexas.
 
 **Key Characteristics:**
-- Paleta cromática semântica: cada cor carrega significado funcional (ação, sucesso, perigo, atenção)
-- Sistema de espaçamento com base 4px, idêntico ao grid do navegador
+- Paleta cromática semântica refinada: tons mais profundos e elegantes (azul, verde, vermelho, laranja)
+- Sistema de superfícies com 3 níveis de elevação sutil (background → card → modal)
+- Separação por cor de fundo + sombra, não por bordas estruturais
+- Tabelas sem bordas verticais — linhas horizontais finas + zebra striping
+- Sistema de espaçamento com base 4px
 - Alvos de toque de 44px (WCAG AAA para mobile)
-- Tipografia exclusivamente do sistema operacional — zero fontes web, zero tempo de carregamento
-- Flat por padrão; sombras raras e exclusivamente estruturais (modals, overlay)
-- Transições rápidas (100-200ms ease) — a interface responde, não desfila
-- Estados visuais binários: highlight-warning e highlight-danger como anéis coloridos nos cards
+- Tipografia exclusivamente do sistema operacional — zero fontes web
+- Flat por padrão; sombras apenas para separação de superfícies e estados
+- Transições rápidas (150-300ms ease)
+- Valores numéricos com `font-variant-numeric: tabular-nums` para alinhamento
+- Estados visuais: highlight por cor no valor (não anel), warning como barra no fluxo da página
+- Botões sem `text-transform: uppercase` — case natural, weight 600
+- Select customizado com seta SVG inline
 
 ## Colors
 
