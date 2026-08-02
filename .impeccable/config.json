@@ -1,0 +1,54 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [
+      "backend/Menu.js"
+    ],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "frontend/src/style.css"
+        ],
+        "createdAt": "2026-07-22T19:07:35.148Z"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "80px",
+        "createdAt": "2026-07-28T13:49:10.893Z",
+        "reason": "Emoji 80px intencional em telas de bloqueio"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#28a745",
+        "createdAt": "2026-08-02T13:03:29.786Z",
+        "reason": "Debug console download button - intentional terminal aesthetic"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "11px",
+        "createdAt": "2026-08-02T13:03:35.081Z",
+        "reason": "Debug console terminal font - intentional"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#f8d7da",
+        "createdAt": "2026-08-02T13:03:40.534Z",
+        "reason": "Noscript fallback - standard Bootstrap alert bg"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#721c24",
+        "createdAt": "2026-08-02T13:03:45.358Z",
+        "reason": "Noscript fallback - standard Bootstrap alert text"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "2px",
+        "createdAt": "2026-08-02T13:03:50.974Z",
+        "reason": "Focus-visible outline radius - accessibility requirement"
+      }
+    ]
+  }
+}

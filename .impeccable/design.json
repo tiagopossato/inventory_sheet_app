@@ -1,0 +1,305 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-22T00:00:00-03:00",
+  "title": "Design System: App Inventário IFC",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Azul Operacional",
+        "canonical": "#007bff",
+        "tonalRamp": ["#001a33", "#003366", "#004d99", "#0066cc", "#007bff", "#3396ff", "#66b0ff", "#99cbff"]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "Azul Operacional (Hover)",
+        "canonical": "#0056b3",
+        "tonalRamp": ["#001122", "#002244", "#003366", "#004488", "#0056b3", "#2277cc", "#4499dd", "#66bbee"]
+      },
+      "success": {
+        "role": "semantic",
+        "displayName": "Verde de Confirmação",
+        "canonical": "#198754",
+        "tonalRamp": ["#051a10", "#0a3320", "#0f4d30", "#146640", "#198754", "#3da16e", "#66bb88", "#90d5a8"]
+      },
+      "danger": {
+        "role": "semantic",
+        "displayName": "Vermelho de Alerta",
+        "canonical": "#dc3545",
+        "tonalRamp": ["#2d0a0e", "#5a141c", "#871e2a", "#b12838", "#dc3545", "#e55d6a", "#ee858f", "#f6adb4"]
+      },
+      "warning-text": {
+        "role": "semantic",
+        "displayName": "Laranja de Atenção",
+        "canonical": "#c26400",
+        "tonalRamp": ["#261400", "#4d2800", "#733c00", "#995000", "#c26400", "#cc8333", "#d9a266", "#e6c199"]
+      },
+      "warning-active-bg": {
+        "role": "semantic",
+        "displayName": "Fundo de Aviso Ativo",
+        "canonical": "#fff8e1",
+        "tonalRamp": ["#332f1c", "#665e38", "#998d54", "#ccbc70", "#fff8e1", "#fff9e7", "#fffaed", "#fffcf3"]
+      },
+      "white": {
+        "role": "neutral",
+        "displayName": "Branco",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff"]
+      },
+      "gray-800": {
+        "role": "neutral",
+        "displayName": "Cinza Texto",
+        "canonical": "#333333",
+        "tonalRamp": ["#0a0a0a", "#141414", "#1f1f1f", "#292929", "#333333", "#5c5c5c", "#858585", "#adadad"]
+      },
+      "gray-400": {
+        "role": "neutral",
+        "displayName": "Cinza Borda",
+        "canonical": "#cccccc",
+        "tonalRamp": ["#1a1a1a", "#333333", "#4d4d4d", "#808080", "#cccccc", "#d6d6d6", "#e0e0e0", "#ebebeb"]
+      },
+      "gray-200": {
+        "role": "neutral",
+        "displayName": "Cinza Superfície",
+        "canonical": "#eeeeee",
+        "tonalRamp": ["#1e1e1e", "#3c3c3c", "#5a5a5a", "#8c8c8c", "#eeeeee", "#f0f0f0", "#f2f2f2", "#f5f5f5"]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Cinza Fundo de Página",
+        "canonical": "#f4f4f4",
+        "tonalRamp": ["#1f1f1f", "#3e3e3e", "#5d5d5d", "#929292", "#f4f4f4", "#f6f6f6", "#f8f8f8", "#fafafa"]
+      },
+      "modal-header": {
+        "role": "surface",
+        "displayName": "Azul Modal Header",
+        "canonical": "#88b6c2",
+        "tonalRamp": ["#0d1a1d", "#1a343a", "#274e57", "#346874", "#88b6c2", "#9ec5cf", "#b4d4dc", "#cae3e9"]
+      }
+    },
+    "typographyMeta": {
+      "body": {
+        "displayName": "Corpo",
+        "purpose": "Texto corrido em modals, formulários, conteúdo de tabela. 16px é o piso anti-zoom iOS."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Rótulos de cards de estatística, cabeçalhos de coluna compacta, indicadores de status."
+      },
+      "title": {
+        "displayName": "Título",
+        "purpose": "Títulos de modal, labels de seção, cabeçalho da aplicação."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Valores numéricos grandes no dashboard (stat-value, focus-count). Uso restrito."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Exclusivo para console de debug."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-rest",
+        "value": "0 1px 3px rgba(0, 0, 0, 0.06)",
+        "purpose": "Separação sutil entre card branco e fundo cinza. Quase imperceptível — funciona como anti-aliasing visual."
+      },
+      {
+        "name": "modal",
+        "value": "0 4px 15px rgba(0, 0, 0, 0.3)",
+        "purpose": "Exclusivo do modal de confirmação (AppModal). A única sombra que afirma presença espacial."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-fast",
+        "value": "0.1s ease",
+        "purpose": "Transições de hover/active em botões e elementos interativos. Praticamente instantâneo."
+      },
+      {
+        "name": "ease-normal",
+        "value": "0.2s ease",
+        "purpose": "Transições de estado: abertura de modal, highlight de card, troca de opacidade."
+      },
+      {
+        "name": "ease-slow",
+        "value": "0.3s ease",
+        "purpose": "Transição de cor do ícone de sync. Único uso registrado."
+      },
+      {
+        "name": "app-icon-spin",
+        "value": "1s linear infinite",
+        "purpose": "Rotação do ícone de sincronização durante fetch. Única animação infinita do sistema."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "600px",
+        "purpose": "Stats grid salta de 2 para 4 colunas."
+      },
+      {
+        "name": "md",
+        "value": "768px",
+        "purpose": "Altura da área de câmera sobe de 180px para 400px."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal em formulários e modals. Fundo azul operacional com texto branco uppercase bold.",
+      "html": "<button class=\"ds-btn-primary\">SALVAR ALTERAÇÕES</button>",
+      "css": ".ds-btn-primary { background-color: #007bff; color: #ffffff; border: 1px solid #007bff; border-radius: 4px; padding: 0 12px; min-height: 44px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: filter 0.1s ease, transform 0.1s ease; } .ds-btn-primary:hover { filter: brightness(0.95); } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid #007bff; outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; filter: none; }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Ação destrutiva ou de alerta. Fundo vermelho com texto branco.",
+      "html": "<button class=\"ds-btn-danger\">LIMPAR</button>",
+      "css": ".ds-btn-danger { background-color: #dc3545; color: #ffffff; border: 1px solid #dc3545; border-radius: 4px; padding: 0 12px; min-height: 44px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: filter 0.1s ease, transform 0.1s ease; } .ds-btn-danger:hover { filter: brightness(0.95); } .ds-btn-danger:active { transform: scale(0.97); } .ds-btn-danger:focus-visible { outline: 2px solid #007bff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Ação secundária ou cancelar. Fundo branco com borda cinza e texto escuro.",
+      "html": "<button class=\"ds-btn-ghost\">CANCELAR</button>",
+      "css": ".ds-btn-ghost { background-color: #ffffff; color: #333333; border: 1px solid #999999; border-radius: 4px; padding: 0 12px; min-height: 44px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: filter 0.1s ease, transform 0.1s ease; } .ds-btn-ghost:hover { filter: brightness(0.95); } .ds-btn-ghost:active { transform: scale(0.97); } .ds-btn-ghost:focus-visible { outline: 2px solid #007bff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Edit Button (Table)",
+      "kind": "button",
+      "refersTo": "button-edit",
+      "description": "Botão compacto de edição em linhas de tabela. Azul, sem borda, padding reduzido.",
+      "html": "<button class=\"ds-btn-edit\">Editar</button>",
+      "css": ".ds-btn-edit { background-color: #007bff; color: #ffffff; border: none; border-radius: 4px; padding: 0 8px; min-height: 44px; font-weight: bold; font-size: 0.75rem; cursor: pointer; transition: filter 0.1s ease, transform 0.1s ease; } .ds-btn-edit:hover { filter: brightness(0.9); } .ds-btn-edit:active { transform: scale(0.97); } .ds-btn-edit:focus-visible { outline: 2px solid #007bff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Stat Card",
+      "kind": "card",
+      "refersTo": "stat-card",
+      "description": "Card de métrica no dashboard. Label uppercase + valor numérico grande. Estados de destaque para pendentes e falhas.",
+      "html": "<div class=\"ds-stat-card\"><span class=\"ds-stat-label\">SINCRONIZADOS</span><span class=\"ds-stat-value ds-text-success\">142</span></div>",
+      "css": ".ds-stat-card { background: #ffffff; padding: 12px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.06); min-height: 70px; transition: box-shadow 0.2s ease; } .ds-stat-label { font-size: 0.875rem; text-transform: uppercase; color: #666666; margin-bottom: 4px; font-weight: bold; } .ds-stat-value { font-size: 1.5rem; font-weight: 800; line-height: 1.2; } .ds-text-success { color: #198754; } .ds-stat-card.ds-highlight-warning { box-shadow: 0 0 0 2px #c26400; background-color: #fffaf5; } .ds-stat-card.ds-highlight-danger { box-shadow: 0 0 0 2px #dc3545; background-color: #fff5f5; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Campo de texto padrão. 16px de fonte para evitar zoom iOS, altura 44px para toque confortável.",
+      "html": "<input type=\"text\" class=\"ds-input\" placeholder=\"Código (10 dig)\" inputmode=\"numeric\">",
+      "css": ".ds-input { font-size: 1rem; border: 1px solid #cccccc; border-radius: 4px; background-color: #ffffff; padding: 0 8px; min-height: 44px; width: 100%; } .ds-input:focus-visible { outline: 2px solid #007bff; outline-offset: 2px; } .ds-input:disabled { opacity: 0.5; }"
+    },
+    {
+      "name": "Select Field",
+      "kind": "input",
+      "refersTo": "select-field",
+      "description": "Dropdown de seleção. Mesma altura e estilo de borda do input de texto.",
+      "html": "<select class=\"ds-select\"><option value=\"0\">Péssimo</option><option value=\"1\">Ruim</option><option value=\"2\">Regular</option><option value=\"3\">Bom</option><option value=\"4\">Excelente</option></select>",
+      "css": ".ds-select { width: 100%; padding: 8px; font-size: 1rem; border-radius: 4px; background-color: #ffffff; border: 1px solid #cccccc; min-height: 44px; line-height: 1.4; white-space: normal; } .ds-select:focus-visible { outline: 2px solid #007bff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Data Table Row",
+      "kind": "custom",
+      "refersTo": "barcode-table-row",
+      "description": "Linha da tabela de leituras com status, código, descrição, localização clicável e ação de editar.",
+      "html": "<table class=\"ds-barcode-table\"><thead><tr><th>Stat</th><th>Patrimônio</th><th>Descrição</th><th>Local</th><th>Ação</th></tr></thead><tbody><tr><td class=\"ds-centered\">✅</td><td class=\"ds-centered\">123456</td><td>Cadeira Giratória</td><td class=\"ds-cell-link\">SALA-101</td><td><button class=\"ds-btn-edit\">Editar</button></td></tr></tbody></table>",
+      "css": ".ds-barcode-table { width: 100%; border-collapse: collapse; background: #ffffff; font-size: 0.875rem; border: 1px solid #cccccc; } .ds-barcode-table th { background-color: #eeeeee; padding: 4px; border: 1px solid #cccccc; font-weight: bold; } .ds-barcode-table td { padding: 4px; border: 1px solid #dddddd; vertical-align: middle; } .ds-centered { text-align: center; } .ds-cell-link { cursor: pointer; color: #007bff; text-decoration: underline; } .ds-cell-link:hover { color: #0056b3; }"
+    },
+    {
+      "name": "Full-Screen Modal Header",
+      "kind": "custom",
+      "refersTo": "modal-header",
+      "description": "Cabeçalho de modal full-screen com fundo azul acinzentado e título centralizado.",
+      "html": "<div class=\"ds-modal-header\"><h2>Editar Item</h2></div>",
+      "css": ".ds-modal-header { padding: 8px; border-bottom: 1px solid #eeeeee; display: flex; align-items: center; justify-content: center; background: #88b6c2; } .ds-modal-header h2 { margin: 0; font-size: 1.25rem; font-weight: 700; }"
+    },
+    {
+      "name": "Dialog Modal",
+      "kind": "custom",
+      "refersTo": "app-modal",
+      "description": "Modal de confirmação centrado com overlay escuro, animação de entrada scale+fade.",
+      "html": "<div class=\"ds-modal-overlay active\"><div class=\"ds-modal-box\"><div class=\"ds-modal-title\">Confirmar</div><div class=\"ds-modal-body\">Tem certeza?</div><div class=\"ds-modal-actions\"><button class=\"ds-btn-ghost\">Cancelar</button><button class=\"ds-btn-primary\">Confirmar</button></div></div></div>",
+      "css": ".ds-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s ease; visibility: hidden; } .ds-modal-overlay.active { opacity: 1; visibility: visible; } .ds-modal-box { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) scale(0.9); background: #ffffff; width: 90%; max-width: 400px; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: transform 0.2s ease; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; } .ds-modal-overlay.active .ds-modal-box { transform: translateX(-50%) scale(1); } .ds-modal-title { font-size: 1.125rem; font-weight: bold; margin-bottom: 8px; color: #dc3545; } .ds-modal-body { font-size: 1rem; color: #333333; margin-bottom: 20px; white-space: pre-line; line-height: 1.5; } .ds-modal-actions { display: flex; justify-content: flex-end; gap: 8px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Caderno de Campo",
+    "overview": "O App Inventário IFC é uma prancheta digital: metódica, confiável, funcional. Cada elemento na tela tem uma tarefa específica — nada existe por decoração. A interface é uma ferramenta de trabalho que opera em movimento, sob luz variável, em celulares pessoais de equipes não-técnicas. A linguagem visual recusa adorno e abraça a clareza como valor estético supremo.\n\nA atmosfera é funcional e direta. Não há gradientes, ilustrações, ou micro-interações decorativas. A beleza do sistema está na precisão: cores semânticas que comunicam estado instantaneamente (azul = ação, verde = ok, vermelho = alerta, laranja = atenção), tipografia do sistema que garante legibilidade máxima em qualquer dispositivo, e uma grelha de 4px que impõe ritmo sem que o operador perceba. A interface desaparece para que o patrimônio apareça.\n\nOs componentes são industriais e robustos: bordas visíveis (1px sólida), cantos controlados (4px), altura mínima de toque de 44px, e contraste alto entre superfície e conteúdo. Como equipamento de fábrica, cada botão e input foi dimensionado para operação em condições reais — dedos sujos, luminosidade variável, pressa. O feedback tátil visual (scale:active a 0.97) confirma cada interação sem depender de animações complexas.",
+    "keyCharacteristics": [
+      "Paleta cromática semântica: cada cor carrega significado funcional (ação, sucesso, perigo, atenção)",
+      "Sistema de espaçamento com base 4px, idêntico ao grid do navegador",
+      "Alvos de toque de 44px (WCAG AAA para mobile)",
+      "Tipografia exclusivamente do sistema operacional — zero fontes web, zero tempo de carregamento",
+      "Flat por padrão; sombras raras e exclusivamente estruturais (modals, overlay)",
+      "Transições rápidas (100-200ms ease) — a interface responde, não desfila",
+      "Estados visuais binários: highlight-warning e highlight-danger como anéis coloridos nos cards"
+    ],
+    "rules": [
+      {
+        "name": "A Regra da Cor Única",
+        "body": "A cor primária azul aparece em no máximo 15% dos pixels de qualquer tela. Sua raridade é o que a torna informativa — se tudo é azul, nada é ação.",
+        "section": "colors"
+      },
+      {
+        "name": "A Regra do Significado Único",
+        "body": "Nenhuma cor semântica compartilha significado. Verde = sucesso e apenas sucesso. Vermelho = perigo e apenas perigo. Laranja = atenção e apenas atenção. Um botão vermelho nunca deve significar 'salvar'; um card verde nunca deve indicar 'pendente'.",
+        "section": "colors"
+      },
+      {
+        "name": "A Regra do Cinza Estrutural",
+        "body": "Os 10 passos de cinza (white a black) formam a espinha dorsal do sistema. Nenhum elemento estrutural — borda, fundo, separador — usa cor cromática. Cinza é a arquitetura; cor é o sinal.",
+        "section": "colors"
+      },
+      {
+        "name": "A Regra da Fonte Zero",
+        "body": "Nenhuma fonte é carregada da web. A tipografia usa exclusivamente a pilha de fontes do sistema operacional. Isto não é uma limitação — é uma garantia de performance offline e legibilidade nativa.",
+        "section": "typography"
+      },
+      {
+        "name": "A Regra do Peso como Sinal",
+        "body": "Peso 400 para corpo (neutro), 700 para títulos e labels (estrutura), 800-900 para números grandes (impacto). A variação de peso é o principal diferenciador hierárquico — não tamanho, não cor.",
+        "section": "typography"
+      },
+      {
+        "name": "A Regra do Flat por Padrão",
+        "body": "Superfícies são planas em repouso. Sombras aparecem exclusivamente como resposta a estado: .app-modal-box (sobreposição de diálogo), .highlight-warning/.highlight-danger (anel de alerta), :focus-visible (anel de acessibilidade). Se não há estado extraordinário, não há sombra.",
+        "section": "elevation"
+      },
+      {
+        "name": "A Regra do Overlay como Profundidade",
+        "body": "A separação entre o aplicativo e um modal não é feita com sombra — é feita com overlay escuro (rgba 0.6 ou 0.4). O fundo recua; o modal não 'flutua', ele substitui o contexto.",
+        "section": "elevation"
+      },
+      {
+        "name": "A Regra dos Cantos Discretos",
+        "body": "Nenhum raio de borda excede 12px. O arredondamento suaviza a forma sem torná-la 'amigável' — este é um sistema industrial, não convidativo. 4px é o raio padrão; 8px sinaliza um contêiner; 12px é o máximo absoluto.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do usar cores exclusivamente com seu significado semântico: azul para ação, verde para sucesso, vermelho para perigo, laranja para atenção",
+      "Do manter altura mínima de 44px em todos os elementos interativos (botões, inputs, selects)",
+      "Do usar a pilha de fontes do sistema operacional — nunca carregar fontes web",
+      "Do aplicar filter: brightness(0.95) como hover de botão e transform: scale(0.97) como feedback de toque",
+      "Do usar a escala de cinza para estrutura (bordas, fundos, separadores) e cores cromáticas apenas para sinalização",
+      "Do usar :focus-visible (não :focus) para anéis de foco — mouse users não devem ver outline",
+      "Do usar height: 100svh (não 100vh) em modals full-screen para evitar corte em barras de navegação mobile",
+      "Do respeitar prefers-reduced-motion: reduce — todas as animações e transições devem parar"
+    ],
+    "donts": [
+      "Don't usar sombras como elemento decorativo. Sombra só aparece em modals (separação estrutural) e highlights (sinalização de estado)",
+      "Don't exceder 12px de border-radius em qualquer elemento",
+      "Don't usar gradientes, blur, ou backdrop-filter — a estética é plana e sólida",
+      "Don't introduzir novas cores cromáticas além das quatro semânticas (azul, verde, vermelho, laranja)",
+      "Don't usar texto com menos de 12px (0.75rem) exceto em contexto de debug",
+      "Don't usar text-transform: uppercase fora de .stat-label e .btn — uppercase é ênfase estrutural, não estilo",
+      "Don't carregar ícones como dependência externa. Emoji Unicode e SVG inline são as únicas fontes de ícones aceitáveis"
+    ]
+  }
+}
