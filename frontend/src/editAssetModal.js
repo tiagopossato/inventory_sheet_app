@@ -105,7 +105,7 @@ EditAssetModal.prototype.innerHTML = function () {
 
                 <div class="form-group">
                     <label>Tombamento</label>
-                    <input type="text" id="tombamentoField" class="input-modal-readonly" readonly/>
+                    <div id="tombamentoField" class="input-modal-readonly"></div>
                 </div>
 
                <div class="form-group">
@@ -214,7 +214,7 @@ EditAssetModal.prototype.open = function (uid) {
 
     // Preenche os campos do formulário
     this.fields.uid.value = item.uid || "";
-    this.fields.code.value = item.code || "";
+    this.fields.code.textContent = item.code || "";
     this.fields.specification.textContent = inventoryBaseline.getAssetName(item.code) || "Sem descrição";
     this.fields.location.textContent = item.location || "";
     this.fields.state.value = item.state !== undefined ? String(item.state) : "3";
