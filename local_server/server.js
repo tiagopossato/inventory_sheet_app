@@ -511,18 +511,23 @@ async function startServer() {
                 console.warn('║  Use apenas em LAN confiavel para testes.                  ║');
                 console.warn('╚══════════════════════════════════════════════════════════════╝');
                 console.log(`🌐 Modo rede local ativado (--host)`);
-                console.log(`📊 Acesse localmente: ${protocol.toLowerCase()}://localhost:${PORT}`);
+                console.log(`📊 API local: ${protocol.toLowerCase()}://localhost:${PORT}`);
+                console.log(`🌐 Interface (Vite): https://localhost:5173`);
+                console.log(`   As chamadas /api do frontend sao encaminhadas pelo proxy do Vite`);
+                console.log(`   para este servidor — o navegador so precisa confiar na porta 5173.`);
 
                 const networkIPs = getNetworkIPs();
                 if (networkIPs.length > 0) {
                     console.log(`🌍 Acesse pela rede:`);
                     networkIPs.forEach(ip => {
-                        console.log(`   ${protocol.toLowerCase()}://${ip}:${PORT}`);
+                        console.log(`   https://${ip}:5173`);
                     });
                 }
             } else {
                 console.log(`💻 Modo localhost`);
-                console.log(`📊 Acesse: ${protocol.toLowerCase()}://localhost:${PORT}`);
+                console.log(`📊 API local: ${protocol.toLowerCase()}://localhost:${PORT}`);
+                console.log(`🌐 Interface (Vite): https://localhost:5173`);
+                console.log(`   As chamadas /api do frontend sao encaminhadas pelo proxy do Vite.`);
             }
 
             console.log(`🔍 Health check: ${protocol.toLowerCase()}://localhost:${PORT}/api/health`);

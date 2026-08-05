@@ -10,10 +10,15 @@ const isGAS = typeof google !== 'undefined' && google.script && google.script.ru
 // Configuração do servidor local
 const SERVER_HOST = window.MOCK_GAS_HOST || window.location.hostname;
 const SERVER_PORT = window.MOCK_GAS_PORT || 3000;
-const SERVER_URL = `https://${SERVER_HOST}:${SERVER_PORT}`;
+
+// No Vite dev server (porta 5173), usa URLs relativas — o proxy do Vite
+// encaminha /api/* para o mock server internamente. Isso evita que o
+// navegador precise confiar no certificado auto-assinado da porta 3000.
+const IS_VITE_DEV = window.location.port === '5173';
+const SERVER_URL = IS_VITE_DEV ? '' : `https://${SERVER_HOST}:${SERVER_PORT}`;
 
 if (!isGAS) {
-    console.log(`🔧 Ambiente de desenvolvimento detectado. Redirecionando para ${SERVER_URL}`);
+    console.log(`🔧 Ambiente de desenvolvimento detectado. ${IS_VITE_DEV ? 'Usando proxy do Vite (mesma origem)' : `Redirecionando para ${SERVER_URL}`}`);
 
     // Factory function para criar uma nova instância do google.script.run para cada chamada
     function createGoogleScriptRun() {

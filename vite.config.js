@@ -46,6 +46,17 @@ export default defineConfig(({ mode }) => {
 
   return {
     root: "frontend",
+
+    server: {
+      proxy: {
+        '/api': {
+          target: 'https://localhost:3000',
+          secure: false,
+          changeOrigin: true,
+        }
+      }
+    },
+
     define: {
       // Dados do inventário embutidos na build
       __INVENTORY_DATA__: JSON.stringify(inventoryData || null),
