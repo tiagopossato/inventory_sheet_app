@@ -165,12 +165,14 @@ var __spreadValues = (a, b) => {
     if (!this.isListening) {
       window.addEventListener("keydown", this._handleKeyDown);
       this.isListening = true;
+      /* @__PURE__ */ console.log("BarcodeScanner: Ativando escuta do leitor em segundo plano.");
     }
   };
   BarcodeScanner.prototype.stop = function() {
     if (this.isListening) {
       window.removeEventListener("keydown", this._handleKeyDown);
       this.isListening = false;
+      /* @__PURE__ */ console.log("BarcodeScanner: Desativando escuta do leitor em segundo plano.");
     }
   };
   BarcodeScanner.prototype._handleKeyDown = function(e) {
@@ -226,7 +228,7 @@ var __spreadValues = (a, b) => {
                 type="text" 
                 id="manualBarcode" 
                 name="barcode_no_fill"
-                placeholder="Código (10 dig)" 
+                placeholder="Tombamento" 
                 inputmode="numeric" 
                 pattern="[0-9]*" 
                 autocomplete="nope" 
@@ -269,6 +271,14 @@ var __spreadValues = (a, b) => {
             }));
           }, 0);
         }
+      }
+    });
+    this.manualBarcodeInput.addEventListener("focus", function() {
+      barcodeScanner.stop();
+    });
+    this.manualBarcodeInput.addEventListener("blur", function() {
+      if (!self2.isLockedExternal) {
+        barcodeScanner.start();
       }
     });
     if (clearBtn) {
@@ -317,7 +327,6 @@ var __spreadValues = (a, b) => {
       this.manualBarcodeInput.disabled = false;
       this.setFocus();
     }
-    barcodeScanner.start();
   };
   const inputArea = new InputArea();
   const STORAGE_KEY = "BARCODE_APP_DATA_V1";
@@ -1584,32 +1593,34 @@ var __spreadValues = (a, b) => {
         userWarnings.printUserWarning(retorno.msg);
         return false;
       }
-      if (bypassCheckLocation === false && retorno.status === "check") {
-        audioManager.playWarning();
-        inputArea.lock();
-        try {
-          const userConfirmed = await AppModal.confirm(
-            `⚠️ ATENÇÃO: LOCALIZAÇÃO DIVERGENTE`,
-            `Este bem deveria estar na localidade 
+      if (retorno.status === "check") {
+        if (bypassCheckLocation === true) {
+          source += "+bypassLocationCheck";
+          userWarnings.printUserWarning(`AVISO: ${rawValue} inserido automaticamente. Deveria estar em ${retorno.local}.`);
+        } else {
+          audioManager.playWarning();
+          inputArea.lock();
+          try {
+            const userConfirmed = await AppModal.confirm(
+              `⚠️ ATENÇÃO: LOCALIZAÇÃO DIVERGENTE`,
+              `Este bem deveria estar na localidade 
 
 📍${retorno.local}
 
 Confirma que o código ${rawValue} está correto?`
-          );
-          if (!userConfirmed) {
-            userWarnings.printUserWarning(`Cancelado: Item deveria estar em ${retorno.local}`);
-            return false;
-          }
-        } finally {
-          try {
-            inputArea.unlock();
-          } catch (e) {
+            );
+            if (!userConfirmed) {
+              userWarnings.printUserWarning(`Cancelado: Item deveria estar em ${retorno.local}`);
+              return false;
+            }
+            source += "+userOverrideLocation";
+          } finally {
+            try {
+              inputArea.unlock();
+            } catch (e) {
+            }
           }
         }
-      }
-      if (bypassCheckLocation === true && retorno.status === "check") {
-        userWarnings.printUserWarning(`AVISO: ${rawValue} inserido automaticamente. Deveria estar em ${retorno.local}.`);
-        source += "+bypassCheckLocation";
       }
       const foundLocation = await remoteInventoryRegistry.checkAssetLocation(rawValue);
       if (!remoteInventoryRegistry.ready) {
@@ -2468,7 +2479,7 @@ Deseja prosseguir mesmo assim?`
   new AssetSyncManager(assetRepository);
   {
     /* @__PURE__ */ console.log("🐛 Modo DEBUG: Carregando módulo de debug...");
-    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-CS2hRVH2.js", document.baseURI).href).then((module) => {
+    __vitePreload(() => Promise.resolve().then(() => debug), false ? void 0 : void 0, _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("index-DjD2IZ9B.js", document.baseURI).href).then((module) => {
       module.setupDebug();
     }).catch((err) => {
       console.error("Falha ao carregar o módulo de debug:", err);
@@ -2567,8 +2578,8 @@ Deseja prosseguir mesmo assim?`
     const el = document.getElementById("footer-version");
     if (!el) return;
     {
-      el.textContent = "2026.08.02-002";
-      el.title = `Versão do build: ${"2026.08.02-002"}`;
+      el.textContent = "2026.08.05-001";
+      el.title = `Versão do build: ${"2026.08.05-001"}`;
     }
   });
   window.addEventListener("inventoryClosed", function(e) {
@@ -2619,7 +2630,7 @@ Deseja prosseguir mesmo assim?`
       document.getElementById("btn-clear-debug").addEventListener("click", clearDebug);
       document.getElementById("btn-download-debug").addEventListener("click", downloadDebugLog);
       /* @__PURE__ */ console.log("Sistema de Debug Iniciado com Sucesso.");
-      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.08.02-002"}`);
+      /* @__PURE__ */ console.log(`🚀 Build: ${"2026.08.05-001"}`);
     } catch (error) {
       console.error("Erro ao inicializar sistema de debug:", error);
       throw new Error(`Falha na inicialização do debug: ${error.message}`);

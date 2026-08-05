@@ -96,31 +96,34 @@ export async function processBarcode(rawValue, selectedLocation, source = "unkno
         }
 
         // 4.2 Alerta de Localização Divergente (Aviso, mas permite prosseguir)
-        if (bypassCheckLocation === false && retorno.status === 'check') {
-            audioManager.playWarning();
-            // 1. BLOQUEIA O SCANNER
-            inputArea.lock();
-            try {
-                const userConfirmed = await AppModal.confirm(
-                    `⚠️ ATENÇÃO: LOCALIZAÇÃO DIVERGENTE`,
-                    `Este bem deveria estar na localidade \n\n` +
-                    `📍${retorno.local}\n\n` +
-                    `Confirma que o código ${rawValue} está correto?`
-                );
-                if (!userConfirmed) {
-                    userWarnings.printUserWarning(`Cancelado: Item deveria estar em ${retorno.local}`);
-                    return false;
+        if (retorno.status === 'check') {
+            if (bypassCheckLocation === true) {
+                source += "+bypassLocationCheck"; // Marca a origem para indicar que passou pelo bypass de localização divergente
+                userWarnings.printUserWarning(`AVISO: ${rawValue} inserido automaticamente. Deveria estar em ${retorno.local}.`);
+            } else {
+                audioManager.playWarning();
+                // 1. BLOQUEIA O SCANNER
+                inputArea.lock();
+                try {
+                    const userConfirmed = await AppModal.confirm(
+                        `⚠️ ATENÇÃO: LOCALIZAÇÃO DIVERGENTE`,
+                        `Este bem deveria estar na localidade \n\n` +
+                        `📍${retorno.local}\n\n` +
+                        `Confirma que o código ${rawValue} está correto?`
+                    );
+                    if (!userConfirmed) {
+                        userWarnings.printUserWarning(`Cancelado: Item deveria estar em ${retorno.local}`);
+                        return false;
+                    }
+                    source += "+userOverrideLocation"; // Usuário confirmou manualmente a divergência de localização                
+                } finally {
+                    // 2. DESBLOQUEIA O SCANNER APÓS A DECISÃO (ou erro)
+                    // eslint-disable-next-line no-unused-vars
+                    try { inputArea.unlock(); } catch (e) { /* ignore */ }
                 }
-            } finally {
-                // 2. DESBLOQUEIA O SCANNER APÓS A DECISÃO (ou erro)
-                // eslint-disable-next-line no-unused-vars
-                try { inputArea.unlock(); } catch (e) { /* ignore */ }
             }
         }
-        if (bypassCheckLocation === true && retorno.status === 'check') {
-            userWarnings.printUserWarning(`AVISO: ${rawValue} inserido automaticamente. Deveria estar em ${retorno.local}.`);
-            source += "+bypassCheckLocation"; // Marca a origem para indicar que passou pelo bypass de localização divergente
-        }
+
 
         // 5. Verifica se o item já foi encontrado em outra localidade
         const foundLocation = await remoteInventoryRegistry.checkAssetLocation(rawValue);

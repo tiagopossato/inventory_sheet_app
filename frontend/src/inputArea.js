@@ -68,7 +68,7 @@ InputArea.prototype.init = function () {
                 type="text" 
                 id="manualBarcode" 
                 name="barcode_no_fill"
-                placeholder="Código (10 dig)" 
+                placeholder="Tombamento" 
                 inputmode="numeric" 
                 pattern="[0-9]*" 
                 autocomplete="nope" 
@@ -135,6 +135,21 @@ InputArea.prototype._setupManualInput = function () {
                     }));
                 }, 0);
             }
+        }
+    });
+
+    // Quando o input recebe foco, pausa o barcodeScanner
+    // para evitar duplicação: o scanner físico digita direto no campo,
+    // e o handler keydown do input já processa a leitura
+    this.manualBarcodeInput.addEventListener('focus', function () {
+        barcodeScanner.stop();
+    });
+
+    // Quando o input perde foco, reativa o barcodeScanner
+    // apenas se o inputArea não estiver bloqueado
+    this.manualBarcodeInput.addEventListener('blur', function () {
+        if (!self.isLockedExternal) {
+            barcodeScanner.start();
         }
     });
 
@@ -215,7 +230,8 @@ InputArea.prototype.unlock = function () {
         this.manualBarcodeInput.disabled = false; // CORREÇÃO: Desbloqueia o input
         this.setFocus();
     }
-    barcodeScanner.start(); // Inicia a escuta do scanner quando um local é selecionado
+    // barcodeScanner é reativado via evento 'blur' do input manual,
+    // não aqui, pois setFocus() acima dispara 'focus' que pausa o scanner
 };
 
 /**

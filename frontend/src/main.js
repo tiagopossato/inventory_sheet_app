@@ -84,7 +84,7 @@ window.addEventListener('codeScanned', async function (e) {
 
     if (source == 'manual_input') {
       //bypassCheckLocation = document.querySelector("#bypassCheckLocation").checked;
-      bypassCheckLocation = false; // Força bypass para input manual
+      bypassCheckLocation = false; // Força verificação para input manual
     }
 
     await processBarcode(codigo, selectedLocation, source, bypassCheckLocation);

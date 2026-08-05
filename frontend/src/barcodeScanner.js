@@ -46,6 +46,7 @@ BarcodeScanner.prototype.start = function () {
     if (!this.isListening) {
         window.addEventListener('keydown', this._handleKeyDown);
         this.isListening = true;
+        console.log('BarcodeScanner: Ativando escuta do leitor em segundo plano.');
     }
 };
 
@@ -57,6 +58,7 @@ BarcodeScanner.prototype.stop = function () {
     if (this.isListening) {
         window.removeEventListener('keydown', this._handleKeyDown);
         this.isListening = false;
+        console.log('BarcodeScanner: Desativando escuta do leitor em segundo plano.');
     }
 };
 
