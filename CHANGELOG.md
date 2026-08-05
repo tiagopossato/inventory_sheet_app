@@ -4,6 +4,32 @@ Histórico de alterações concluídas. Entradas são movidas do [TODO.md](./TOD
 
 ---
 
+## 2026-08-05 — Acesso HTTPS unificado + Correção de modais em telas pequenas + Bloqueio do scanner
+
+### Refatoração do bloqueio do scanner de código de barras
+
+- **Placeholder do input alterado** (`inputArea.js`): "Código (10 dig)" → "Tombamento".
+- **Bloqueio automático do scanner ao focar o input manual** (`inputArea.js`): evento `focus` pausa o `barcodeScanner`, evento `blur` reativa (se `inputArea` não estiver bloqueado externamente). Evita que o scanner físico e o input manual compitam pela mesma digitação.
+- **`barcodeScanner.start()` removido do `inputArea.unlock()`** (`inputArea.js`): reativação agora é gerenciada exclusivamente pelo evento `blur`, evitando condição de corrida com `setFocus()`.
+- **Logs de ativação/desativação do scanner** (`barcodeScanner.js`): `console.log` ao iniciar/parar escuta do leitor em segundo plano.
+- **Reestruturação da verificação de localização divergente** (`processBarcode.js`): `bypassCheckLocation` agora é tratado como branch dentro de `retorno.status === 'check'` em vez de dois condicionais separados. Confirmação manual do usuário marca origem com `+userOverrideLocation`; bypass automático marca `+bypassLocationCheck`.
+- **Comentário corrigido** (`main.js`): "Força bypass" → "Força verificação para input manual".
+
+### Proxy Vite e unificação HTTPS
+
+- **Proxy Vite para API local** (`vite.config.js`): adicionado `server.proxy` que encaminha `/api/*` para `https://localhost:3000` com `secure: false`. O navegador agora só precisa confiar no certificado da porta 5173 — chega de aceitar dois avisos de segurança.
+- **URLs relativas no dev server** (`mockGAS.js`): detecta porta 5173 (`IS_VITE_DEV`) e usa URLs relativas (`/api/...`) em vez de absolutas (`https://host:3000/api/...`), aproveitando o proxy do Vite. Preview e produção não são afetados.
+- **Startup do mock server atualizada** (`local_server/server.js`): mensagens agora indicam que a interface é acessada via porta 5173 com proxy.
+
+### Correção de modais em telas pequenas
+
+- **Botões dos modais ocultos em telas pequenas — correção** (`editAssetModal.js`, `messageSendModal.js`): modais abriam com `.is-visible` (`display: block !important`), matando o layout flex column. Trocado para `.is-visible-flex` (`display: flex !important`), igual ao `assetsNotFound.js` que já funcionava. Campos rolam, botões ficam fixos no rodapé.
+- **AppModal com scroll interno** (`style.css`): `.app-modal-box` agora é flex column com `max-height: 85vh`; `.app-modal-body` ganhou `overflow-y: auto`; `.app-modal-actions` fixo no fundo com separador. Mensagens longas de confirmação não empurram mais os botões para fora da tela.
+- **Safe area para modal footer** (`style.css`): `padding-bottom` e `margin-bottom` de `.modal-body` e `.modal-footer-btns` incluem `env(safe-area-inset-bottom)`, evitando que botões fiquem atrás do gesto de home em iPhones com notch.
+- **Media query para telas ≤700px de altura** (`style.css`): padding, gap e margin dos modais reduzidos para caber em viewports pequenas (ex: Samsung A05).
+
+---
+
 ## 2026-08-02 — Redesign CSS: Minimalista Linear + Centralização de estilos
 
 - **CSS inline eliminado** (41 ocorrências em 9 arquivos JS): todos os `.style.display`, `.style.zIndex`, `.style.cursor`, e atributos `style="..."` substituídos por `classList.add/remove()` e classes CSS utilitárias (`.is-visible`, `.is-visible-flex`, `.body-no-scroll`, `.is-loading`).

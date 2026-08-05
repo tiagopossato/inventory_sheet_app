@@ -201,7 +201,7 @@ SendMessage.prototype.open = function () {
     }
 
     document.getElementById('obsLocationName').textContent = `Local: ${loc}`;
-    document.getElementById('modalObs').classList.add('is-visible');
+    document.getElementById('modalObs').classList.add('is-visible-flex');
     document.getElementById('messageModalOverlay').classList.add('is-visible');
     document.getElementById('obsText').focus();
 };
@@ -211,7 +211,7 @@ SendMessage.prototype.open = function () {
  * @public
  */
 SendMessage.prototype.close = function () {
-    document.getElementById('modalObs').classList.remove('is-visible');
+    document.getElementById('modalObs').classList.remove('is-visible-flex');
     document.getElementById('messageModalOverlay').classList.remove('is-visible');
     document.getElementById('obsText').value = '';
     document.getElementById('obsCharCount').textContent = '0 / 140';

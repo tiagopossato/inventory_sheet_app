@@ -1092,7 +1092,7 @@ video {
   overflow-y: auto;
   flex: 1;
   /* garante que padding-bottom nao corte botoes */
-  padding-bottom: var(--space-2xl);
+  padding-bottom: calc(var(--space-2xl) + env(safe-area-inset-bottom, 0px));
 }
 
 /* --- 10b. Overlay Modal (AppModal confirm/alert) --- */
@@ -1121,12 +1121,16 @@ video {
   background: var(--color-white);
   width: 90%;
   max-width: 400px;
+  max-height: 85vh;
   padding: var(--space-2xl);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-modal);
   transition: transform var(--transition-normal);
   font-family: var(--font-family);
   transform: scale(0.95);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .app-modal-overlay.active .app-modal-box {
@@ -1147,12 +1151,17 @@ video {
   margin-bottom: var(--space-xl);
   white-space: pre-line;
   line-height: 1.6;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .app-modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-sm);
+  flex-shrink: 0;
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-gray-200);
 }
 
 .app-btn {
@@ -1294,7 +1303,7 @@ video {
   display: flex;
   gap: var(--space-md);
   margin-top: var(--space-lg);
-  margin-bottom: var(--space-lg);
+  margin-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
   flex-shrink: 0;
 }
 
@@ -1658,5 +1667,26 @@ video {
 
   .lock-screen {
     padding: var(--space-xl);
+  }
+}
+
+@media (max-height: 700px) {
+  .modal-body {
+    padding: var(--space-md);
+    padding-bottom: calc(var(--space-xl) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .modal-footer-btns {
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+    margin-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .modal-header {
+    padding: var(--space-md);
+  }
+
+  .modal-header h2 {
+    font-size: var(--text-base);
   }
 }

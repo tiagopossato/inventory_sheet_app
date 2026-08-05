@@ -221,7 +221,7 @@ EditAssetModal.prototype.open = function (uid) {
     this.fields.ipvu.value = item.ipvu !== undefined ? String(item.ipvu) : "0";
     this.fields.obs.value = item.obs || "";
 
-    this.modal.classList.add('is-visible');
+    this.modal.classList.add('is-visible-flex');
     document.body.classList.add('body-no-scroll'); // Trava o scroll do fundo
 
     // this.initEvents();
@@ -258,7 +258,7 @@ EditAssetModal.prototype.submit = function () {
  * @public
  */
 EditAssetModal.prototype.close = function () {
-    this.modal.classList.remove('is-visible');
+    this.modal.classList.remove('is-visible-flex');
     document.body.classList.remove('body-no-scroll'); // Destrava o scroll
     // this.removeEvents();
 };
